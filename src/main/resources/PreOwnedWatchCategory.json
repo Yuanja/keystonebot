@@ -1,0 +1,494 @@
+{
+  "name": "Pre-Owned Watches",
+  "properties": [
+    {
+      "key": "Pre-Owned Condition",
+      "feedItemField" : "webWatchCondition",
+      "designation": "required",
+      "name": "Pre-Owned Condition",
+      "kind": "enumerable",
+      "data": {
+        "multiple": false,
+        "values": [
+          "Unworn / Like New",
+          "Mint",
+          "Excellent",
+          "Very Good",
+          "Good"
+        ]
+      },
+      "gwValueMap": {
+        "Mint":"Mint",
+        "Likely Never Polished, Original Finish" : "Excellent",
+        "Excellent":"Excellent",
+        "Very Good":"Very Good",
+        "Good":"Good",
+        "Like New, Worn a Few Times" : "Mint"
+      }
+    },
+
+    {
+      "key": "MSRP",
+      "feedItemField" : "webPriceRetail",
+      "designation": "required",
+      "name": "MSRP",
+      "instructions": "The manufacturer\u0027s suggested retail price",
+      "kind": "numeric",
+      "data": {
+        "greater_than": "0"
+      }
+    },
+
+    {
+      "key": "Series",
+      "feedItemField" : "webWatchModel",
+      "designation": "required",
+      "name": "Series",
+      "kind": "string",
+      "data": {
+        "max_length": "500"
+      }
+    },
+
+    {
+      "key": "Subclass Watches",
+      "gwValue" : "Watches",
+      "designation": "required",
+      "name": "Subclass Watches",
+      "kind": "enumerable",
+      "data": {
+        "multiple": false,
+        "values": [
+          "Clock",
+          "Pocket Watches",
+          "Smart Watches",
+          "Watches"
+        ]
+      }
+    },
+
+    {
+      "key": "Box",
+      "feedItemField":"webWatchBoxPapers",
+      "gwValue" : "Yes",
+      "designation": "required",
+      "name": "Box",
+      "kind": "enumerable",
+      "data": {
+        "multiple": false,
+        "values": [
+          "Yes",
+          "No"
+        ]
+      },
+      "gwValueMap": {
+        "B+P":"Yes",
+        "Box" : "Yes",
+        "Original Box and certificate" : "Yes",
+        "Original Box" : "Yes" ,
+        "Original Box, Manuals and Warranty Card" : "Yes",
+        "Original Box and Archive Paper" : "Yes",
+        "Original Box and Service Paper" : "Yes"
+      },
+      "gwDefaultValue" : "No"
+    },
+
+    {
+      "key": "Papers",
+      "feedItemField":"webWatchBoxPapers",
+      "designation": "required",
+      "name": "Papers",
+      "kind": "enumerable",
+      "data": {
+        "multiple": false,
+        "values": [
+          "Yes",
+          "No"
+        ]
+      },
+      "gwValueMap": {
+        "B+P":"Yes",
+        "Paper" : "Yes",
+        "Original Box and certificate" : "Yes",
+        "Original Box" : "Yes", 
+        "Original Box, Manuals and Warranty Card ": "Yes",
+        "Original Warranty Paper": "Yes",
+        "Service Paper" : "Yes",
+        "Archive Paper" : "Yes",
+        "Original Box and Service Paper" : "Yes"
+      },
+      "gwDefaultValue" : "No"
+    },
+
+    {
+      "key": "Movement Type",
+      "feedItemField" : "webWatchMovement",
+      "gwValue" : "Hand Wind",
+      "designation": "required",
+      "name": "Movement Type",
+      "kind": "enumerable",
+      "data": {
+        "values": [
+          "Quartz",
+          "Automatic",
+          "Eco-Drive",
+          "Hand Wind"
+        ]
+      },
+      "gwValueMap": {
+        "Quartz" : "Quartz",
+        "Automatic" : "Automatic",
+        "Eco-Drive" : "Eco-Drive",
+        "Manual" : "Hand Wind"
+      }
+    },
+
+    {
+      "key": "Serial Number",
+      "feedItemField" : "webSerialNumber",
+      "designation": "required",
+      "name": "Serial Number ",
+      "kind": "string",
+      "data": {
+        "max_length": "50"
+      }
+    },
+
+    {
+      "key": "Gender",
+      "feedItemField" : "webStyle",
+      "designation": "required",
+      "name": "Gender",
+      "instructions": "The gender the product is intended for",
+      "kind": "enumerable",
+      "data": {
+        "values": [
+          "Ladies",
+          "Mens",
+          "Unisex"
+        ]
+      },
+      "gwValueMap": {
+        "Unisex" : "Unisex",
+        "Gents" : "Mens"
+      },
+      "gwDefaultValue" : "Ladies"
+    },
+
+    {
+      "key": "Dial Type",
+      "gwValue" : "Analog",
+      "designation": "required",
+      "name": "Dial Type",
+      "kind": "enumerable",
+      "data": {
+        "values": [
+          "Analog",
+          "Digital",
+          "Analog-Digital"
+        ]
+      }
+    },
+
+    {
+      "key": "Dial Color",
+      "feedItemField" : "webWatchGeneralDial",
+      "gwValue" : "Black",
+      "designation": "required",
+      "name": "Dial Color",
+      "kind": "enumerable",
+      "data": {
+        "multiple": false,
+        "values": [
+          "Beige",
+          "Black",
+          "Blue",
+          "Brown",
+          "Champagne",
+          "Chocolate",
+          "Gold Tone",
+          "Green",
+          "Grey",
+          "Gunmetal",
+          "Mother of Pearl",
+          "Multi-Color",
+          "Orange",
+          "Pink",
+          "Purple",
+          "Red",
+          "Rose Gold-tone",
+          "Silver-tone",
+          "Tortoise",
+          "Two-tone",
+          "White",
+          "Yellow"
+        ]
+      },
+      "gwDefaultValue" : "White"
+    },
+
+    {
+      "key": "Short Description",
+      "feedItemField" : "webDescriptionShort",
+      "designation": "optional",
+      "name": "Short Description",
+      "kind": "string",
+      "data": {
+        "max_length": "500"
+      }
+    },
+
+    {
+      "key": "Case Material",
+      "feedItemField" : "webMetalType",
+      "designation": "required",
+      "name": "Case Material ",
+      "kind": "enumerable",
+      "data": {
+        "multiple": false,
+        "values": [
+          "18ct Everose Gold",
+          "18kt Gold",
+          "18kt Pink Gold",
+          "18kt Rose Gold",
+          "18kt White Gold",
+          "18kt Yellow Gold",
+          "Acrylic",
+          "Aluminum",
+          "Brass",
+          "Ceramic",
+          "Composite",
+          "Diamond",
+          "Fiber",
+          "Glass",
+          "Gold",
+          "Plastic",
+          "Platinum",
+          "Polycarbonate",
+          "Polyurethane",
+          "Resin",
+          "Rubber",
+          "Sapphire",
+          "Silicone",
+          "Stainless Steel",
+          "Titanium",
+          "Tungsten"
+        ]
+      },
+      "gwValueMap": {
+          "18ct Everose Gold" : "18ct Everose Gold",
+          "18kt Gold" : "18kt Gold",
+          "18k RG" : "18kt Rose Gold",
+          "18k WG" : "18kt White Gold",
+          "18k YG" : "18kt Yellow Gold",
+          "Acrylic" : "Acrylic",
+          "Aluminum" : "Aluminum",
+          "Brass" : "Brass",
+          "Ceramic" : "Ceramic",
+          "Composite" : "Composite",
+          "Diamond" : "Diamond",
+          "Fiber" : "Fiber",
+          "Glass" : "Glass",
+          "Gold" : "Gold",
+          "Plastic" : "Plastic",
+          "Platinum" : "Platinum",
+          "Polycarbonate" : "Polycarbonate",
+          "Polyurethane" : "Polyurethane",
+          "Resin" : "Resin",
+          "Rubber" : "Rubber",
+          "Sapphire" : "Sapphire",
+          "Silicone" :"Silicone",
+          "Silver" : "Silver",
+          "Steel" : "Stainless Steel",
+          "Stainless Steel" : "Stainless Steel",
+          "SS/YG" : "Stainless Steel",
+          "Titanium" : "Titanium",
+          "Tungsten" : "Tungsten",
+          "Ultralight Polymer" : "Composite"
+        }
+    },
+
+    {
+      "key": "Case Crown",
+      "feedItemField" : "webWatchCaseCrown",
+      "designation": "required",
+      "name": "Case Crown",
+      "kind": "enumerable",
+      "data": {
+        "multiple": false,
+        "values": [
+          "Screw Down",
+          "Pull / Push"
+        ]
+      },
+      "gwValueMap": {
+        "Screw Down" : "Screw Down",
+        "Pull/Push" : "Pull / Push"
+      }
+    },
+
+    {
+      "key": "Case Diameter",
+      "feedItemField" : "webWatchDiameter",
+      "designation": "required",
+      "name": "Case Diameter",
+      "kind": "numeric",
+      "data": {}
+    },
+
+    {
+      "key": "Band Type",
+      "feedItemField" : "webWatchBandType",
+      "designation": "required",
+      "name": "Band Type",
+      "kind": "enumerable",
+      "data": {
+        "multiple": false,
+        "values": [
+          "Strap",
+          "Bracelet",
+          "Jubilee",
+          "Oyster",
+          "President",
+          "Pearlmaster"
+        ]
+      },
+      "gwValueMap": {
+          "18ct Everose Gold" : "Bracelet",
+          "18kt Gold": "Bracelet",
+          "18kt Pink Gold": "Bracelet",
+          "18kt Rose Gold": "Bracelet",
+          "18kt Rose Gold and Stainless Steel": "Bracelet",
+          "18kt White Gold": "Bracelet",
+          "18kt Yellow Gold": "Bracelet",
+          "18kt Yellow Gold and Stainless Steel": "Bracelet",
+          "Alligator": "Strap",
+          "Alloy": "Bracelet",
+          "Aluminum": "Bracelet",
+          "Calfskin": "Strap",
+          "Canvas": "Strap",
+          "Ceramic": "Bracelet",
+          "Crocodile Leather": "Strap",
+          "Genuine Leather": "Strap",
+          "Leather": "Strap",
+          "Lizard": "Strap",
+          "Nylon": "Strap",
+          "Plastic": "Bracelet",
+          "Platinum": "Bracelet",
+          "Polycarbonate": "Strap",
+          "Polyurethane": "Strap",
+          "Resin": "Strap",
+          "Rubber": "Strap",
+          "Satin": "Strap",
+          "Silicone": "Strap",
+          "Silk": "Strap",
+          "Snakeskin": "Strap",
+          "Stainless Steel": "Bracelet",
+          "Titanium": "Bracelet",
+          "Tungsten": "Bracelet"
+      }
+    },
+
+    {
+      "key": "Band Material",
+      "feedItemField" : "webWatchBandType",
+      "designation": "required",
+      "name": "Band Material",
+      "kind": "enumerable",
+      "data": {
+        "multiple": false,
+        "values": [
+          "18ct Everose Gold",
+          "18kt Gold",
+          "18kt Pink Gold",
+          "18kt Rose Gold",
+          "18kt Rose Gold and Stainless Steel",
+          "18kt White Gold",
+          "18kt Yellow Gold",
+          "18kt Yellow Gold and Stainless Steel",
+          "Alligator",
+          "Alloy",
+          "Aluminum",
+          "Calfskin",
+          "Canvas",
+          "Ceramic",
+          "Crocodile Leather",
+          "Genuine Leather",
+          "Leather",
+          "Lizard",
+          "Nylon",
+          "Plastic",
+          "Platinum",
+          "Polycarbonate",
+          "Polyurethane",
+          "Resin",
+          "Rubber",
+          "Satin",
+          "Silicone",
+          "Silk",
+          "Snakeskin",
+          "Stainless Steel",
+          "Titanium",
+          "Tungsten"
+        ]
+      }
+    },
+
+    {
+      "key": "Dial Markers",
+      "feedItemField" : "webWatchDialMarkers",
+      "designation": "required",
+      "name": "Dial Markers",
+      "kind": "enumerable",
+      "data": {
+        "multiple": false,
+        "values": [
+          "Arabic & Index",
+          "Arabic Numeral",
+          "California",
+          "Diamond",
+          "Index",
+          "Roman & Index",
+          "Roman Numeral",
+          "N/A"
+        ]
+      },
+      "gwDefaultValue" : "N/A"
+    },
+
+    {
+      "key": "Style",
+      "gwValue" : "Luxury",
+      "designation": "required",
+      "name": "Style",
+      "kind": "enumerable",
+      "data": {
+        "multiple": false,
+        "values": [
+          "Casual",
+          "Dive",
+          "Dress",
+          "Fashion",
+          "Luxury",
+          "Military",
+          "Sport"
+        ]
+      }
+    },
+
+    {
+      "key": "Bezel Type",
+      "feedItemField" : "webWatchBezelType",
+      "designation": "optional",
+      "name": "Bezel Type",
+      "kind": "enumerable",
+      "data": {
+        "values": [
+          "Bi-directional Rotating",
+          "Fixed",
+          "Uni-directional Rotating"
+        ]
+      }
+    }
+  ]
+}

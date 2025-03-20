@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration monitorInterval="60">
+    <Properties>
+        <Property name="log-path">gw.log</Property>
+    </Properties>
+    <Appenders>
+        <Console name="Console-Appender" target="SYSTEM_OUT">
+            <PatternLayout>
+                <pattern>
+                    [%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n
+                </pattern>>
+            </PatternLayout>
+        </Console>
+        <File name="App-File-Appender" fileName="gw.log" >
+            <PatternLayout>
+                <pattern>
+                    [%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n
+                </pattern>
+            </PatternLayout>
+        </File>
+ZZ    </Appenders>
+    <Loggers>
+    <!-- 
+        <Logger name="org.hibernate.type" level="trace" additivity="false">
+            <AppenderRef ref="AppSQL-File-Appender"/>
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
+        <Logger name="org.springframework.orm.jpa" level="debug" additivity="false">
+            <AppenderRef ref="AppSQL-File-Appender"/>
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
+        <Logger name="org.springframework.transaction" level="trace" additivity="false">
+            <AppenderRef ref="App-File-Appender"/>
+            <AppenderRef ref="AppSQL-File-Appender"/>
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
+        <Logger name="com.zaxxer.hikari" level="debug">
+            <AppenderRef ref="App-File-Appender"/>
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
+        <Logger name="org.springframework.http.client.support" level="debug" additivity="false">
+            <AppenderRef ref="App-File-Appender"/>
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
+    -->
+        <Logger name="com.gw" level="debug" additivity="false">
+            <AppenderRef ref="App-File-Appender"/>
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
+        <Root>
+            <AppenderRef ref="App-File-Appender"/>
+            <AppenderRef ref="Console-Appender"/>
+        </Root>
+    </Loggers>
+</Configuration>
