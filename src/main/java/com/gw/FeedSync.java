@@ -4,6 +4,8 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -15,6 +17,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @Import(Config.class)
 @EnableScheduling
+@ComponentScan(basePackages = {
+    "com.gw.services",
+    "com.gw.domain"
+})
+@EntityScan(basePackages = {"com.gw.domain"})  // Specify the correct package
 public class FeedSync implements CommandLineRunner {
 
     final static Logger logger = LogManager.getLogger(FeedSync.class);
