@@ -4,13 +4,12 @@ import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,7 +29,7 @@ import java.util.stream.Collectors;
  * IMPORTANT: This test suite is READONLY - it makes NO modifications to production data
  * This version uses production Shopify credentials with dev database for safety
  */
-@RunWith(SpringRunner.class)
+@SpringJUnitConfig
 @SpringBootTest
 @ActiveProfiles({"keystone-dev"}) // Use dev profile as base
 @TestPropertySource(properties = {

@@ -5,15 +5,15 @@ import com.gw.services.ReconciliationService.ReconciliationAnalysis;
 import com.gw.services.ReconciliationService.ProductDiscrepancy;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 /**
- * Read-only reconciliation analysis test
+ * Read-only reconciliation analysis test - Profile Aware
  * 
  * This test analyzes discrepancies between:
  * - Database (FeedItems)
@@ -23,18 +23,18 @@ import org.springframework.test.context.junit4.SpringRunner;
  * 
  * NO MODIFICATIONS ARE MADE - This is purely analytical
  * 
- * Uses keystone-dev profile for safe testing with development environment.
- * For production analysis, use the analyze-reconciliation-prod Maven profile.
+ * PROFILE AWARE: Uses the profile specified by the Maven profile:
+ * - Development: keystone-dev (safe for testing)
+ * - Production: keystone-prod (live production data)
  * 
  * Usage:
- * Development: mvn test -Panalyze-reconciliation
- * Production:  mvn test -Panalyze-reconciliation-prod
+ * Development: mvn test -Panalyze-reconciliation (uses keystone-dev)
+ * Production:  mvn test -Panalyze-reconciliation-prod (uses keystone-prod)
  * 
  * @author jyuan
  */
-@RunWith(SpringRunner.class)
+@SpringJUnitConfig
 @SpringBootTest
-@ActiveProfiles("keystone-dev")  // Use development profile for safer testing
 public class ReconciliationAnalysisTest {
 
     private static final Logger logger = LogManager.getLogger(ReconciliationAnalysisTest.class);
@@ -44,10 +44,24 @@ public class ReconciliationAnalysisTest {
 
     @Test
     public void testReconciliationAnalysis() throws Exception {
+        // Detect active profile from system properties (set by Maven profiles)
+        String activeProfile = System.getProperty("spring.profiles.active", "keystone-dev");
+        boolean isProduction = activeProfile.contains("keystone-prod");
+        
         logger.info("=== RECONCILIATION ANALYSIS TEST (READ-ONLY) ===");
         logger.info("⚠️ ANALYSIS MODE - NO MODIFICATIONS WILL BE MADE");
-        logger.info("📊 Using keystone-dev profile for safe testing");
-        logger.info("💡 For production analysis, use: mvn test -Panalyze-reconciliation-prod");
+        logger.info("📊 Active Profile: {}", activeProfile);
+        
+        if (isProduction) {
+            logger.warn("🚨 PRODUCTION MODE - Analyzing live production data");
+            logger.warn("🚨 Use extreme caution when reviewing results");
+        } else {
+            logger.info("🛡️ DEVELOPMENT MODE - Safe for testing");
+        }
+        
+        logger.info("💡 Profile Usage:");
+        logger.info("  Development: mvn test -Panalyze-reconciliation");
+        logger.info("  Production:  mvn test -Panalyze-reconciliation-prod");
         logger.info("");
         
         try {

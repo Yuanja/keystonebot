@@ -3,66 +3,24 @@ package com.gw.service;
 import com.gw.Config;
 import com.gw.domain.FeedItem;
 import com.gw.domain.FeedItemChangeSet;
-import com.gw.domain.PredefinedCollection;
-import com.gw.domain.keystone.KeyStoneCollections;
-import com.gw.services.*;
+import com.gw.services.FeedItemService;
+import com.gw.services.FeedService;
+import com.gw.services.KeystoneShopifySyncService;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
-import com.gw.services.shopifyapi.objects.*;
+import com.gw.services.shopifyapi.objects.Product;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
-import org.xml.sax.SAXException;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.w3c.dom.Element;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import static org.junit.Assert.assertNotNull;
-import java.util.stream.Collectors;
-import java.util.HashMap;
-import java.util.Arrays;
-
-@RunWith(SpringRunner.class)
-@Import(Config.class)
+@SpringJUnitConfig
 @SpringBootTest
-@ActiveProfiles(profiles = "keystone-dev")
-/**
- * Keystone Publish Test Suite
- * 
- * MIGRATION NOTE: This test class has been migrated from ShopifyAPIService (REST) 
- * to ShopifyGraphQLService (GraphQL) for improved performance and modern API usage.
- * 
- * Key changes made during migration:
- * - getAllCustomCollections() now returns List<CustomCollection> instead of CustomCollections wrapper
- * - getProductByProductId() now returns Product directly instead of ProductVo wrapper  
- * - getInventoryLevelByInventoryItemId() now returns List<InventoryLevel> instead of InventoryLevels wrapper
- * - Added compatibility conversion for InventoryLevels where needed by existing factory methods
- * 
- * All test functionality remains the same with improved GraphQL performance benefits.
- */
 public class KeystoneGraphqlTest {
 	private static Logger logger = LogManager.getLogger(KeystoneGraphqlTest.class);
 
@@ -73,11 +31,8 @@ public class KeystoneGraphqlTest {
     ShopifyGraphQLService shopifyApiService;
     
     @Autowired
-    private IShopifySyncService syncService;
+    private KeystoneShopifySyncService syncService;
 
-    @Autowired
-    private IFeedService keyStoneFeedService;
-    
     @Autowired
     private FeedItemService feedItemService;
 
@@ -85,7 +40,7 @@ public class KeystoneGraphqlTest {
      * Setup method that runs before each test to ensure clean state
      * Removes all products from Shopify and all feed items from database
      */
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         logger.info("=== TEST SETUP: Cleaning Shopify and Database ===");
         
@@ -101,7 +56,7 @@ public class KeystoneGraphqlTest {
 
         // Verify clean state
         List<Product> allProducts = shopifyApiService.getAllProducts();
-        Assert.assertTrue("Shopify should be empty after setup", allProducts.isEmpty());
+        Assertions.assertTrue("Shopify should be empty after setup", allProducts.isEmpty());
         
         logger.info("✅ Setup complete - Shopify and Database are clean");
         logger.info("=== END TEST SETUP ===");
@@ -111,7 +66,7 @@ public class KeystoneGraphqlTest {
         shopifyApiService.removeAllCollections();
         
         List<CustomCollection> allCollections = shopifyApiService.getAllCustomCollections();
-        Assert.assertTrue(allCollections.isEmpty());
+        Assertions.assertTrue(allCollections.isEmpty());
     }
     
     private List<FeedItem> getTopFeedItems(int count) throws Exception{
@@ -180,7 +135,7 @@ public class KeystoneGraphqlTest {
             
             // Verify collections exist
             List<CustomCollection> collections = shopifyApiService.getAllCustomCollections();
-            Assert.assertTrue("Collections should exist after sync", collections.size() > 0);
+            Assertions.assertTrue("Collections should exist after sync", collections.size() > 0);
             logger.info("✅ Verified " + collections.size() + " collections exist");
             
             // Verify items are associated with collections
@@ -221,7 +176,7 @@ public class KeystoneGraphqlTest {
         
         // Load top 10 items from live feed using private method
         List<FeedItem> topFeedItems = getTopFeedItems(10);
-        Assert.assertTrue("Should have at least 10 items from live feed", topFeedItems.size() >= 10);
+        Assertions.assertTrue("Should have at least 10 items from live feed", topFeedItems.size() >= 10);
         
         // Split into first 5 and second 5 for analysis
         List<FeedItem> firstBatch = topFeedItems.stream().limit(5).collect(Collectors.toList());
@@ -247,7 +202,7 @@ public class KeystoneGraphqlTest {
         
         // Verify first batch was published
         List<Product> productsAfterFirstBatch = shopifyApiService.getAllProducts();
-        Assert.assertEquals("Should have created products for first 5 items", 
+        Assertions.assertEquals("Should have created products for first 5 items", 
                            firstBatch.size(), productsAfterFirstBatch.size());
         
         // Store details of first batch products for later comparison
@@ -258,11 +213,11 @@ public class KeystoneGraphqlTest {
                 .filter(p -> originalItem.getWebTagNumber().equals(p.getVariants().get(0).getSku()))
                     .findFirst();
                 
-            Assert.assertTrue("Product should exist for SKU: " + originalItem.getWebTagNumber(), 
+            Assertions.assertTrue("Product should exist for SKU: " + originalItem.getWebTagNumber(), 
                              foundProduct.isPresent());
             
             Product product = foundProduct.get();
-            Assert.assertEquals("Product should have ACTIVE status", "ACTIVE", product.getStatus());
+            Assertions.assertEquals("Product should have ACTIVE status", "ACTIVE", product.getStatus());
             
             // Store product details for comparison after second batch
             firstBatchProductDetails.put(originalItem.getWebTagNumber(), 
@@ -270,7 +225,7 @@ public class KeystoneGraphqlTest {
             
             // Verify collection associations
             List<Collect> collects = shopifyApiService.getCollectsForProductId(product.getId());
-            Assert.assertTrue("Product should be associated with collections", collects.size() > 0);
+            Assertions.assertTrue("Product should be associated with collections", collects.size() > 0);
             
             logger.info("✅ Verified first batch item: " + originalItem.getWebTagNumber() + 
                        " (Shopify ID: " + product.getId() + ", Collections: " + collects.size() + ")");
@@ -291,7 +246,7 @@ public class KeystoneGraphqlTest {
         List<Product> finalProducts = shopifyApiService.getAllProducts();
         
         // Verify total count is 10
-        Assert.assertEquals("Should have total of 10 products after both batches", 
+        Assertions.assertEquals("Should have total of 10 products after both batches", 
                            10, finalProducts.size());
         logger.info("✅ Verified total product count: " + finalProducts.size());
         
@@ -302,15 +257,15 @@ public class KeystoneGraphqlTest {
                 .filter(p -> secondBatchItem.getWebTagNumber().equals(p.getVariants().get(0).getSku()))
                 .findFirst();
             
-            Assert.assertTrue("Second batch product should exist for SKU: " + secondBatchItem.getWebTagNumber(), 
+            Assertions.assertTrue("Second batch product should exist for SKU: " + secondBatchItem.getWebTagNumber(), 
                              foundProduct.isPresent());
             
             Product product = foundProduct.get();
-            Assert.assertEquals("Second batch product should have ACTIVE status", "ACTIVE", product.getStatus());
+            Assertions.assertEquals("Second batch product should have ACTIVE status", "ACTIVE", product.getStatus());
             
             // Verify collection associations
             List<Collect> collects = shopifyApiService.getCollectsForProductId(product.getId());
-            Assert.assertTrue("Second batch product should be associated with collections", collects.size() > 0);
+            Assertions.assertTrue("Second batch product should be associated with collections", collects.size() > 0);
             
             logger.info("✅ Verified second batch item: " + secondBatchItem.getWebTagNumber() + 
                        " (Shopify ID: " + product.getId() + ", Collections: " + collects.size() + ")");
@@ -324,7 +279,7 @@ public class KeystoneGraphqlTest {
                 .filter(p -> firstBatchItem.getWebTagNumber().equals(p.getVariants().get(0).getSku()))
                 .findFirst();
             
-            Assert.assertTrue("First batch product should still exist: " + firstBatchItem.getWebTagNumber(), 
+            Assertions.assertTrue("First batch product should still exist: " + firstBatchItem.getWebTagNumber(), 
                              currentProduct.isPresent());
             
             Product product = currentProduct.get();
@@ -335,15 +290,15 @@ public class KeystoneGraphqlTest {
             String storedUpdatedAt = storedDetailsParts[2];
             
             // Verify the product ID hasn't changed (most critical)
-            Assert.assertEquals("First batch product ID should be unchanged: " + firstBatchItem.getWebTagNumber(), 
+            Assertions.assertEquals("First batch product ID should be unchanged: " + firstBatchItem.getWebTagNumber(), 
                                storedId, product.getId());
             
             // Verify the title hasn't changed
-            Assert.assertEquals("First batch product title should be unchanged: " + firstBatchItem.getWebTagNumber(), 
+            Assertions.assertEquals("First batch product title should be unchanged: " + firstBatchItem.getWebTagNumber(), 
                                storedTitle, product.getTitle());
             
             // Verify the updatedAt timestamp hasn't changed (indicates no modification)
-            Assert.assertEquals("First batch product updatedAt should be unchanged (no modification): " + firstBatchItem.getWebTagNumber(), 
+            Assertions.assertEquals("First batch product updatedAt should be unchanged (no modification): " + firstBatchItem.getWebTagNumber(), 
                                storedUpdatedAt, product.getUpdatedAt());
             
             logger.info("✅ Verified first batch item UNCHANGED: " + firstBatchItem.getWebTagNumber() + 
@@ -377,13 +332,13 @@ public class KeystoneGraphqlTest {
         logger.info("Step 1: Publishing initial items...");
         for (FeedItem item : testItems) {
             syncService.publishItemToShopify(item);
-            Assert.assertNotNull("Item should have Shopify ID after publishing", item.getShopifyItemId());
+            Assertions.assertNotNull("Item should have Shopify ID after publishing", item.getShopifyItemId());
             logger.info("Published: " + item.getWebTagNumber() + " (ID: " + item.getShopifyItemId() + ")");
         }
         
         // Verify initial state
         List<Product> initialProducts = shopifyApiService.getAllProducts();
-        Assert.assertEquals("Should have initial products", testItems.size(), initialProducts.size());
+        Assertions.assertEquals("Should have initial products", testItems.size(), initialProducts.size());
         
         logger.info("Step 2: Modifying items to simulate changes...");
         // Simulate changes by modifying the feed items
@@ -409,20 +364,20 @@ public class KeystoneGraphqlTest {
         
         // Verify updates were applied
         List<Product> updatedProducts = shopifyApiService.getAllProducts();
-        Assert.assertEquals("Should still have same number of products", testItems.size(), updatedProducts.size());
+        Assertions.assertEquals("Should still have same number of products", testItems.size(), updatedProducts.size());
         
         for (FeedItem modifiedItem : modifiedItems) {
             Optional<Product> foundProduct = updatedProducts.stream()
                 .filter(p -> p.getId().equals(modifiedItem.getShopifyItemId()))
                 .findFirst();
             
-            Assert.assertTrue("Updated product should exist for SKU: " + modifiedItem.getWebTagNumber(), 
+            Assertions.assertTrue("Updated product should exist for SKU: " + modifiedItem.getWebTagNumber(), 
                              foundProduct.isPresent());
             
             Product product = foundProduct.get();
-            Assert.assertTrue("Product title should contain modification marker", 
+            Assertions.assertTrue("Product title should contain modification marker", 
                              product.getTitle().contains("[MODIFIED FOR TEST]"));
-            Assert.assertEquals("Product should maintain ACTIVE status", "ACTIVE", product.getStatus());
+            Assertions.assertEquals("Product should maintain ACTIVE status", "ACTIVE", product.getStatus());
             
             logger.info("✅ Verified update: " + modifiedItem.getWebTagNumber() + 
                        " - Title: " + product.getTitle());
@@ -442,7 +397,7 @@ public class KeystoneGraphqlTest {
         
         // Step 1: Get top 5 items from live feed using the same pattern as other tests
         List<FeedItem> topFeedItems = getTopFeedItems(5);
-        Assert.assertTrue("Should have at least 5 items from live feed", topFeedItems.size() >= 5);
+        Assertions.assertTrue("Should have at least 5 items from live feed", topFeedItems.size() >= 5);
         
         List<FeedItem> initialItems = topFeedItems.stream().limit(5).collect(Collectors.toList());
         
@@ -455,17 +410,17 @@ public class KeystoneGraphqlTest {
         // Publish all 5 items initially
         for (FeedItem item : initialItems) {
             syncService.publishItemToShopify(item);
-            Assert.assertNotNull("Item should have Shopify ID after publishing", item.getShopifyItemId());
+            Assertions.assertNotNull("Item should have Shopify ID after publishing", item.getShopifyItemId());
             logger.info("Published: " + item.getWebTagNumber() + " (ID: " + item.getShopifyItemId() + ")");
         }
         
         // Verify initial state in Shopify
         List<Product> initialProducts = shopifyApiService.getAllProducts();
-        Assert.assertEquals("Should have 5 initial products in Shopify", 5, initialProducts.size());
+        Assertions.assertEquals("Should have 5 initial products in Shopify", 5, initialProducts.size());
         
         // Verify initial state in database
         List<FeedItem> dbItemsInitial = feedItemService.findAll();
-        Assert.assertEquals("Should have 5 initial items in database", 5, dbItemsInitial.size());
+        Assertions.assertEquals("Should have 5 initial items in database", 5, dbItemsInitial.size());
         
         logger.info("✅ Initial state verified: 5 items in both Shopify and database");
         
@@ -505,8 +460,8 @@ public class KeystoneGraphqlTest {
         logger.info("Final item count in database: " + dbItemsFinal.size() + " (expected: 3)");
         
         // Assert that we have the correct number of items (3 remaining)
-        Assert.assertEquals("Should have 3 products remaining in Shopify after deletion", 3, finalProducts.size());
-        Assert.assertEquals("Should have 3 items remaining in database after deletion", 3, dbItemsFinal.size());
+        Assertions.assertEquals("Should have 3 products remaining in Shopify after deletion", 3, finalProducts.size());
+        Assertions.assertEquals("Should have 3 items remaining in database after deletion", 3, dbItemsFinal.size());
         
         // Verify that the remaining 3 items still exist in Shopify
         for (FeedItem remainingItem : reducedFeed) {
@@ -515,7 +470,7 @@ public class KeystoneGraphqlTest {
                 .filter(p -> remainingItem.getWebTagNumber().equals(p.getVariants().get(0).getSku()))
                 .findFirst();
             
-            Assert.assertTrue("Remaining item should still exist in Shopify: " + remainingItem.getWebTagNumber(), 
+            Assertions.assertTrue("Remaining item should still exist in Shopify: " + remainingItem.getWebTagNumber(), 
                              foundProduct.isPresent());
             
             logger.info("✅ Verified remaining item in Shopify: " + remainingItem.getWebTagNumber());
@@ -527,7 +482,7 @@ public class KeystoneGraphqlTest {
                 .filter(item -> remainingItem.getWebTagNumber().equals(item.getWebTagNumber()))
                 .findFirst();
             
-            Assert.assertTrue("Remaining item should still exist in database: " + remainingItem.getWebTagNumber(), 
+            Assertions.assertTrue("Remaining item should still exist in database: " + remainingItem.getWebTagNumber(), 
                              foundDbItem.isPresent());
             
             logger.info("✅ Verified remaining item in database: " + remainingItem.getWebTagNumber());
@@ -540,7 +495,7 @@ public class KeystoneGraphqlTest {
                 .filter(p -> deletedItem.getWebTagNumber().equals(p.getVariants().get(0).getSku()))
                 .findFirst();
             
-            Assert.assertFalse("Deleted item should NOT exist in Shopify: " + deletedItem.getWebTagNumber(), 
+            Assertions.assertFalse("Deleted item should NOT exist in Shopify: " + deletedItem.getWebTagNumber(), 
                               foundProduct.isPresent());
             
             logger.info("✅ Confirmed deletion from Shopify: " + deletedItem.getWebTagNumber());
@@ -552,7 +507,7 @@ public class KeystoneGraphqlTest {
                 .filter(item -> deletedItem.getWebTagNumber().equals(item.getWebTagNumber()))
                 .findFirst();
             
-            Assert.assertFalse("Deleted item should NOT exist in database: " + deletedItem.getWebTagNumber(), 
+            Assertions.assertFalse("Deleted item should NOT exist in database: " + deletedItem.getWebTagNumber(), 
                               foundDbItem.isPresent());
             
             logger.info("✅ Confirmed deletion from database: " + deletedItem.getWebTagNumber());
@@ -584,7 +539,7 @@ public class KeystoneGraphqlTest {
         }
         
         List<Product> phase1Products = shopifyApiService.getAllProducts();
-        Assert.assertEquals("Should have initial products", initialItems.size(), phase1Products.size());
+        Assertions.assertEquals("Should have initial products", initialItems.size(), phase1Products.size());
         
         // Phase 2: Create a mixed scenario feed
         logger.info("Phase 2: Creating mixed scenario feed...");
@@ -638,7 +593,7 @@ public class KeystoneGraphqlTest {
                 .filter(p -> unchangedItem.getWebTagNumber().equals(p.getVariants().get(0).getSku()))
                 .findFirst();
             
-            Assert.assertTrue("Unchanged item should exist: " + unchangedItem.getWebTagNumber(), 
+            Assertions.assertTrue("Unchanged item should exist: " + unchangedItem.getWebTagNumber(), 
                              foundProduct.isPresent());
             logger.info("✅ Verified unchanged item: " + unchangedItem.getWebTagNumber());
         }
@@ -649,9 +604,9 @@ public class KeystoneGraphqlTest {
             .filter(p -> modifiedItem.getWebTagNumber().equals(p.getVariants().get(0).getSku()))
             .findFirst();
         
-        Assert.assertTrue("Updated item should exist: " + modifiedItem.getWebTagNumber(), 
+        Assertions.assertTrue("Updated item should exist: " + modifiedItem.getWebTagNumber(), 
                          updatedProduct.isPresent());
-        Assert.assertTrue("Updated item should contain modification marker", 
+        Assertions.assertTrue("Updated item should contain modification marker", 
                          updatedProduct.get().getTitle().contains("[UPDATED FOR TESTING]"));
         logger.info("✅ Verified updated item: " + modifiedItem.getWebTagNumber());
         
@@ -662,7 +617,7 @@ public class KeystoneGraphqlTest {
                 .filter(p -> newItem.getWebTagNumber().equals(p.getVariants().get(0).getSku()))
                 .findFirst();
             
-            Assert.assertTrue("New item should exist: " + newItem.getWebTagNumber(), 
+            Assertions.assertTrue("New item should exist: " + newItem.getWebTagNumber(), 
                              foundProduct.isPresent());
             logger.info("✅ Verified new item: " + newItem.getWebTagNumber());
         }
@@ -697,7 +652,7 @@ public class KeystoneGraphqlTest {
         Optional<FeedItem> specificToUpdate = 
                 keyStoneFeedService.getItemsFromFeed().stream().filter(
                         feedItem -> feedItem.getWebTagNumber().equals("160883")).findAny();
-        Assert.assertTrue(specificToUpdate.isPresent());
+        Assertions.assertTrue(specificToUpdate.isPresent());
         FeedItem item = specificToUpdate.get();
         item.setShopifyItemId("7532623036655");
         
@@ -739,7 +694,7 @@ public class KeystoneGraphqlTest {
         // Get the initially published product from Shopify
         Product initialProduct = shopifyApiService.getProductByProductId(item.getShopifyItemId());
         assertNotNull("Should be able to retrieve initially published product", initialProduct);
-        Assert.assertEquals("Initial product should have ACTIVE status", "ACTIVE", initialProduct.getStatus());
+        Assertions.assertEquals("Initial product should have ACTIVE status", "ACTIVE", initialProduct.getStatus());
         
         logger.info("=== PHASE 2: Simulate Changes ===");
         
@@ -768,9 +723,9 @@ public class KeystoneGraphqlTest {
         logger.info("=== PHASE 4: Verify Identity Preservation ===");
         
         // CRITICAL ASSERTIONS: Verify that IDs haven't changed
-        Assert.assertEquals("Shopify Item ID must not change during update", 
+        Assertions.assertEquals("Shopify Item ID must not change during update", 
                            originalShopifyId, item.getShopifyItemId());
-        Assert.assertEquals("Web Tag Number must not change during update", 
+        Assertions.assertEquals("Web Tag Number must not change during update", 
                            originalWebTagNumber, item.getWebTagNumber());
         
         logger.info("✅ VERIFIED: Item identity preserved during update");
@@ -784,8 +739,8 @@ public class KeystoneGraphqlTest {
         assertNotNull("Should be able to retrieve updated product", updatedProduct);
         
         // Verify the changes were applied (webDescriptionShort becomes the product title)
-        Assert.assertEquals("Updated title should match the updated description", updatedDescription, updatedProduct.getTitle());
-        Assert.assertTrue("Updated description should contain the test marker", 
+        Assertions.assertEquals("Updated title should match the updated description", updatedDescription, updatedProduct.getTitle());
+        Assertions.assertTrue("Updated description should contain the test marker", 
                          updatedProduct.getTitle().contains("[UPDATED FOR TESTING]"));
         
         logger.info("✅ VERIFIED: Changes successfully applied");
@@ -800,7 +755,7 @@ public class KeystoneGraphqlTest {
         logger.info("Product published at: " + updatedProduct.getPublishedAt());
         
         // Verify the product has ACTIVE status (available on sales channels)
-        Assert.assertEquals("Updated product must maintain ACTIVE status", 
+        Assertions.assertEquals("Updated product must maintain ACTIVE status", 
                            "ACTIVE", updatedProduct.getStatus());
         
         // Verify the product has a publishedAt timestamp
@@ -811,7 +766,7 @@ public class KeystoneGraphqlTest {
         // Verify collection associations are maintained
         List<Collect> productCollections = shopifyApiService.getCollectsForProductId(item.getShopifyItemId());
         assertNotNull("Product should maintain collection associations", productCollections);
-        Assert.assertTrue("Updated product should still be associated with collections", 
+        Assertions.assertTrue("Updated product should still be associated with collections", 
                          productCollections.size() > 0);
         
         logger.info("Product maintains " + productCollections.size() + " collection association(s):");
@@ -831,7 +786,7 @@ public class KeystoneGraphqlTest {
         // Verify the updated product is published to ALL available sales channels
         List<Map<String, String>> allPublications = shopifyApiService.getAllPublications();
         assertNotNull("Should be able to retrieve all publications", allPublications);
-        Assert.assertTrue("There should be at least one sales channel available", allPublications.size() > 0);
+        Assertions.assertTrue("There should be at least one sales channel available", allPublications.size() > 0);
         
         logger.info("Total available sales channels: " + allPublications.size());
         for (Map<String, String> publication : allPublications) {
@@ -846,7 +801,7 @@ public class KeystoneGraphqlTest {
         // Additional verification: Try to retrieve the product again to ensure it's accessible
         Product verificationProduct = shopifyApiService.getProductByProductId(item.getShopifyItemId());
         assertNotNull("Updated product should be retrievable for verification", verificationProduct);
-        Assert.assertEquals("Verification product should have same title as updated", 
+        Assertions.assertEquals("Verification product should have same title as updated", 
                            updatedDescription, verificationProduct.getTitle());
         
         logger.info("=== FINAL VERIFICATION COMPLETE ===");
@@ -907,7 +862,7 @@ public class KeystoneGraphqlTest {
         
         // Verify the product has ACTIVE status (which means it can be published to sales channels)
         // ACTIVE status means the product is ready to sell and can be published to sales channels
-        Assert.assertEquals("Product must have ACTIVE status to be available on sales channels", 
+        Assertions.assertEquals("Product must have ACTIVE status to be available on sales channels", 
             "ACTIVE", publishedProduct.getStatus());
         
         // Verify the product is published (publishedAt may be null for some products but ACTIVE status is sufficient)
@@ -924,7 +879,7 @@ public class KeystoneGraphqlTest {
         // NEW ASSERTION: Verify the product is associated with at least one collection
         List<Collect> productCollections = shopifyApiService.getCollectsForProductId(item.getShopifyItemId());
         assertNotNull("Product should have collection associations", productCollections);
-        Assert.assertTrue("Published product should be associated with at least one collection", 
+        Assertions.assertTrue("Published product should be associated with at least one collection", 
                          productCollections.size() > 0);
         
         logger.info("Product is associated with " + productCollections.size() + " collection(s):");
@@ -944,7 +899,7 @@ public class KeystoneGraphqlTest {
         logger.info("Verifying product is published to ALL sales channels...");
         List<Map<String, String>> allPublications = shopifyApiService.getAllPublications();
         assertNotNull("Should be able to retrieve all publications", allPublications);
-        Assert.assertTrue("There should be at least one sales channel available", allPublications.size() > 0);
+        Assertions.assertTrue("There should be at least one sales channel available", allPublications.size() > 0);
         
         logger.info("Total available sales channels: " + allPublications.size());
         for (Map<String, String> publication : allPublications) {
@@ -968,7 +923,7 @@ public class KeystoneGraphqlTest {
         }
         
         // For ACTIVE products, being retrievable and having proper configuration indicates successful publication
-        Assert.assertTrue("Published product must either have publishedAt timestamp OR be ACTIVE with proper configuration. " +
+        Assertions.assertTrue("Published product must either have publishedAt timestamp OR be ACTIVE with proper configuration. " +
                          "ACTIVE status: " + publishedProduct.getStatus() + 
                          ", Published timestamp: " + publishedProduct.getPublishedAt() + 
                          ", Collections: " + productCollections.size(),
@@ -977,8 +932,8 @@ public class KeystoneGraphqlTest {
         // Additional verification: Re-retrieve the product to confirm it's accessible from Shopify's perspective
         Product verificationProduct = shopifyApiService.getProductByProductId(item.getShopifyItemId());
         assertNotNull("Product should be retrievable after publication, confirming it's accessible on sales channels", verificationProduct);
-        Assert.assertEquals("Re-retrieved product should have same title", publishedProduct.getTitle(), verificationProduct.getTitle());
-        Assert.assertEquals("Re-retrieved product should have ACTIVE status", "ACTIVE", verificationProduct.getStatus());
+        Assertions.assertEquals("Re-retrieved product should have same title", publishedProduct.getTitle(), verificationProduct.getTitle());
+        Assertions.assertEquals("Re-retrieved product should have ACTIVE status", "ACTIVE", verificationProduct.getStatus());
         
         logger.info("✅ VERIFICATION COMPLETE: Product publication to all sales channels confirmed through:");
         logger.info("  ✅ Product has ACTIVE status (available for sale)");
@@ -1070,8 +1025,8 @@ public class KeystoneGraphqlTest {
         logger.info("Verification: Loaded " + trimmedFeedItems.size() + " items from trimmed feed");
         
         // Assert that we have the expected number of items (or fewer if filtered by the service)
-        Assert.assertTrue("Trimmed feed should contain items", trimmedFeedItems.size() > 0);
-        Assert.assertTrue("Trimmed feed should not exceed 20 items that pass filtering", 
+        Assertions.assertTrue("Trimmed feed should contain items", trimmedFeedItems.size() > 0);
+        Assertions.assertTrue("Trimmed feed should not exceed 20 items that pass filtering", 
                          trimmedFeedItems.size() <= 20);
         
         logger.info("Feed trimming test completed successfully!");
@@ -1128,7 +1083,7 @@ public class KeystoneGraphqlTest {
         
         // Verify all collections are removed
         List<CustomCollection> collectionsAfterRemoval = shopifyApiService.getAllCustomCollections();
-        Assert.assertEquals("All collections should be removed", 0, collectionsAfterRemoval.size());
+        Assertions.assertEquals("All collections should be removed", 0, collectionsAfterRemoval.size());
         logger.info("✅ Successfully removed all collections");
         
         // Step 3: Ensure configured collections are created
@@ -1136,15 +1091,15 @@ public class KeystoneGraphqlTest {
         Map<PredefinedCollection, CustomCollection> collectionByEnum = 
                 shopifyApiService.ensureConfiguredCollections(KeyStoneCollections.values());
         
-        Assert.assertNotNull("Collection mapping should not be null", collectionByEnum);
-        Assert.assertEquals("Should create all predefined collections", 
+        Assertions.assertNotNull("Collection mapping should not be null", collectionByEnum);
+        Assertions.assertEquals("Should create all predefined collections", 
                            KeyStoneCollections.values().length, collectionByEnum.size());
         
         logger.info("✅ Successfully created " + collectionByEnum.size() + " collections");
         
         // Step 4: Verify collections exist in Shopify
         List<CustomCollection> createdCollections = shopifyApiService.getAllCustomCollections();
-        Assert.assertEquals("Created collections should match predefined collections count", 
+        Assertions.assertEquals("Created collections should match predefined collections count", 
                            KeyStoneCollections.values().length, createdCollections.size());
         
         // Step 5: Verify each collection is properly configured and published to all channels
@@ -1163,19 +1118,19 @@ public class KeystoneGraphqlTest {
             // Get collection status using the simplified method
             Map<String, Object> collectionStatus = shopifyApiService.getCollectionPublicationStatus(collection.getId());
             
-            Assert.assertNotNull("Collection status should be retrievable", collectionStatus);
-            Assert.assertEquals("Collection ID should match", collection.getId(), collectionStatus.get("id").toString());
-            Assert.assertEquals("Collection title should match", collection.getTitle(), collectionStatus.get("title"));
+            Assertions.assertNotNull("Collection status should be retrievable", collectionStatus);
+            Assertions.assertEquals("Collection ID should match", collection.getId(), collectionStatus.get("id").toString());
+            Assertions.assertEquals("Collection title should match", collection.getTitle(), collectionStatus.get("title"));
             
             // Verify collection has required fields
-            Assert.assertNotNull("Collection should have a title", collectionStatus.get("title"));
-            Assert.assertNotNull("Collection should have a handle", collectionStatus.get("handle"));
-            Assert.assertNotNull("Collection should have an updated timestamp", collectionStatus.get("updatedAt"));
+            Assertions.assertNotNull("Collection should have a title", collectionStatus.get("title"));
+            Assertions.assertNotNull("Collection should have a handle", collectionStatus.get("handle"));
+            Assertions.assertNotNull("Collection should have an updated timestamp", collectionStatus.get("updatedAt"));
             
             // Verify collection is accessible
             Boolean isAccessible = (Boolean) collectionStatus.get("isAccessible");
-            Assert.assertNotNull("Collection should have accessibility status", isAccessible);
-            Assert.assertTrue("Collection should be accessible", isAccessible);
+            Assertions.assertNotNull("Collection should have accessibility status", isAccessible);
+            Assertions.assertTrue("Collection should be accessible", isAccessible);
             
             // Log collection status
             logger.info("Collection '" + collection.getTitle() + "' verification:");
@@ -1187,8 +1142,8 @@ public class KeystoneGraphqlTest {
             
             // Additional verification: Attempt to retrieve collection via different method to confirm publication
             CustomCollection retrievedCollection = shopifyApiService.getCollectionWithPublications(collection.getId());
-            Assert.assertNotNull("Collection should be retrievable via getCollectionWithPublications", retrievedCollection);
-            Assert.assertEquals("Retrieved collection title should match", collection.getTitle(), retrievedCollection.getTitle());
+            Assertions.assertNotNull("Collection should be retrievable via getCollectionWithPublications", retrievedCollection);
+            Assertions.assertEquals("Retrieved collection title should match", collection.getTitle(), retrievedCollection.getTitle());
             
             logger.info("✅ Collection is properly configured and accessible");
             logger.info("✅ Collection publication to all channels attempted during creation");
@@ -1200,9 +1155,9 @@ public class KeystoneGraphqlTest {
         
         for (PredefinedCollection predefinedCollection : KeyStoneCollections.values()) {
             CustomCollection mappedCollection = collectionByEnum.get(predefinedCollection);
-            Assert.assertNotNull("Predefined collection should be mapped: " + predefinedCollection.getTitle(), 
+            Assertions.assertNotNull("Predefined collection should be mapped: " + predefinedCollection.getTitle(), 
                                  mappedCollection);
-            Assert.assertEquals("Mapped collection title should match predefined title", 
+            Assertions.assertEquals("Mapped collection title should match predefined title", 
                                predefinedCollection.getTitle(), mappedCollection.getTitle());
             
             logger.info("✅ " + predefinedCollection.getTitle() + " → Collection ID: " + mappedCollection.getId());
@@ -1235,7 +1190,7 @@ public class KeystoneGraphqlTest {
                 List<Collect> productCollects = shopifyApiService.getCollectsForProductId(testProduct.getId());
                 boolean associationFound = productCollects.stream()
                     .anyMatch(c -> c.getCollectionId().equals(testCollection.getId()));
-                Assert.assertTrue("Product should be associated with test collection", associationFound);
+                Assertions.assertTrue("Product should be associated with test collection", associationFound);
                 logger.info("✅ Verified collection-product association exists");
                 
                 // Clean up test association
@@ -1259,12 +1214,12 @@ public class KeystoneGraphqlTest {
                     .filter(c -> c.getId().equals(collection.getId()))
                     .toList();
                 
-                Assert.assertEquals("Collection should be retrievable individually", 1, singleCollectionList.size());
+                Assertions.assertEquals("Collection should be retrievable individually", 1, singleCollectionList.size());
                 logger.info("✅ Collection '" + collection.getTitle() + "' is accessible and retrievable");
                 
             } catch (Exception e) {
                 logger.error("Failed to verify collection accessibility: " + collection.getTitle(), e);
-                Assert.fail("Collection should be accessible: " + collection.getTitle());
+                Assertions.fail("Collection should be accessible: " + collection.getTitle());
             }
         }
         
@@ -1289,7 +1244,7 @@ public class KeystoneGraphqlTest {
         logger.info("✅ Collections are published and available to customers");
         
         // Assert final state
-        Assert.assertEquals("Final collection count should match predefined collections", 
+        Assertions.assertEquals("Final collection count should match predefined collections", 
                            KeyStoneCollections.values().length, 
                            shopifyApiService.getAllCustomCollections().size());
         
@@ -1347,11 +1302,11 @@ public class KeystoneGraphqlTest {
             // Verify the product exists in Shopify
             Product publishedProduct = shopifyApiService.getProductByProductId(item.getShopifyItemId());
             assertNotNull("Published product should be retrievable from Shopify", publishedProduct);
-            Assert.assertEquals("Product should have ACTIVE status", "ACTIVE", publishedProduct.getStatus());
+            Assertions.assertEquals("Product should have ACTIVE status", "ACTIVE", publishedProduct.getStatus());
             
             // Verify collections are associated
             List<Collect> productCollections = shopifyApiService.getCollectsForProductId(item.getShopifyItemId());
-            Assert.assertTrue("Product should be associated with collections", productCollections.size() > 0);
+            Assertions.assertTrue("Product should be associated with collections", productCollections.size() > 0);
             
             logger.info("✅ Product successfully published and verified:");
             logger.info("  - Shopify ID: " + item.getShopifyItemId());
@@ -1386,7 +1341,7 @@ public class KeystoneGraphqlTest {
         
         // Step 1: Get top 10 items from live feed using the same pattern as other tests
         List<FeedItem> topFeedItems = getTopFeedItems(10);
-        Assert.assertTrue("Should have at least 10 items from live feed", topFeedItems.size() >= 10);
+        Assertions.assertTrue("Should have at least 10 items from live feed", topFeedItems.size() >= 10);
         
         // Step 2: Find 2 items that are not sold (webStatus does not contain "SOLD")
         List<FeedItem> unsoldItems = topFeedItems.stream()
@@ -1404,7 +1359,7 @@ public class KeystoneGraphqlTest {
             }
         }
         
-        Assert.assertTrue("Should have at least 2 items for testing", unsoldItems.size() >= 2);
+        Assertions.assertTrue("Should have at least 2 items for testing", unsoldItems.size() >= 2);
         
         logger.info("Step 1: Selected 2 unsold items for testing:");
         for (FeedItem item : unsoldItems) {
@@ -1421,36 +1376,36 @@ public class KeystoneGraphqlTest {
         
         // Step 4: Verify both items were published and have inventory of 1
         List<Product> productsAfterInitialSync = shopifyApiService.getAllProducts();
-        Assert.assertEquals("Should have created 2 products", 2, productsAfterInitialSync.size());
+        Assertions.assertEquals("Should have created 2 products", 2, productsAfterInitialSync.size());
         
         logger.info("Step 3: Verifying initial inventory levels (should be 1 for both items)...");
         Map<String, String> itemToProductMapping = new HashMap<>();
         
         for (FeedItem item : unsoldItems) {
-            Assert.assertNotNull("Item should have Shopify ID after sync", item.getShopifyItemId());
+            Assertions.assertNotNull("Item should have Shopify ID after sync", item.getShopifyItemId());
             
             // Find the product in Shopify
             Product product = shopifyApiService.getProductByProductId(item.getShopifyItemId());
-            Assert.assertNotNull("Product should exist in Shopify", product);
-            Assert.assertEquals("Product should have ACTIVE status", "ACTIVE", product.getStatus());
+            Assertions.assertNotNull("Product should exist in Shopify", product);
+            Assertions.assertEquals("Product should have ACTIVE status", "ACTIVE", product.getStatus());
             
             // Store mapping for later use
             itemToProductMapping.put(item.getWebTagNumber(), item.getShopifyItemId());
             
             // Verify inventory level
-            Assert.assertFalse("Product should have variants", product.getVariants().isEmpty());
+            Assertions.assertFalse("Product should have variants", product.getVariants().isEmpty());
             Variant variant = product.getVariants().get(0);
-            Assert.assertNotNull("Variant should have inventory item ID", variant.getInventoryItemId());
+            Assertions.assertNotNull("Variant should have inventory item ID", variant.getInventoryItemId());
             
             // Get inventory levels for this variant
             List<InventoryLevel> inventoryLevels = shopifyApiService.getInventoryLevelByInventoryItemId(variant.getInventoryItemId());
-            Assert.assertNotNull("Should have inventory levels", inventoryLevels);
-            Assert.assertFalse("Should have at least one inventory level", inventoryLevels.isEmpty());
+            Assertions.assertNotNull("Should have inventory levels", inventoryLevels);
+            Assertions.assertFalse("Should have at least one inventory level", inventoryLevels.isEmpty());
             
             // Verify inventory quantity is 1
             InventoryLevel mainInventoryLevel = inventoryLevels.get(0);
-            Assert.assertNotNull("Inventory level should have available quantity", mainInventoryLevel.getAvailable());
-            Assert.assertEquals("Initial inventory should be 1", "1", mainInventoryLevel.getAvailable());
+            Assertions.assertNotNull("Inventory level should have available quantity", mainInventoryLevel.getAvailable());
+            Assertions.assertEquals("Initial inventory should be 1", "1", mainInventoryLevel.getAvailable());
             
             logger.info("✅ Verified initial inventory for " + item.getWebTagNumber() + 
                        " (Product ID: " + product.getId() + ", Inventory: " + mainInventoryLevel.getAvailable() + ")");
@@ -1485,34 +1440,34 @@ public class KeystoneGraphqlTest {
         
         // Verify the sold item has inventory of 0
         Product soldProduct = shopifyApiService.getProductByProductId(soldItem.getShopifyItemId());
-        Assert.assertNotNull("Sold product should still exist in Shopify", soldProduct);
-        Assert.assertEquals("Sold product should maintain ACTIVE status", "ACTIVE", soldProduct.getStatus());
+        Assertions.assertNotNull("Sold product should still exist in Shopify", soldProduct);
+        Assertions.assertEquals("Sold product should maintain ACTIVE status", "ACTIVE", soldProduct.getStatus());
         
         Variant soldVariant = soldProduct.getVariants().get(0);
         List<InventoryLevel> soldInventoryLevels = shopifyApiService.getInventoryLevelByInventoryItemId(soldVariant.getInventoryItemId());
-        Assert.assertNotNull("Sold product should have inventory levels", soldInventoryLevels);
-        Assert.assertFalse("Sold product should have at least one inventory level", soldInventoryLevels.isEmpty());
+        Assertions.assertNotNull("Sold product should have inventory levels", soldInventoryLevels);
+        Assertions.assertFalse("Sold product should have at least one inventory level", soldInventoryLevels.isEmpty());
         
         InventoryLevel soldInventoryLevel = soldInventoryLevels.get(0);
-        Assert.assertNotNull("Sold product inventory level should have available quantity", soldInventoryLevel.getAvailable());
-        Assert.assertEquals("Sold item inventory should be 0", "0", soldInventoryLevel.getAvailable());
+        Assertions.assertNotNull("Sold product inventory level should have available quantity", soldInventoryLevel.getAvailable());
+        Assertions.assertEquals("Sold item inventory should be 0", "0", soldInventoryLevel.getAvailable());
         
         logger.info("✅ Verified sold item inventory: " + soldItem.getWebTagNumber() + 
                    " (Product ID: " + soldProduct.getId() + ", Inventory: " + soldInventoryLevel.getAvailable() + ")");
         
         // Verify the unsold item still has inventory of 1
         Product unsoldProduct = shopifyApiService.getProductByProductId(itemToRemainUnsold.getShopifyItemId());
-        Assert.assertNotNull("Unsold product should still exist in Shopify", unsoldProduct);
-        Assert.assertEquals("Unsold product should maintain ACTIVE status", "ACTIVE", unsoldProduct.getStatus());
+        Assertions.assertNotNull("Unsold product should still exist in Shopify", unsoldProduct);
+        Assertions.assertEquals("Unsold product should maintain ACTIVE status", "ACTIVE", unsoldProduct.getStatus());
         
         Variant unsoldVariant = unsoldProduct.getVariants().get(0);
         List<InventoryLevel> unsoldInventoryLevels = shopifyApiService.getInventoryLevelByInventoryItemId(unsoldVariant.getInventoryItemId());
-        Assert.assertNotNull("Unsold product should have inventory levels", unsoldInventoryLevels);
-        Assert.assertFalse("Unsold product should have at least one inventory level", unsoldInventoryLevels.isEmpty());
+        Assertions.assertNotNull("Unsold product should have inventory levels", unsoldInventoryLevels);
+        Assertions.assertFalse("Unsold product should have at least one inventory level", unsoldInventoryLevels.isEmpty());
         
         InventoryLevel unsoldInventoryLevel = unsoldInventoryLevels.get(0);
-        Assert.assertNotNull("Unsold product inventory level should have available quantity", unsoldInventoryLevel.getAvailable());
-        Assert.assertEquals("Unsold item inventory should remain 1", "1", unsoldInventoryLevel.getAvailable());
+        Assertions.assertNotNull("Unsold product inventory level should have available quantity", unsoldInventoryLevel.getAvailable());
+        Assertions.assertEquals("Unsold item inventory should remain 1", "1", unsoldInventoryLevel.getAvailable());
         
         logger.info("✅ Verified unsold item inventory: " + itemToRemainUnsold.getWebTagNumber() + 
                    " (Product ID: " + unsoldProduct.getId() + ", Inventory: " + unsoldInventoryLevel.getAvailable() + ")");
@@ -1521,12 +1476,12 @@ public class KeystoneGraphqlTest {
         logger.info("Step 7: Final verification of inventory management...");
         
         List<Product> finalProducts = shopifyApiService.getAllProducts();
-        Assert.assertEquals("Should still have 2 products after inventory changes", 2, finalProducts.size());
+        Assertions.assertEquals("Should still have 2 products after inventory changes", 2, finalProducts.size());
         
         // Verify collection associations are maintained
         for (Product product : finalProducts) {
             List<Collect> collections = shopifyApiService.getCollectsForProductId(product.getId());
-            Assert.assertTrue("Product should maintain collection associations", collections.size() > 0);
+            Assertions.assertTrue("Product should maintain collection associations", collections.size() > 0);
             logger.info("Product " + product.getId() + " maintains " + collections.size() + " collection association(s)");
         }
         
@@ -1562,7 +1517,7 @@ public class KeystoneGraphqlTest {
         
         // Step 1: Get top feed items and find one with multiple images
         List<FeedItem> topFeedItems = getTopFeedItems(20);
-        Assert.assertTrue("Should have at least 20 items from live feed", topFeedItems.size() >= 20);
+        Assertions.assertTrue("Should have at least 20 items from live feed", topFeedItems.size() >= 20);
         
         FeedItem itemWithMultipleImages = null;
         for (FeedItem item : topFeedItems) {
@@ -1572,8 +1527,8 @@ public class KeystoneGraphqlTest {
             }
         }
         
-        Assert.assertNotNull("Should find an item with multiple images", itemWithMultipleImages);
-        Assert.assertTrue("Selected item should have more than 1 image", 
+        Assertions.assertNotNull("Should find an item with multiple images", itemWithMultipleImages);
+        Assertions.assertTrue("Selected item should have more than 1 image", 
                          itemWithMultipleImages.getImageCount() > 1);
         
         logger.info("Step 1: Selected item with multiple images:");
@@ -1593,15 +1548,15 @@ public class KeystoneGraphqlTest {
         logger.info("✅ Initial sync completed in " + (endTime1 - startTime1) + "ms");
         
         // Step 3: Verify the product was created with multiple images
-        Assert.assertNotNull("Item should have Shopify ID after sync", itemWithMultipleImages.getShopifyItemId());
+        Assertions.assertNotNull("Item should have Shopify ID after sync", itemWithMultipleImages.getShopifyItemId());
         
         Product initialProduct = shopifyApiService.getProductByProductId(itemWithMultipleImages.getShopifyItemId());
-        Assert.assertNotNull("Product should exist in Shopify", initialProduct);
-        Assert.assertEquals("Product should have ACTIVE status", "ACTIVE", initialProduct.getStatus());
+        Assertions.assertNotNull("Product should exist in Shopify", initialProduct);
+        Assertions.assertEquals("Product should have ACTIVE status", "ACTIVE", initialProduct.getStatus());
         
         List<Image> initialImages = shopifyApiService.getImagesByProduct(itemWithMultipleImages.getShopifyItemId());
-        Assert.assertNotNull("Product should have images", initialImages);
-        Assert.assertTrue("Product should have multiple images", initialImages.size() > 1);
+        Assertions.assertNotNull("Product should have images", initialImages);
+        Assertions.assertTrue("Product should have multiple images", initialImages.size() > 1);
         
         int originalImageCount = initialImages.size();
         logger.info("✅ Verified initial product creation:");
@@ -1638,7 +1593,7 @@ public class KeystoneGraphqlTest {
         logger.info("- Updated Description: " + modifiedItem.getWebDescriptionShort());
         
         // Verify the modified item now has only 1 image
-        Assert.assertEquals("Modified item should have exactly 1 image", 1, modifiedItem.getImageCount());
+        Assertions.assertEquals("Modified item should have exactly 1 image", 1, modifiedItem.getImageCount());
         
         // Step 5: Sync the modified item (should trigger image deletion and recreation)
         logger.info("Step 4: Syncing modified item (should delete " + originalImageCount + 
@@ -1654,15 +1609,15 @@ public class KeystoneGraphqlTest {
         
         // Use the original Shopify ID to get the updated product
         String productId = itemWithMultipleImages.getShopifyItemId();
-        Assert.assertNotNull("Product ID should not be null", productId);
+        Assertions.assertNotNull("Product ID should not be null", productId);
         
         Product updatedProduct = shopifyApiService.getProductByProductId(productId);
-        Assert.assertNotNull("Updated product should exist in Shopify", updatedProduct);
-        Assert.assertEquals("Updated product should maintain ACTIVE status", "ACTIVE", updatedProduct.getStatus());
+        Assertions.assertNotNull("Updated product should exist in Shopify", updatedProduct);
+        Assertions.assertEquals("Updated product should maintain ACTIVE status", "ACTIVE", updatedProduct.getStatus());
         
         List<Image> finalImages = shopifyApiService.getImagesByProduct(productId);
-        Assert.assertNotNull("Updated product should have images", finalImages);
-        Assert.assertEquals("Product should now have exactly 1 image", 1, finalImages.size());
+        Assertions.assertNotNull("Updated product should have images", finalImages);
+        Assertions.assertEquals("Product should now have exactly 1 image", 1, finalImages.size());
         
         // Check if the updated description was applied (optional due to possible inventory side effects)
         boolean descriptionUpdated = updatedProduct.getBodyHtml().contains("[Updated]");
@@ -1696,7 +1651,7 @@ public class KeystoneGraphqlTest {
         
         // Step 8: Verify collections are maintained
         List<Collect> productCollections = shopifyApiService.getCollectsForProductId(productId);
-        Assert.assertTrue("Product should maintain collection associations", productCollections.size() > 0);
+        Assertions.assertTrue("Product should maintain collection associations", productCollections.size() > 0);
         
         logger.info("✅ Verified collection associations maintained: " + productCollections.size());
         

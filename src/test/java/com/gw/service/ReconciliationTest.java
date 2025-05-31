@@ -5,16 +5,15 @@ import com.gw.services.ReconciliationService.ReconciliationResult;
 import com.gw.services.ReconciliationService.ReconciliationAnalysis;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 /**
- * Actual reconciliation test that MODIFIES data
+ * Actual reconciliation test that MODIFIES data - Profile Aware
  * 
  * This test performs actual reconciliation work including:
  * - Deleting extra products from Shopify
@@ -24,19 +23,19 @@ import org.springframework.test.context.junit4.SpringRunner;
  * 
  * ⚠️ WARNING: THIS TEST MODIFIES DATA
  * 
- * Uses keystone-dev profile for safe testing with development environment.
- * For production reconciliation, use the perform-reconciliation-prod Maven profile.
+ * PROFILE AWARE: Uses the profile specified by the Maven profile:
+ * - Development: keystone-dev (safer for testing)
+ * - Production: keystone-prod (live production data - DANGEROUS)
  * 
  * Usage:
- * Development: mvn test -Pperform-reconciliation
- * Production:  mvn test -Pperform-reconciliation-prod
- * Force mode:  mvn test -Pforce-reconciliation[-prod]
+ * Development: mvn test -Pperform-reconciliation (uses keystone-dev)
+ * Production:  mvn test -Pperform-reconciliation-prod (uses keystone-prod)
+ * Force mode:  mvn test -P[force-reconciliation|force-reconciliation-prod]
  * 
  * @author jyuan
  */
-@RunWith(SpringRunner.class)
+@SpringJUnitConfig
 @SpringBootTest
-@ActiveProfiles("keystone-dev")  // Use development profile for safer testing
 public class ReconciliationTest {
 
     private static final Logger logger = LogManager.getLogger(ReconciliationTest.class);
@@ -49,10 +48,24 @@ public class ReconciliationTest {
 
     @Test
     public void testReconciliation() throws Exception {
+        // Detect active profile from system properties (set by Maven profiles)
+        String activeProfile = System.getProperty("spring.profiles.active", "keystone-dev");
+        boolean isProduction = activeProfile.contains("keystone-prod");
+        
         logger.info("=== RECONCILIATION TEST (MODIFIES DATA) ===");
         logger.warn("⚠️ WARNING: THIS TEST WILL MODIFY DATA");
-        logger.info("📊 Using keystone-dev profile for safe testing");
-        logger.info("💡 For production reconciliation, use: mvn test -Pperform-reconciliation-prod");
+        logger.info("📊 Active Profile: {}", activeProfile);
+        
+        if (isProduction) {
+            logger.error("🚨🚨🚨 PRODUCTION MODE - WILL MODIFY LIVE PRODUCTION DATA 🚨🚨🚨");
+            logger.error("🚨🚨🚨 USE EXTREME CAUTION - LIVE SHOPIFY AND DATABASE 🚨🚨🚨");
+        } else {
+            logger.info("🛡️ DEVELOPMENT MODE - Safe for testing");
+        }
+        
+        logger.info("💡 Profile Usage:");
+        logger.info("  Development: mvn test -Pperform-reconciliation");
+        logger.info("  Production:  mvn test -Pperform-reconciliation-prod");
         logger.info("Force mode: {}", forceReconciliation);
         logger.info("");
         
@@ -91,21 +104,45 @@ public class ReconciliationTest {
     }
     
     private void confirmReconciliationIntent() {
-        logger.warn("⚠️ ⚠️ ⚠️  RECONCILIATION CONFIRMATION  ⚠️ ⚠️ ⚠️");
-        logger.warn("This operation will modify production data:");
-        logger.warn("  - Delete products from Shopify");
-        logger.warn("  - Remove items from database");  
-        logger.warn("  - Update Shopify IDs in database");
-        logger.warn("  - Mark items for image re-sync");
-        logger.warn("");
-        logger.warn("If this is not intended, stop the test now!");
-        logger.warn("Continue only if you've reviewed the analysis first!");
-        logger.warn("⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️");
+        // Detect active profile to provide appropriate warnings
+        String activeProfile = System.getProperty("spring.profiles.active", "keystone-dev");
+        boolean isProduction = activeProfile.contains("keystone-prod");
+        
+        if (isProduction) {
+            logger.error("🚨🚨🚨 PRODUCTION RECONCILIATION CONFIRMATION 🚨🚨🚨");
+            logger.error("This operation will modify LIVE PRODUCTION data:");
+            logger.error("  - Delete products from PRODUCTION Shopify");
+            logger.error("  - Remove items from PRODUCTION database");  
+            logger.error("  - Update Shopify IDs in PRODUCTION database");
+            logger.error("  - Mark items for image re-sync in PRODUCTION");
+            logger.error("");
+            logger.error("🚨 LIVE PRODUCTION SHOPIFY: https://max-abbott.myshopify.com");
+            logger.error("🚨 LIVE PRODUCTION DATABASE: Production RDS instance");
+            logger.error("");
+            logger.error("IF THIS IS NOT INTENDED, STOP THE TEST NOW!");
+            logger.error("Continue only if you've carefully reviewed the analysis first!");
+            logger.error("🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨");
+        } else {
+            logger.warn("⚠️ ⚠️ ⚠️  DEVELOPMENT RECONCILIATION CONFIRMATION  ⚠️ ⚠️ ⚠️");
+            logger.warn("This operation will modify DEVELOPMENT data:");
+            logger.warn("  - Delete products from DEV Shopify");
+            logger.warn("  - Remove items from DEV database");  
+            logger.warn("  - Update Shopify IDs in DEV database");
+            logger.warn("  - Mark items for image re-sync");
+            logger.warn("");
+            logger.warn("🛡️ Development environment - safer for testing");
+            logger.warn("Continue only if you've reviewed the analysis first!");
+            logger.warn("⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️");
+        }
+        
         logger.info("");
         
-        // Add a small delay to allow manual interruption
+        // Add a delay to allow manual interruption, longer for production
+        int delaySeconds = isProduction ? 10 : 3;
+        logger.info("Proceeding in {} seconds... (Ctrl+C to cancel)", delaySeconds);
+        
         try {
-            Thread.sleep(3000);
+            Thread.sleep(delaySeconds * 1000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Test interrupted - reconciliation cancelled");
