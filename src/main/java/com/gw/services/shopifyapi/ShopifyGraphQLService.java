@@ -34,6 +34,8 @@ import com.gw.services.shopifyapi.objects.Location;
 import com.gw.services.shopifyapi.objects.Product;
 import com.gw.services.shopifyapi.objects.Variant;
 import com.gw.services.shopifyapi.objects.Metafield;
+import com.gw.services.shopifyapi.objects.Option;
+import com.gw.services.shopifyapi.objects.InventoryLevels;
 
 /**
  * Shopify GraphQL API Service
@@ -176,6 +178,12 @@ public class ShopifyGraphQLService {
                     createdAt
                     updatedAt
                     publishedAt
+                    options {
+                        id
+                        name
+                        position
+                        values
+                    }
                     images(first: 10) {
                         edges {
                             node {
@@ -265,6 +273,15 @@ public class ShopifyGraphQLService {
                                 createdAt
                                 updatedAt
                                 publishedAt
+                                images(first: 10) {
+                                    edges {
+                                        node {
+                                            id
+                                            url
+                                            altText
+                                        }
+                                    }
+                                }
                                 variants(first: 100) {
                                     edges {
                                         node {
@@ -272,9 +289,17 @@ public class ShopifyGraphQLService {
                                             title
                                             sku
                                             price
+                                            compareAtPrice
+                                            weight
+                                            weightUnit
                                             inventoryItem {
                                                 id
                                             }
+                                            inventoryPolicy
+                                            requiresShipping
+                                            taxable
+                                            barcode
+                                            position
                                         }
                                     }
                                 }
@@ -336,6 +361,7 @@ public class ShopifyGraphQLService {
                         vendor
                         productType
                         tags
+                        updatedAt
                         images(first: 10) {
                             edges {
                                 node {
@@ -405,6 +431,7 @@ public class ShopifyGraphQLService {
                     product {
                         id
                         title
+                        updatedAt
                         images(first: 10) {
                             edges {
                                 node {
@@ -817,6 +844,9 @@ public class ShopifyGraphQLService {
         if (productNode.has("publishedAt") && !productNode.get("publishedAt").isNull()) {
             product.setPublishedAt(productNode.get("publishedAt").asText());
         }
+        if (productNode.has("updatedAt") && !productNode.get("updatedAt").isNull()) {
+            product.setUpdatedAt(productNode.get("updatedAt").asText());
+        }
         if (productNode.has("status") && !productNode.get("status").isNull()) {
             product.setStatus(productNode.get("status").asText());
         }
@@ -845,6 +875,17 @@ public class ShopifyGraphQLService {
             product.setImages(images);
         }
         
+        // Convert options
+        if (productNode.has("options")) {
+            JsonNode optionsNode = productNode.get("options");
+            List<Option> options = new ArrayList<>();
+            for (JsonNode optionNode : optionsNode) {
+                Option option = convertJsonToOption(optionNode);
+                options.add(option);
+            }
+            product.setOptions(options);
+        }
+        
         return product;
     }
     
@@ -865,7 +906,28 @@ public class ShopifyGraphQLService {
         }
         if (variantNode.has("inventoryItem") && variantNode.get("inventoryItem").has("id")) {
             String inventoryItemGid = variantNode.get("inventoryItem").get("id").asText();
-            variant.setInventoryItemId(extractIdFromGid(inventoryItemGid));
+            String inventoryItemId = extractIdFromGid(inventoryItemGid);
+            variant.setInventoryItemId(inventoryItemId);
+            
+            // CRITICAL FIX: Populate inventory levels when retrieving existing variants
+            // This ensures that mergeInventoryLevels receives proper existing inventory data
+            try {
+                List<InventoryLevel> inventoryLevelsList = getInventoryLevelByInventoryItemId(inventoryItemId);
+                if (inventoryLevelsList != null && !inventoryLevelsList.isEmpty()) {
+                    // Convert List<InventoryLevel> to InventoryLevels wrapper for compatibility
+                    InventoryLevels inventoryLevels = new InventoryLevels();
+                    for (InventoryLevel level : inventoryLevelsList) {
+                        inventoryLevels.addInventoryLevel(level);
+                    }
+                    variant.setInventoryLevels(inventoryLevels);
+                    
+                    logger.debug("✅ Populated " + inventoryLevelsList.size() + " inventory levels for variant SKU: " + variant.getSku());
+                } else {
+                    logger.warn("⚠️ No inventory levels found for inventory item: " + inventoryItemId + " (SKU: " + variant.getSku() + ")");
+                }
+            } catch (Exception e) {
+                logger.error("❌ Failed to retrieve inventory levels for inventory item: " + inventoryItemId + " (SKU: " + variant.getSku() + ")", e);
+            }
         }
         
         return variant;
@@ -880,11 +942,75 @@ public class ShopifyGraphQLService {
         if (imageNode.has("url")) {
             image.setSrc(imageNode.get("url").asText());
         }
-        if (imageNode.has("altText")) {
-            image.addAltTag(imageNode.get("altText").asText());
+        if (imageNode.has("altText") && !imageNode.get("altText").isNull()) {
+            // Convert altText to metafield format for compatibility
+            Metafield altMetafield = new Metafield();
+            altMetafield.setNamespace("tags");
+            altMetafield.setKey("alt");
+            altMetafield.setValue(imageNode.get("altText").asText());
+            altMetafield.setType("single_line_text_field");
+            
+            List<Metafield> metafields = new ArrayList<>();
+            metafields.add(altMetafield);
+            image.setMetafields(metafields);
         }
         
         return image;
+    }
+    
+    private Image convertJsonToMediaImage(JsonNode mediaImageNode) {
+        Image image = new Image();
+        
+        // Extract the media ID (this will be in MediaImage format)
+        String gid = mediaImageNode.get("id").asText();
+        image.setId(extractIdFromGid(gid));
+        
+        // Get image data from nested image object
+        if (mediaImageNode.has("image")) {
+            JsonNode imageData = mediaImageNode.get("image");
+            
+            if (imageData.has("url")) {
+                image.setSrc(imageData.get("url").asText());
+            }
+            if (imageData.has("altText") && !imageData.get("altText").isNull()) {
+                // Convert altText to metafield format for compatibility
+                Metafield altMetafield = new Metafield();
+                altMetafield.setNamespace("tags");
+                altMetafield.setKey("alt");
+                altMetafield.setValue(imageData.get("altText").asText());
+                altMetafield.setType("single_line_text_field");
+                
+                List<Metafield> metafields = new ArrayList<>();
+                metafields.add(altMetafield);
+                image.setMetafields(metafields);
+            }
+        }
+        
+        return image;
+    }
+    
+    private Option convertJsonToOption(JsonNode optionNode) {
+        Option option = new Option();
+        
+        String gid = optionNode.get("id").asText();
+        option.setId(extractIdFromGid(gid));
+        
+        if (optionNode.has("name")) {
+            option.setName(optionNode.get("name").asText());
+        }
+        if (optionNode.has("position")) {
+            option.setPosition(String.valueOf(optionNode.get("position").asInt()));
+        }
+        if (optionNode.has("values")) {
+            JsonNode valuesNode = optionNode.get("values");
+            List<String> values = new ArrayList<>();
+            for (JsonNode valueNode : valuesNode) {
+                values.add(valueNode.asText());
+            }
+            option.setValues(values);
+        }
+        
+        return option;
     }
     
     private Location convertJsonToLocation(JsonNode locationNode) {
@@ -990,7 +1116,7 @@ public class ShopifyGraphQLService {
         // Note: Images cannot be added directly in ProductInput via GraphQL
         // They must be added separately using productImageCreate mutation after product creation
         
-        // Handle variants
+        // Handle variants with COMPLETE inventory management settings
         if (product.getVariants() != null && !product.getVariants().isEmpty()) {
             List<Map<String, Object>> variants = new ArrayList<>();
             for (Variant variant : product.getVariants()) {
@@ -1004,6 +1130,28 @@ public class ShopifyGraphQLService {
                 }
                 if (variant.getPrice() != null) {
                     variantInput.put("price", variant.getPrice());
+                }
+                
+                // CRITICAL FIX: Include inventory management settings for proper inventory tracking
+                if (variant.getInventoryManagement() != null) {
+                    variantInput.put("inventoryManagement", variant.getInventoryManagement().toUpperCase());
+                }
+                if (variant.getInventoryPolicy() != null) {
+                    variantInput.put("inventoryPolicy", variant.getInventoryPolicy().toUpperCase());
+                }
+                if (variant.getTaxable() != null) {
+                    variantInput.put("taxable", Boolean.parseBoolean(variant.getTaxable()));
+                }
+                
+                // Additional inventory-related fields
+                if (variant.getRequiresShipping() != null) {
+                    variantInput.put("requiresShipping", Boolean.parseBoolean(variant.getRequiresShipping()));
+                }
+                if (variant.getWeight() != null) {
+                    variantInput.put("weight", Double.parseDouble(variant.getWeight()));
+                }
+                if (variant.getWeightUnit() != null) {
+                    variantInput.put("weightUnit", variant.getWeightUnit().toUpperCase());
                 }
                 
                 variants.add(variantInput);
@@ -1118,18 +1266,22 @@ public class ShopifyGraphQLService {
     }
     
     /**
-     * Get images by product ID using GraphQL
+     * Get images by product ID using GraphQL (media query for compatibility with productDeleteMedia)
      */
     public List<Image> getImagesByProduct(String productId) {
         String query = """
-            query getProductImages($id: ID!) {
+            query getProductMedia($id: ID!) {
                 product(id: $id) {
-                    images(first: 250) {
+                    media(first: 250) {
                         edges {
                             node {
-                                id
-                                url
-                                altText
+                                ... on MediaImage {
+                                    id
+                                    image {
+                                        url
+                                        altText
+                                    }
+                                }
                             }
                         }
                     }
@@ -1148,12 +1300,14 @@ public class ShopifyGraphQLService {
                 return new ArrayList<>();
             }
             
-            JsonNode imagesNode = productNode.get("images").get("edges");
+            JsonNode mediaNode = productNode.get("media").get("edges");
             List<Image> images = new ArrayList<>();
-            for (JsonNode edge : imagesNode) {
-                JsonNode imageNode = edge.get("node");
-                Image image = convertJsonToImage(imageNode);
-                images.add(image);
+            for (JsonNode edge : mediaNode) {
+                JsonNode mediaImageNode = edge.get("node");
+                if (mediaImageNode.has("image")) {
+                    Image image = convertJsonToMediaImage(mediaImageNode);
+                    images.add(image);
+                }
             }
             
             return images;
@@ -1177,9 +1331,9 @@ public class ShopifyGraphQLService {
      */
     private void deleteImageById(String productId, String imageId) {
         String mutation = """
-            mutation productImageDelete($productId: ID!, $id: ID!) {
-                productImageDelete(productId: $productId, id: $id) {
-                    deletedImageId
+            mutation productDeleteMedia($productId: ID!, $mediaIds: [ID!]!) {
+                productDeleteMedia(productId: $productId, mediaIds: $mediaIds) {
+                    deletedProductImageIds
                     userErrors {
                         field
                         message
@@ -1190,20 +1344,25 @@ public class ShopifyGraphQLService {
         
         Map<String, Object> variables = new HashMap<>();
         variables.put("productId", "gid://shopify/Product/" + productId);
-        variables.put("id", "gid://shopify/ProductImage/" + imageId);
+        variables.put("mediaIds", List.of("gid://shopify/MediaImage/" + imageId));
         
         try {
             JsonNode data = executeGraphQLQuery(mutation, variables);
-            JsonNode imageDelete = data.get("productImageDelete");
+            JsonNode mediaDelete = data.get("productDeleteMedia");
             
             // Check for user errors
-            JsonNode userErrors = imageDelete.get("userErrors");
+            JsonNode userErrors = mediaDelete.get("userErrors");
             if (userErrors != null && userErrors.size() > 0) {
-                logger.error("Image deletion failed with user errors: " + userErrors.toString());
+                logger.error("Media deletion failed with user errors: " + userErrors.toString());
+            } else {
+                JsonNode deletedIds = mediaDelete.get("deletedProductImageIds");
+                if (deletedIds != null && deletedIds.size() > 0) {
+                    logger.info("Successfully deleted image ID: " + deletedIds.get(0).asText());
+                }
             }
             
         } catch (Exception e) {
-            logger.error("Got error while trying to delete Images By Product Id:" 
+            logger.error("Got error while trying to delete Media By Product Id:" 
                 + productId + " Image Id: " + imageId, e);
         }
     }
@@ -1290,6 +1449,8 @@ public class ShopifyGraphQLService {
      * Get inventory level by inventory item ID using GraphQL
      */
     public List<InventoryLevel> getInventoryLevelByInventoryItemId(String id) {
+        logger.debug("Getting inventory levels for inventory item ID: " + id);
+        
         String query = """
             query getInventoryLevels($inventoryItemId: ID!) {
                 inventoryItem(id: $inventoryItemId) {
@@ -1322,19 +1483,22 @@ public class ShopifyGraphQLService {
             JsonNode itemNode = data.get("inventoryItem");
             
             if (itemNode == null || itemNode.isNull()) {
-                logger.warn("Inventory item not found with ID: " + id);
+                logger.warn("❌ Inventory item not found with ID: " + id);
+                logger.warn("❌ This may indicate the inventory item was created with REST API and has compatibility issues");
                 return new ArrayList<>();
             }
             
             JsonNode inventoryLevelsNode = itemNode.get("inventoryLevels");
             if (inventoryLevelsNode == null || inventoryLevelsNode.isNull()) {
-                logger.warn("No inventory levels found for inventory item: " + id);
+                logger.warn("❌ No inventory levels node found for inventory item: " + id);
+                logger.warn("❌ This may indicate inventory was not properly set up during product creation");
                 return new ArrayList<>();
             }
             
             JsonNode levelsNode = inventoryLevelsNode.get("edges");
             if (levelsNode == null || levelsNode.isNull()) {
-                logger.warn("No inventory level edges found for inventory item: " + id);
+                logger.warn("❌ No inventory level edges found for inventory item: " + id);
+                logger.warn("❌ This indicates the inventory item exists but has no location-specific levels");
                 return new ArrayList<>();
             }
             
@@ -1347,11 +1511,17 @@ public class ShopifyGraphQLService {
                 level.setInventoryItemId(id);
                 
                 levels.add(level);
+                
+                logger.debug("✅ Retrieved inventory level - LocationId: " + level.getLocationId() + 
+                           ", InventoryItemId: " + level.getInventoryItemId() + 
+                           ", Available: " + level.getAvailable());
             }
             
+            logger.info("✅ Successfully retrieved " + levels.size() + " inventory levels for inventory item: " + id);
             return levels;
         } catch (Exception e) {
-            logger.error("Error getting inventory levels for inventory item: " + id, e);
+            logger.error("❌ Error getting inventory levels for inventory item: " + id, e);
+            logger.error("❌ This error may indicate REST vs GraphQL API compatibility issues");
             return new ArrayList<>();
         }
     }

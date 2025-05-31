@@ -9,8 +9,6 @@ public interface IShopifySyncService extends ISyncService {
 
 	void removeExtraItemsInDBAndInShopify();
 
-	void updateDB(FeedItemChangeSet changeSet) throws Exception;
-
 	FeedItemChangeSet compareFeedItemWithDB(final List<FeedItem> feedItems);
 
 	PredefinedCollection[] getPredefinedCollections();
@@ -26,5 +24,7 @@ public interface IShopifySyncService extends ISyncService {
 	 * @param item FeedItem to publish to Shopify
 	 */
 	void publishItemToShopify(FeedItem item);
+
+	void doSyncForFeedItems(List<FeedItem> feedItems) throws Exception;
 
 }

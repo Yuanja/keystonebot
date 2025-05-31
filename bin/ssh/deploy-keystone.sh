@@ -2,7 +2,7 @@
 
 ./status-keystone.sh
 ./recompile-keystone.sh
-./kill-feedsync.sh keystone-prod
+./kill-keystone.sh
 ./status-keystone.sh
 ./start-keystone.sh
 ./status-keystone.sh
