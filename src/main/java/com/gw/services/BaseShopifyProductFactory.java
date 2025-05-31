@@ -6,11 +6,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 import com.gw.domain.FeedItem;
-import com.gw.services.shopifyapi.ShopifyAPIService;
+import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.GoogleMetafield;
 import com.gw.services.shopifyapi.objects.Image;
 import com.gw.services.shopifyapi.objects.InventoryLevel;
@@ -21,6 +23,8 @@ import com.gw.services.shopifyapi.objects.Product;
 import com.gw.services.shopifyapi.objects.Variant;
 
 public class BaseShopifyProductFactory implements IShopifyProductFactory {
+    
+    private static final Logger logger = LogManager.getLogger(BaseShopifyProductFactory.class);
     
     @Value("${css.hosting.url.base}") 
     private String cssHostingUrlBase;
@@ -35,7 +39,7 @@ public class BaseShopifyProductFactory implements IShopifyProductFactory {
     private ImageService imageService;
     
     @Autowired 
-    private ShopifyAPIService shopifyApiService;
+    private ShopifyGraphQLService shopifyApiService;
     
     private List<Location> locations;
     
@@ -247,6 +251,17 @@ public class BaseShopifyProductFactory implements IShopifyProductFactory {
     
     @Override
 	public void mergeInventoryLevels(InventoryLevels existingInventoryLevels, InventoryLevels newInventoryLevels) {
+		// Handle null existingInventoryLevels gracefully (GraphQL API doesn't always populate this)
+		if (existingInventoryLevels == null || existingInventoryLevels.get() == null) {
+			logger.warn("Existing inventory levels are null - this is expected with GraphQL API for some scenarios");
+			return;
+		}
+		
+		if (newInventoryLevels == null || newInventoryLevels.get() == null) {
+			logger.warn("New inventory levels are null - skipping merge");
+			return;
+		}
+		
     	for (InventoryLevel invLevel : existingInventoryLevels.get()) {
     		InventoryLevel aNewInvLevel = newInventoryLevels.getByLocationId(invLevel.getLocationId());
     		if (aNewInvLevel != null) {
@@ -256,6 +271,17 @@ public class BaseShopifyProductFactory implements IShopifyProductFactory {
     }
     
     private void mergeOptions(List<Option> existingOptions, List<Option> newOptions) {
+        // Handle null existingOptions gracefully (GraphQL API doesn't always populate this)
+        if (existingOptions == null) {
+            logger.warn("Existing options are null - this is expected with GraphQL API for some scenarios");
+            return;
+        }
+        
+        if (newOptions == null) {
+            logger.warn("New options are null - skipping merge");
+            return;
+        }
+        
         Map<String, Option> existingOptionsByName = existingOptions.stream().collect(Collectors.toMap(Option::getName, c->c)); 
         newOptions.stream().forEach(c-> {
             if (existingOptionsByName.containsKey(c.getName())) {

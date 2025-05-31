@@ -1,0 +1,5298 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fmresultset xmlns="http://www.filemaker.com/xml/fmresultset" version="1.0">
+  <error code="0"/>
+  <product build="12/29/2022" name="FileMaker Web Publishing Engine" version="19.6.3.302"/>
+  <datasource database="DEG" date-format="MM/dd/yyyy" layout="WEB_XML" table="WEB_EXPORT" time-format="HH:mm:ss" timestamp-format="MM/dd/yyyy HH:mm:ss" total-count="9043"/>
+  <metadata>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_style" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_record_id" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="calculation"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_tag_number" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_tag_number_print" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_price_retail" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_price_sale" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_description_short" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_serial_number" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_case_serial_number" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_designer" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_metal_type" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_model" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_year" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_manufacturer_reference_number" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_diameter" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_movement" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_complications" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_case" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_dial" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_strap" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_buckle" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_warranty" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_box_papers" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_condition" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_status" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_image_path_1" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_image_path_2" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_image_path_3" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_image_path_4" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_image_path_5" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_status__c" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="yes" four-digit-year="no" global="no" max-repeat="1" name="SYS_record_created_timestamp" not-empty="no" numeric-only="no" result="timestamp" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_description_long" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_retail" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_retail" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_site_selected" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_category" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_price_retail_web" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_price_sale" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_price_ebay" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_ebay" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_image_path_6" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_image_path_7" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_image_path_8" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_image_path_9" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_retail__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_ebay__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_wholesale__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_chrono24__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_price_chronos__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="calculation"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_date_added_to_inventory" not-empty="no" numeric-only="no" result="date" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_keystone" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_keystone__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_price_keystone" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_notes" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="calculation"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_category" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_keystone__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_keystone" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_retail__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_chrono24" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_chrono24__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_ebay" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_ebay__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_ebay_or_ebayauction__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_ebayauction" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_ebayauction__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_wholesale__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_price_upon_request" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_dial_markers" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_band_material" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_bezel_type" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_case_crown" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_band_type" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_jomashop" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_flag_jomashop__c" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_price_retail" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_price_sale" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_price_wholesale" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_watch_general_dial" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="flag_test" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_memo_numbers" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_memo_number_current" not-empty="no" numeric-only="no" result="text" time-of-day="no" type="normal"/>
+    <field-definition auto-enter="no" four-digit-year="no" global="no" max-repeat="1" name="web_memo_price_current" not-empty="no" numeric-only="no" result="number" time-of-day="no" type="normal"/>
+  </metadata>
+  <resultset count="20" fetch-size="2000">
+    <record mod-id="2" record-id="190959955">
+      <field name="web_style">
+        <data>Gents</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190959955</data>
+      </field>
+      <field name="web_tag_number">
+        <data>100108</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>9100108</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>15500</data>
+      </field>
+      <field name="web_description_short">
+        <data>Patek Philippe Yellow Gold Automatic Bracelet Watch Ref. 3604</data>
+      </field>
+      <field name="web_serial_number">
+        <data>1302184/2754855</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Patek Philippe</data>
+      </field>
+      <field name="web_metal_type">
+        <data>18kt YG</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Vintage</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1976</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>3604J</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>36mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Automatic</data>
+      </field>
+      <field name="web_watch_complications">
+        <data/>
+      </field>
+      <field name="web_watch_case">
+        <data/>
+      </field>
+      <field name="web_watch_dial">
+        <data>Brown</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Yellow Gold Bracelet</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data>Deployant</data>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Archive Paper</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Excellent</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=46303&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=46304&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=46305&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=46306&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=46307&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>15500</data>
+      </field>
+      <field name="web_price_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=46308&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data/>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>04/16/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>18500</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>15500</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>15000</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>6347
+6391
+6747</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190959963">
+      <field name="web_style">
+        <data>Unisex</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190959963</data>
+      </field>
+      <field name="web_tag_number">
+        <data>103656</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>4103656</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>8800</data>
+      </field>
+      <field name="web_description_short">
+        <data>Rolex Yellow Gold Day-Date OysterQuartz Watch Ref. 19018, in Never Worn Condition</data>
+      </field>
+      <field name="web_serial_number">
+        <data>6607840</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Rolex</data>
+      </field>
+      <field name="web_metal_type">
+        <data>18k YG</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Day-Date</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1980</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>19018</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>36mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Quartz</data>
+      </field>
+      <field name="web_watch_complications">
+        <data/>
+      </field>
+      <field name="web_watch_case">
+        <data>Yellow Gold</data>
+      </field>
+      <field name="web_watch_dial">
+        <data>Gold</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Yellow Gold Bracelet (Fits up to 6 3/4 wrist)</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data>Deployant</data>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Leather Travel Case</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>New Old Stock</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=29940&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=51762&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=51763&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=51764&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=51765&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data>This Rolex Day-Date OysterQuartz, ref. 19018 is in phenomenal New-Old stock condition with a clean caseback sticker and phenomenal case and dial condition. </data>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>8800</data>
+      </field>
+      <field name="web_price_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=51766&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data/>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>08/19/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>10500</data>
+      </field>
+      <field name="web_notes">
+        <data>This Rolex Day-Date OysterQuartz, ref. 19018 is in phenomenal New-Old stock condition with a clean caseback sticker and phenomenal case and dial condition. </data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>8800</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>8500</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>6969</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190959970">
+      <field name="web_style">
+        <data>Unisex</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190959970</data>
+      </field>
+      <field name="web_tag_number">
+        <data>103395</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>4103395</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>5700</data>
+      </field>
+      <field name="web_description_short">
+        <data>Patek Philippe Yellow Gold Onyx Dial Strap Watch Ref. 3729</data>
+      </field>
+      <field name="web_serial_number">
+        <data/>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Patek Philippe</data>
+      </field>
+      <field name="web_metal_type">
+        <data>18k YG</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Vintage</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1970s</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>3729</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>31mm X 37mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Manual</data>
+      </field>
+      <field name="web_watch_complications">
+        <data/>
+      </field>
+      <field name="web_watch_case">
+        <data>Yellow Gold</data>
+      </field>
+      <field name="web_watch_dial">
+        <data>Onyx</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Original Black Patek Philippe Strap</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data>Deployant</data>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Handmade Leather Travel Pouch</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Very Good</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=41211&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=41212&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=41213&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=41214&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=41215&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>5700</data>
+      </field>
+      <field name="web_price_ebay">
+        <data>6800</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data/>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data>6800</data>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>07/30/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>6800</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>5700</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>5500</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>5567
+6124
+6215</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960042">
+      <field name="web_style">
+        <data>Gents</data>
+      </field>
+      <field name="web_flag">
+        <data>1</data>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960042</data>
+      </field>
+      <field name="web_tag_number">
+        <data>101896</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>2101896</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>67000</data>
+      </field>
+      <field name="web_description_short">
+        <data>Patek Philippe Rose Gold Annual Calendar Advanced Research Ref. 5350R</data>
+      </field>
+      <field name="web_serial_number">
+        <data>3686180</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Patek Philippe</data>
+      </field>
+      <field name="web_metal_type">
+        <data>18k RG</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Annual Calendar</data>
+      </field>
+      <field name="web_watch_year">
+        <data>2007</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>5350R</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>39mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Automatic</data>
+      </field>
+      <field name="web_watch_complications">
+        <data>Annual Calendar , moon phase, power reserve</data>
+      </field>
+      <field name="web_watch_case">
+        <data>Rose Gold</data>
+      </field>
+      <field name="web_watch_dial">
+        <data>Grey</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Black</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data>Deployant</data>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>B+P</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Excellent</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=40612&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=40613&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=40614&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=40616&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=40617&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail">
+        <data>1</data>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>67000</data>
+      </field>
+      <field name="web_price_ebay">
+        <data>65000</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data>1</data>
+      </field>
+      <field name="web_image_path_6">
+        <data/>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data>65000</data>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>06/12/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>65000</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_chrono24">
+        <data>1</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data>1</data>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>67000</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>65000</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>5733
+6572</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960045">
+      <field name="web_style">
+        <data>Gents</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960045</data>
+      </field>
+      <field name="web_tag_number">
+        <data>101886</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>1101886</data>
+      </field>
+      <field name="web_price_retail">
+        <data>310000</data>
+      </field>
+      <field name="web_price_sale">
+        <data>144000</data>
+      </field>
+      <field name="web_description_short">
+        <data>Jaeger LeCoultre Platinum Master Control Minute Repeater Baguette Diamond Watch</data>
+      </field>
+      <field name="web_serial_number">
+        <data>2419139</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Jaeger LeCoultre</data>
+      </field>
+      <field name="web_metal_type">
+        <data>Platinum</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Master Minute Repeater</data>
+      </field>
+      <field name="web_watch_year">
+        <data>Early 2000s</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>Q1646423</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>42mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Manual</data>
+      </field>
+      <field name="web_watch_complications">
+        <data>Minute Repeater</data>
+      </field>
+      <field name="web_watch_case">
+        <data>Platinum with Baguette Bezel</data>
+      </field>
+      <field name="web_watch_dial">
+        <data>Skeletonized</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Black</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data>Deployant</data>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Original Box and Certificate</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Mint</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=46117&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=53918&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=53919&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=53920&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=53921&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>144000</data>
+      </field>
+      <field name="web_price_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data/>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data/>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>06/12/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>160000</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data>310000</data>
+      </field>
+      <field name="web_price_sale">
+        <data>144000</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>140000</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>5073
+5668
+5900
+5995
+6336
+6407
+6542</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960065">
+      <field name="web_style">
+        <data>Gents</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960065</data>
+      </field>
+      <field name="web_tag_number">
+        <data>101701</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>0101701</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>11000</data>
+      </field>
+      <field name="web_description_short">
+        <data>Patek Philippe White Gold Automatic Oval Bracelet Watch Ref. 3589</data>
+      </field>
+      <field name="web_serial_number">
+        <data>523612</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Patek Philippe</data>
+      </field>
+      <field name="web_metal_type">
+        <data>18k WG</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Ellipse</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1970s</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>3589</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>33mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Automatic</data>
+      </field>
+      <field name="web_watch_complications">
+        <data/>
+      </field>
+      <field name="web_watch_case">
+        <data>White Gold</data>
+      </field>
+      <field name="web_watch_dial">
+        <data>Silver Dial with Black Numerals</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>White Gold Bracelet</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data>Clasp</data>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Leather Travel Case</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Excellent</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60374&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60375&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60376&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60377&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60378&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>11000</data>
+      </field>
+      <field name="web_price_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data/>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data/>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>06/05/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>13000</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>11000</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>10500</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>5677
+5756</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960071">
+      <field name="web_style">
+        <data>Gents</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960071</data>
+      </field>
+      <field name="web_tag_number">
+        <data>101601</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>2101601</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>113000</data>
+      </field>
+      <field name="web_description_short">
+        <data>Breguet Yellow Gold Minute Repeating Perpetual Subscription Set</data>
+      </field>
+      <field name="web_serial_number">
+        <data>079</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Breguet</data>
+      </field>
+      <field name="web_metal_type">
+        <data>18k YG</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Subscription Set</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1980s</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>N/A</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>36mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Manual</data>
+      </field>
+      <field name="web_watch_complications">
+        <data/>
+      </field>
+      <field name="web_watch_case">
+        <data>Yellow Gold</data>
+      </field>
+      <field name="web_watch_dial">
+        <data>Silver</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Original Brown Breguet Strap</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data>Tang</data>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Original Box</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Excellent</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=36539&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=59542&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=59543&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=59544&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=59545&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>113000</data>
+      </field>
+      <field name="web_price_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data/>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data/>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>06/02/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>120000</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>113000</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>110000</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>8023</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960132">
+      <field name="web_style">
+        <data>Gents</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960132</data>
+      </field>
+      <field name="web_tag_number">
+        <data>100739</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>1100739</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>26000</data>
+      </field>
+      <field name="web_description_short">
+        <data>A. Lange &amp; Sohne Yellow Gold Lange 1 Bracelet Watch Ref. 101.021</data>
+      </field>
+      <field name="web_serial_number">
+        <data>112766</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>A. Lange &amp; Sohne</data>
+      </field>
+      <field name="web_metal_type">
+        <data>18k YG</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Lange 1</data>
+      </field>
+      <field name="web_watch_year">
+        <data>2000s</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>101.021</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>38.5mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Manual</data>
+      </field>
+      <field name="web_watch_complications">
+        <data/>
+      </field>
+      <field name="web_watch_case">
+        <data>YG</data>
+      </field>
+      <field name="web_watch_dial">
+        <data>Cream</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Yellow Gold Bracelet</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data>Deployant</data>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Original Box</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Excellent</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=41767&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=41768&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=41769&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=41770&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=41771&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>26000</data>
+      </field>
+      <field name="web_price_ebay">
+        <data>30000</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data/>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data>30000</data>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>05/06/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>30000</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>26000</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>25000</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>5126
+6332</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960137">
+      <field name="web_style">
+        <data>Gents</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960137</data>
+      </field>
+      <field name="web_tag_number">
+        <data>100704</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>3100704</data>
+      </field>
+      <field name="web_price_retail">
+        <data>12500</data>
+      </field>
+      <field name="web_price_sale">
+        <data>9300</data>
+      </field>
+      <field name="web_description_short">
+        <data>Piaget Yellow Gold Oversized Beta Quartz Watch</data>
+      </field>
+      <field name="web_serial_number">
+        <data>204790</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Piaget</data>
+      </field>
+      <field name="web_metal_type">
+        <data>18k YG</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Vintage</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1970s</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>14101</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>34mm </data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Quartz</data>
+      </field>
+      <field name="web_watch_complications">
+        <data/>
+      </field>
+      <field name="web_watch_case">
+        <data/>
+      </field>
+      <field name="web_watch_dial">
+        <data>Grey</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Yellow Gold Bracelet (220mm)</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data/>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Leather Travel Case</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Excellent</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=59251&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=59252&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=59253&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=59254&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data/>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>9300</data>
+      </field>
+      <field name="web_price_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data/>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data/>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>05/05/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>15000</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data>12500</data>
+      </field>
+      <field name="web_price_sale">
+        <data>9300</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>9000</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data/>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960156">
+      <field name="web_style">
+        <data>Gents</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960156</data>
+      </field>
+      <field name="web_tag_number">
+        <data>100354</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>6100354</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>34000</data>
+      </field>
+      <field name="web_description_short">
+        <data>Patek Philippe Perpetual Calendar Yellow Gold Ref. 5039J</data>
+      </field>
+      <field name="web_serial_number">
+        <data>775860</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Patek Philippe</data>
+      </field>
+      <field name="web_metal_type">
+        <data>18k YG</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Perpetual Calendar</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1990s</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>5039J</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>35mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Automatic</data>
+      </field>
+      <field name="web_watch_complications">
+        <data>perpetual calendar, moon phase</data>
+      </field>
+      <field name="web_watch_case">
+        <data>YG</data>
+      </field>
+      <field name="web_watch_dial">
+        <data>Original Silver Dial with Perpetual Calendar</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Brown</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data>Tang</data>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Archive Paper on Order</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Mint</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60514&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60515&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60516&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60517&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60518&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>34000</data>
+      </field>
+      <field name="web_price_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60519&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data/>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>04/23/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>37500</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>34000</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>33000</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>5211
+5298</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960160">
+      <field name="web_style">
+        <data>Ladies</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960160</data>
+      </field>
+      <field name="web_tag_number">
+        <data>100321</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>5100321</data>
+      </field>
+      <field name="web_price_retail">
+        <data>8500</data>
+      </field>
+      <field name="web_price_sale">
+        <data>5700</data>
+      </field>
+      <field name="web_description_short">
+        <data>Rolex Yellow Gold Queen Midas Lapis Watch Ref. 4314</data>
+      </field>
+      <field name="web_serial_number">
+        <data>4283479</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Rolex</data>
+      </field>
+      <field name="web_metal_type">
+        <data>18k YG</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Queen Midas
+</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1975</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>4314</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>22mm X 19mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Manual</data>
+      </field>
+      <field name="web_watch_complications">
+        <data/>
+      </field>
+      <field name="web_watch_case">
+        <data/>
+      </field>
+      <field name="web_watch_dial">
+        <data>Lapis Lazuli</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Yellow Gold (Fits 6 3/4 wrist)</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data/>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Handmade Leather Travel Pouch</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Thick Case with Signs of Original Finish</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=42857&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=42858&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=42859&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=42860&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=42861&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>5700</data>
+      </field>
+      <field name="web_price_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data/>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data/>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>04/22/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>7500</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data>8500</data>
+      </field>
+      <field name="web_price_sale">
+        <data>5700</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>5500</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>6717
+6971
+7136
+7172</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960165">
+      <field name="web_style">
+        <data>Gents</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960165</data>
+      </field>
+      <field name="web_tag_number">
+        <data>100258</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>0100258</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>60000</data>
+      </field>
+      <field name="web_description_short">
+        <data>Audemars Piguet Jules Audemars Tourbillon Platinum</data>
+      </field>
+      <field name="web_serial_number">
+        <data>22</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data>D 39113</data>
+      </field>
+      <field name="web_designer">
+        <data>Audemars Piguet</data>
+      </field>
+      <field name="web_metal_type">
+        <data>Platinum</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Jules Audemars </data>
+      </field>
+      <field name="web_watch_year">
+        <data>1990s</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>25718PT</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>39mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Automatic</data>
+      </field>
+      <field name="web_watch_complications">
+        <data>Tourbillon</data>
+      </field>
+      <field name="web_watch_case">
+        <data>Platinum</data>
+      </field>
+      <field name="web_watch_dial">
+        <data>White</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Brown</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data>Tang</data>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Leather Travel Case</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Excellent</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=61167&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=61168&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=61169&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=61170&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=61171&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>60000</data>
+      </field>
+      <field name="web_price_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=61173&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_7">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=61174&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data/>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>04/21/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>75000</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>60000</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>58000</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>5135
+7130</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960166">
+      <field name="web_style">
+        <data>Gents</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960166</data>
+      </field>
+      <field name="web_tag_number">
+        <data>100257</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>9100257</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>14500</data>
+      </field>
+      <field name="web_description_short">
+        <data>Audemars Piguet Platinum Quantieme Perpetual Automatique Watch</data>
+      </field>
+      <field name="web_serial_number">
+        <data>28</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data>C 16330</data>
+      </field>
+      <field name="web_designer">
+        <data>Audemars Piguet</data>
+      </field>
+      <field name="web_metal_type">
+        <data>Platinum</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Vintage</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1990s</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>N/A</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>36mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Automatic</data>
+      </field>
+      <field name="web_watch_complications">
+        <data>Perpetual Calendar</data>
+      </field>
+      <field name="web_watch_case">
+        <data>Platinum</data>
+      </field>
+      <field name="web_watch_dial">
+        <data>Blue</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Grey</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data>Tang</data>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Travel Case</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Excellent</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=37770&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=37771&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=37772&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=37773&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=41314&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>14500</data>
+      </field>
+      <field name="web_price_ebay">
+        <data>18500</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data/>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data>18500</data>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>04/21/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>18500</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>14500</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>14000</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>5412
+5583
+5638
+5677
+5714
+5998</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960175">
+      <field name="web_style">
+        <data>Unisex</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960175</data>
+      </field>
+      <field name="web_tag_number">
+        <data>100131</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>3100131</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>4700</data>
+      </field>
+      <field name="web_description_short">
+        <data>Audemars Piguet Yellow Gold Automatic Strap Watch</data>
+      </field>
+      <field name="web_serial_number">
+        <data>85446</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Audemars Piguet</data>
+      </field>
+      <field name="web_metal_type">
+        <data>18k YG</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Vintage</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1960S</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>N/A</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>38mm X 42mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Automatic</data>
+      </field>
+      <field name="web_watch_complications">
+        <data/>
+      </field>
+      <field name="web_watch_case">
+        <data/>
+      </field>
+      <field name="web_watch_dial">
+        <data>Grey</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Black</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data/>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Travel Case</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Excellent</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=42922&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=42923&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=42924&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=42925&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=42926&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>4700</data>
+      </field>
+      <field name="web_price_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data/>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data/>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>04/17/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>6500</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>4700</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>4500</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data/>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960181">
+      <field name="web_style">
+        <data>Unisex</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960181</data>
+      </field>
+      <field name="web_tag_number">
+        <data>103839</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>0103839</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>10500</data>
+      </field>
+      <field name="web_description_short">
+        <data>Vintage Patek Philippe Platinum Rectangular Diamond Watch Ref. 425</data>
+      </field>
+      <field name="web_serial_number">
+        <data>618963/833120</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Patek Philippe</data>
+      </field>
+      <field name="web_metal_type">
+        <data>Platinum</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Vintage</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1950s</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>425</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>20.5mm X 42mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Manual</data>
+      </field>
+      <field name="web_watch_complications">
+        <data/>
+      </field>
+      <field name="web_watch_case">
+        <data>Platinum</data>
+      </field>
+      <field name="web_watch_dial">
+        <data>Silver with Diamond Markers</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Brown Lizard Strap </data>
+      </field>
+      <field name="web_watch_buckle">
+        <data/>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>N/A</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Excellent</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=39641&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=39642&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=39643&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=39644&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=39645&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data>This platinum Patek Philippe, ref. 425 is in excellent, original condition and feautres a beautiful dial with diamond hour markers. </data>
+      </field>
+      <field name="web_flag_retail">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail">
+        <data>1</data>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>10500</data>
+      </field>
+      <field name="web_price_ebay">
+        <data>11900</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data>1</data>
+      </field>
+      <field name="web_image_path_6">
+        <data/>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data>11900</data>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>08/26/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>11900</data>
+      </field>
+      <field name="web_notes">
+        <data>This platinum Patek Philippe, ref. 425 is in excellent, original condition and feautres a beautiful dial with diamond hour markers. </data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_chrono24">
+        <data>1</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data>1</data>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>10500</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>10000</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data/>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960189">
+      <field name="web_style">
+        <data>Gents</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960189</data>
+      </field>
+      <field name="web_tag_number">
+        <data>100250</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>8100250</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>50</data>
+      </field>
+      <field name="web_description_short">
+        <data>Audemars Piguet Jules Audemars Yellow Gold Tourbillon Watch</data>
+      </field>
+      <field name="web_serial_number">
+        <data>D 7926</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data>20</data>
+      </field>
+      <field name="web_designer">
+        <data>Audemars Piguet</data>
+      </field>
+      <field name="web_metal_type">
+        <data>18k YG</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Vintage</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1990s</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>25718BA</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>39mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Automatic</data>
+      </field>
+      <field name="web_watch_complications">
+        <data>Tourbillon</data>
+      </field>
+      <field name="web_watch_case">
+        <data>YG</data>
+      </field>
+      <field name="web_watch_dial">
+        <data>White</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Brown Strap</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data>Tang</data>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Original Box</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Excellent</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=61160&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=61161&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=61162&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=61163&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=61164&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>50</data>
+      </field>
+      <field name="web_price_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=61165&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_7">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=61166&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data/>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>04/21/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>50000</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>50</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data/>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>5233
+5243
+5465
+5596
+5638
+5668
+5714
+5998
+6124
+6230
+7172</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960193">
+      <field name="web_style">
+        <data>Gents</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960193</data>
+      </field>
+      <field name="web_tag_number">
+        <data>100609</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>0100609</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>8300</data>
+      </field>
+      <field name="web_description_short">
+        <data>Patek Philippe White Gold Gondolo Salmon Dial Ref. 5024</data>
+      </field>
+      <field name="web_serial_number">
+        <data/>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Patek Philippe</data>
+      </field>
+      <field name="web_metal_type">
+        <data>18k WG</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Gondolo</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1990s</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>5024G</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>30mm X 37mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Manual</data>
+      </field>
+      <field name="web_watch_complications">
+        <data/>
+      </field>
+      <field name="web_watch_case">
+        <data>WG</data>
+      </field>
+      <field name="web_watch_dial">
+        <data>Brown</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Original Brown Patek Philippe Strap</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data>Tang</data>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Handmade Leather Travel Pouch</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Excellent</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=44623&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=44624&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=44625&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=44626&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=44627&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>8300</data>
+      </field>
+      <field name="web_price_ebay">
+        <data>10500</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data/>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data>10500</data>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>05/01/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>10500</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>8300</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>8000</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>5117
+5504
+6043
+6480</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960208">
+      <field name="web_style">
+        <data>Unisex</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960208</data>
+      </field>
+      <field name="web_tag_number">
+        <data>101727</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>6101727</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>139000</data>
+      </field>
+      <field name="web_description_short">
+        <data>Audemars Piguet Platinum Jump Hour Minute Repeater Ref. 26151</data>
+      </field>
+      <field name="web_serial_number">
+        <data>G34422</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Audemars Piguet</data>
+      </field>
+      <field name="web_metal_type">
+        <data>Platinum</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Jules Audemars </data>
+      </field>
+      <field name="web_watch_year">
+        <data>2000s</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>26151PT.OO.D028CR.02</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>43mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Manual</data>
+      </field>
+      <field name="web_watch_complications">
+        <data>Jump Hour, Minute Repeater</data>
+      </field>
+      <field name="web_watch_case">
+        <data/>
+      </field>
+      <field name="web_watch_dial">
+        <data>Silver with Blue Arabics</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Brown</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data/>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Papers &amp; No Box</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Excellent Condition with Very Minor Wear</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=35097&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=36699&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60963&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60964&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60965&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data>Named after one of Audemars Piguets eponymous founders, the Jules Audemars is a stunning dress watch collection that typically features impressive complications in a bid to act as a vehicle demonstrating Audemars Piguets horological abilities as a modern watchmaking powerhouse and as an homage to Jules impressive watchmaker who specialized in such complications.
+
+As such, the Jump Hour Minute Repeater ref. 26151 that we have here sports the incredibly complex and immaculately finished manual-wind cal. 2907 movement with a beautifully labyrinthine architecture as viewable behind its sapphire crystal caseback. Featuring two eponymous complications, a jump hour function and a minute repeater, the ref. 26151 is an intriguing watch with both complications that profoundly impact its design. As a result of its jump hour display, it features a digital hour display at 12 oclock and one central minute hand, with a subdial at 6 oclock displaying the seconds. Furthermore, its minute repeater function is operated through the slider found on the ref. 26151s satin-brushed mid-case at 9 oclock.
+
+Made of platinum and measuring 43mm in diameter, the ref. 26151s round case features a flat polished bezel that sits atop its slightly wider case, which gives a level of visual depth to its construction. Featuring the same level of visual depth, the ref. 26151s incredibly well-executed jumping hour display sports an interesting guilloche pattern within its center and a contrasting concentrically satin-brushed chapter ring to house its black applied Arabic numeral minute-scale, which only adds to its level of visual depth. An incredibly impressive timepiece inside and out, the ref. 26151 is a heavy-hitting timepiece no matter what way you look at it, and our example is offered in outstanding condition with its Archive Papers from AP.</data>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>139000</data>
+      </field>
+      <field name="web_price_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60966&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_7">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60967&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_8">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60969&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_9">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=60970&amp;-field=image</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data/>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>06/08/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>150000</data>
+      </field>
+      <field name="web_notes">
+        <data>Named after one of Audemars Piguets eponymous founders, the Jules Audemars is a stunning dress watch collection that typically features impressive complications in a bid to act as a vehicle demonstrating Audemars Piguets horological abilities as a modern watchmaking powerhouse and as an homage to Jules impressive watchmaker who specialized in such complications.
+
+As such, the Jump Hour Minute Repeater ref. 26151 that we have here sports the incredibly complex and immaculately finished manual-wind cal. 2907 movement with a beautifully labyrinthine architecture as viewable behind its sapphire crystal caseback. Featuring two eponymous complications, a jump hour function and a minute repeater, the ref. 26151 is an intriguing watch with both complications that profoundly impact its design. As a result of its jump hour display, it features a digital hour display at 12 oclock and one central minute hand, with a subdial at 6 oclock displaying the seconds. Furthermore, its minute repeater function is operated through the slider found on the ref. 26151s satin-brushed mid-case at 9 oclock.
+
+Made of platinum and measuring 43mm in diameter, the ref. 26151s round case features a flat polished bezel that sits atop its slightly wider case, which gives a level of visual depth to its construction. Featuring the same level of visual depth, the ref. 26151s incredibly well-executed jumping hour display sports an interesting guilloche pattern within its center and a contrasting concentrically satin-brushed chapter ring to house its black applied Arabic numeral minute-scale, which only adds to its level of visual depth. An incredibly impressive timepiece inside and out, the ref. 26151 is a heavy-hitting timepiece no matter what way you look at it, and our example is offered in outstanding condition with its Archive Papers from AP.</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>139000</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>135000</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>5156
+5281
+5787
+7175
+7816
+8758
+9128
+9271</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960223">
+      <field name="web_style">
+        <data>Unisex</data>
+      </field>
+      <field name="web_flag">
+        <data>1</data>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960223</data>
+      </field>
+      <field name="web_tag_number">
+        <data>104690</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>EB8104690</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>15000</data>
+      </field>
+      <field name="web_description_short">
+        <data>Rolex Day-Date White Gold Ref. 18049</data>
+      </field>
+      <field name="web_serial_number">
+        <data>6406067</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Rolex</data>
+      </field>
+      <field name="web_metal_type">
+        <data>18k WG</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Day-Date</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1980</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>18049</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>33mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Automatic</data>
+      </field>
+      <field name="web_watch_complications">
+        <data/>
+      </field>
+      <field name="web_watch_case">
+        <data/>
+      </field>
+      <field name="web_watch_dial">
+        <data>Silver Jubilee with Square-Cut Diamond Markers</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>White Gold Bracelet</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data/>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Serv. Papers</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Mint</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=40312&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=40313&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=40314&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=40315&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=40316&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail">
+        <data>1</data>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>15000</data>
+      </field>
+      <field name="web_price_ebay">
+        <data>16900</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_image_path_6">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=40317&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data>16900</data>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>09/29/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>16900</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>15000</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>14500</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>5668
+5872
+5919
+5958
+6380
+6756</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+    <record mod-id="2" record-id="190960234">
+      <field name="web_style">
+        <data>Unisex</data>
+      </field>
+      <field name="web_flag">
+        <data/>
+      </field>
+      <field name="web_flag__c">
+        <data>1</data>
+      </field>
+      <field name="web_record_id">
+        <data>190960234</data>
+      </field>
+      <field name="web_tag_number">
+        <data>105338</data>
+      </field>
+      <field name="web_tag_number_print">
+        <data>5105338</data>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>33000</data>
+      </field>
+      <field name="web_description_short">
+        <data>Patek Philippe Platinum Perpetual Calendar Retrograde Ref. 5059P (New Arrival)</data>
+      </field>
+      <field name="web_serial_number">
+        <data>4116961</data>
+      </field>
+      <field name="web_case_serial_number">
+        <data/>
+      </field>
+      <field name="web_designer">
+        <data>Patek Philippe</data>
+      </field>
+      <field name="web_metal_type">
+        <data>Platinum</data>
+      </field>
+      <field name="web_watch_model">
+        <data>Perpetual Calendar</data>
+      </field>
+      <field name="web_watch_year">
+        <data>1990s</data>
+      </field>
+      <field name="web_watch_manufacturer_reference_number">
+        <data>5059P</data>
+      </field>
+      <field name="web_watch_diameter">
+        <data>36mm</data>
+      </field>
+      <field name="web_watch_movement">
+        <data>Automatic</data>
+      </field>
+      <field name="web_watch_complications">
+        <data>Perpetual Calendar retrograde, Moon</data>
+      </field>
+      <field name="web_watch_case">
+        <data>Platinum</data>
+      </field>
+      <field name="web_watch_dial">
+        <data>White</data>
+      </field>
+      <field name="web_watch_strap">
+        <data>Black Crocodile</data>
+      </field>
+      <field name="web_watch_buckle">
+        <data/>
+      </field>
+      <field name="web_watch_warranty">
+        <data/>
+      </field>
+      <field name="web_watch_box_papers">
+        <data>Box</data>
+      </field>
+      <field name="web_watch_condition">
+        <data>Excellent Condition with Very Minor Wear</data>
+      </field>
+      <field name="web_status">
+        <data>Sold</data>
+      </field>
+      <field name="web_image_path_1">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=92413&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_2">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=92414&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_3">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=92415&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_4">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=92416&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_5">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=92417&amp;-field=image</data>
+      </field>
+      <field name="web_status__c">
+        <data>Sold</data>
+      </field>
+      <field name="SYS_record_created_timestamp">
+        <data>05/30/2025 17:18:44</data>
+      </field>
+      <field name="web_description_long">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_flag_retail">
+        <data/>
+      </field>
+      <field name="web_site_selected">
+        <data>Retail</data>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_price_retail_web">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>33000</data>
+      </field>
+      <field name="web_price_ebay">
+        <data/>
+      </field>
+      <field name="web_flag_ebay">
+        <data>1</data>
+      </field>
+      <field name="web_image_path_6">
+        <data>https://172.91.134.169/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=93221&amp;-field=image</data>
+      </field>
+      <field name="web_image_path_7">
+        <data/>
+      </field>
+      <field name="web_image_path_8">
+        <data/>
+      </field>
+      <field name="web_image_path_9">
+        <data/>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_chronos__c">
+        <data/>
+      </field>
+      <field name="web_date_added_to_inventory">
+        <data>10/30/2015</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_price_keystone">
+        <data>42000</data>
+      </field>
+      <field name="web_notes">
+        <data/>
+      </field>
+      <field name="web_category">
+        <data>Watches</data>
+      </field>
+      <field name="web_flag_keystone__c">
+        <data>1</data>
+      </field>
+      <field name="web_flag_keystone">
+        <data>1</data>
+      </field>
+      <field name="web_flag_retail__c">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24">
+        <data/>
+      </field>
+      <field name="web_flag_chrono24__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay">
+        <data>1</data>
+      </field>
+      <field name="web_flag_ebay__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebay_or_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_ebayauction">
+        <data/>
+      </field>
+      <field name="web_flag_ebayauction__c">
+        <data>0</data>
+      </field>
+      <field name="web_flag_wholesale__c">
+        <data>0</data>
+      </field>
+      <field name="web_price_upon_request">
+        <data/>
+      </field>
+      <field name="web_watch_dial_markers">
+        <data/>
+      </field>
+      <field name="web_watch_band_material">
+        <data/>
+      </field>
+      <field name="web_watch_bezel_type">
+        <data/>
+      </field>
+      <field name="web_watch_case_crown">
+        <data/>
+      </field>
+      <field name="web_watch_band_type">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop">
+        <data/>
+      </field>
+      <field name="web_flag_jomashop__c">
+        <data/>
+      </field>
+      <field name="web_price_retail">
+        <data/>
+      </field>
+      <field name="web_price_sale">
+        <data>33000</data>
+      </field>
+      <field name="web_price_wholesale">
+        <data>33000</data>
+      </field>
+      <field name="web_watch_general_dial">
+        <data/>
+      </field>
+      <field name="flag_test">
+        <data>1</data>
+      </field>
+      <field name="web_memo_numbers">
+        <data>5126
+5998
+6993
+7130
+9064
+9117
+9271</data>
+      </field>
+      <field name="web_memo_number_current">
+        <data/>
+      </field>
+      <field name="web_memo_price_current">
+        <data/>
+      </field>
+    </record>
+  </resultset>
+</fmresultset>

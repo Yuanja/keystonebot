@@ -1,0 +1,5 @@
+echo "======================================"
+echo "Java processes on keystone-prod..."
+echo "======================================"
+./ssh-keystone-prod.sh "ps -ef | grep java"
+echo ""

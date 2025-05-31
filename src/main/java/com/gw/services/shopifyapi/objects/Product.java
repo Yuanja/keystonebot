@@ -36,6 +36,9 @@ public class Product {
     @JsonProperty("published_scope")
     private String publishedScope;
     
+    @JsonProperty("status")
+    private String status;
+    
     @JsonProperty("tags")
     private String tags;
     
@@ -69,6 +72,22 @@ public class Product {
 
     public void setBodyHtml(String bodyHtml) {
         this.bodyHtml = bodyHtml;
+    }
+
+    /**
+     * GraphQL API compatibility: description property maps to bodyHtml
+     */
+    @JsonProperty("description")
+    public String getDescription() {
+        return bodyHtml;
+    }
+
+    /**
+     * GraphQL API compatibility: description property maps to bodyHtml
+     */
+    @JsonProperty("description")
+    public void setDescription(String description) {
+        this.bodyHtml = description;
     }
 
     public String getCreatedAt() {
@@ -125,6 +144,14 @@ public class Product {
 
     public void setPublishedScope(String publishedScope) {
         this.publishedScope = publishedScope;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public String getVendor() {
