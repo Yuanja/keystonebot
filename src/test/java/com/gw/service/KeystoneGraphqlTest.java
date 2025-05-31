@@ -113,12 +113,12 @@ public class KeystoneGraphqlTest {
         List<CustomCollection> allCollections = shopifyApiService.getAllCustomCollections();
         Assert.assertTrue(allCollections.isEmpty());
     }
-
+    
     private List<FeedItem> getTopFeedItems(int count) throws Exception{
         // Load all items from the live feed
         List<FeedItem> allFeedItems = keyStoneFeedService.getItemsFromFeed();
         logger.info("Loaded " + allFeedItems.size() + " total items from live feed");
-
+        
         // Sort by webTagNumber in descending order and take the highest requested count
         List<FeedItem> topFeedItems = allFeedItems.stream()
             .filter(item -> item.getWebTagNumber() != null && !item.getWebTagNumber().trim().isEmpty())
@@ -149,7 +149,7 @@ public class KeystoneGraphqlTest {
         logger.info("Loading live feed and selecting highest 50 webTagNumber items...");
 
         List<FeedItem> topFeedItems = getTopFeedItems(5);
-
+        
         logger.info("Selected top " + topFeedItems.size() + " items for sync:");
         logger.info("Highest webTagNumber: " + (topFeedItems.isEmpty() ? "N/A" : topFeedItems.get(0).getWebTagNumber()));
         logger.info("Lowest webTagNumber: " + (topFeedItems.isEmpty() ? "N/A" : topFeedItems.get(topFeedItems.size() - 1).getWebTagNumber()));
@@ -254,10 +254,10 @@ public class KeystoneGraphqlTest {
         Map<String, String> firstBatchProductDetails = new HashMap<>();
         for (FeedItem originalItem : firstBatch) {
             Optional<Product> foundProduct = productsAfterFirstBatch.stream()
-                .filter(p -> p.getVariants() != null && !p.getVariants().isEmpty())
+                    .filter(p -> p.getVariants() != null && !p.getVariants().isEmpty())
                 .filter(p -> originalItem.getWebTagNumber().equals(p.getVariants().get(0).getSku()))
-                .findFirst();
-            
+                    .findFirst();
+                
             Assert.assertTrue("Product should exist for SKU: " + originalItem.getWebTagNumber(), 
                              foundProduct.isPresent());
             

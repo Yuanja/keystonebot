@@ -346,6 +346,97 @@ public class ShopifyGraphQLService {
     }
     
     /**
+     * Get the most recently added products with a specified limit
+     * Products are ordered by creation date descending (newest first)
+     * 
+     * @param limit Maximum number of products to return
+     * @return List of recent products
+     */
+    public List<Product> getRecentProducts(int limit) {
+        List<Product> recentProducts = new ArrayList<>();
+        
+        String query = """
+            query getRecentProducts($first: Int!) {
+                products(first: $first, sortKey: CREATED_AT, reverse: true) {
+                    edges {
+                        node {
+                            id
+                            title
+                            handle
+                            description
+                            status
+                            vendor
+                            productType
+                            tags
+                            createdAt
+                            updatedAt
+                            publishedAt
+                            images(first: 10) {
+                                edges {
+                                    node {
+                                        id
+                                        url
+                                        altText
+                                    }
+                                }
+                            }
+                            variants(first: 100) {
+                                edges {
+                                    node {
+                                        id
+                                        title
+                                        sku
+                                        price
+                                        compareAtPrice
+                                        weight
+                                        weightUnit
+                                        inventoryItem {
+                                            id
+                                        }
+                                        inventoryPolicy
+                                        requiresShipping
+                                        taxable
+                                        barcode
+                                        position
+                                    }
+                                }
+                            }
+                        }
+                        cursor
+                    }
+                    pageInfo {
+                        hasNextPage
+                        endCursor
+                    }
+                }
+            }
+            """;
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("first", limit);
+        
+        try {
+            JsonNode data = executeGraphQLQuery(query, variables);
+            JsonNode productsNode = data.get("products");
+            JsonNode edges = productsNode.get("edges");
+            
+            for (JsonNode edge : edges) {
+                JsonNode productNode = edge.get("node");
+                Product product = convertJsonToProduct(productNode);
+                recentProducts.add(product);
+            }
+            
+            logger.info("✅ Retrieved " + recentProducts.size() + " recent products (limit: " + limit + ")");
+            
+        } catch (Exception e) {
+            logger.error("Error getting recent products", e);
+            throw new RuntimeException("Failed to get recent products", e);
+        }
+        
+        return recentProducts;
+    }
+    
+    /**
      * Add/Create a new product using GraphQL
      */
     public Product addProduct(Product product) {
@@ -1517,7 +1608,7 @@ public class ShopifyGraphQLService {
                            ", Available: " + level.getAvailable());
             }
             
-            logger.info("✅ Successfully retrieved " + levels.size() + " inventory levels for inventory item: " + id);
+            logger.debug("Successfully retrieved " + levels.size() + " inventory levels for inventory item: " + id);
             return levels;
         } catch (Exception e) {
             logger.error("❌ Error getting inventory levels for inventory item: " + id, e);

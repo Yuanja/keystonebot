@@ -63,11 +63,6 @@ public class KeyStoneShopifyProductFactoryService extends BaseShopifyProductFact
         
     }
     
-    @Override
-    public String getPrice(FeedItem feedItem) {
-        return feedItem.getWebPriceKeystone();
-    }
-    
     private Map<String, String> getMaterialMap(){
         Map<String, String> materialMap = new HashMap<String, String>();
         materialMap.put("PVD Steel/TItanium","Black");

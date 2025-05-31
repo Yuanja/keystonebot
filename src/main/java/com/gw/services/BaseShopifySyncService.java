@@ -20,10 +20,17 @@ import java.util.stream.Collectors;
 /**
  * Base Shopify Sync Service with GraphQL API integration
  * 
- * This class has been refactored to:
- * - Support ShopifyGraphQLService (migrated from REST to GraphQL)
- * - Implement caching for collection mappings using Spring best practices
- * - Fix compatibility issues between REST and GraphQL API responses
+ * This class handles regular Shopify synchronization operations:
+ * - Processing feed items for new, changed, and deleted products
+ * - Publishing new products to Shopify
+ * - Updating existing products on Shopify
+ * - Managing product collections and inventory
+ * - Handling image uploads and updates
+ * 
+ * RECONCILIATION MOVED:
+ * - Reconciliation logic has been extracted to ReconciliationService
+ * - This service now focuses only on regular sync operations
+ * - For reconciliation, use the dedicated ReconciliationService and tests
  * 
  * CACHING STRATEGY:
  * - Collection mappings are cached in memory during the first initialization
@@ -169,22 +176,6 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
 		}
 		        
         ensureCollections();
-        logger.info("Reconciling Shopify and DB...");
-        Map<String, Product> allProductBySku = shopifyApiService.unlistDupeListings();
-        Map<String, FeedItem> allItemsInDBBySku = feedItemService.getFeedItemBySkuMap();
-        logger.info("Got total of "+allItemsInDBBySku.size() +" number of products from DB.");
-        logger.info("Got total of "+allProductBySku.size()+" number of products from shopify.");
-        
-        if (Math.abs(allProductBySku.size() - allItemsInDBBySku.size()) > MAX_TO_DELETE_COUNT) {
-            throw new RuntimeException("Too many items to reconcile:" +
-                    Math.abs(allProductBySku.size() - allItemsInDBBySku.size())
-                    +".  Skipping scheduled task!");
-        }
-        removeExtraListingsNotInDB(allProductBySku, allItemsInDBBySku);
-        removeExtraItemsNotListedInShopify(allProductBySku, allItemsInDBBySku);
-        List<FeedItemChange> mismatchedImageItems = 
-            getShopifyItemsToUpdateDueToImageCountMismatch(allProductBySku, allItemsInDBBySku);
-        handleChangedItems(mismatchedImageItems);
 
         logger.info("Detecting any new Feed Items or changes...");
 		FeedItemChangeSet changeSet = compareFeedItemWithDB(feedItems);
@@ -283,54 +274,111 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
     public void updateItemOnShopify(FeedItem item) {
         logger.info("Updating Sku: " + item.getWebTagNumber());
         try {
-            if (item.getShopifyItemId() == null) {
-                throw new RuntimeException("No Shopify Item Id found for Sku: " 
-                            + item.getWebTagNumber());
-            }
-            // GraphQL API returns Product directly, not ProductVo wrapper
-            Product existingProduct = shopifyApiService.getProductByProductId(item.getShopifyItemId());
+            validateItemForUpdate(item);
             
-            if(existingProduct == null) {
-                throw new RuntimeException("No Shopify product found by the id: " 
-                        + item.getShopifyItemId());
-            } 
-        
-            //Download images (skip if configured)
-            if (!skipImageDownload) {
-                logger.info("Downloading images for SKU: " + item.getWebTagNumber());
+            // Get existing product from Shopify
+            Product existingProduct = retrieveExistingProduct(item);
+            
+            // Download images if not skipped
+            handleImageDownload(item);
+            
+            // Create updated product and merge with existing
+            Product updatedProduct = createAndMergeUpdatedProduct(item, existingProduct);
+            
+            // Update the product on Shopify
+            updateProductOnShopify(updatedProduct, item);
+            
+            // Handle image updates (delete and recreate)
+            handleImageUpdatesForExistingProduct(existingProduct, updatedProduct);
+            
+            // Update inventory levels with refreshed data
+            updateInventoryAfterProductUpdate(item, updatedProduct);
+            
+            // Update collection associations
+            updateCollectionAssociations(item);
+            
+            // Update item status and log success
+            finalizeSuccessfulUpdate(item);
+            
+        } catch (Exception e) {
+            handleUpdateFailure(item, e);
+        }
+    }
+    
+    /**
+     * Validates that the item has required data for updating
+     */
+    private void validateItemForUpdate(FeedItem item) {
+        if (item.getShopifyItemId() == null) {
+            throw new RuntimeException("No Shopify Item Id found for Sku: " + item.getWebTagNumber());
+        }
+    }
+    
+    /**
+     * Retrieves the existing product from Shopify with validation
+     */
+    private Product retrieveExistingProduct(FeedItem item) {
+        Product existingProduct = shopifyApiService.getProductByProductId(item.getShopifyItemId());
+        if (existingProduct == null) {
+            throw new RuntimeException("No Shopify product found by the id: " + item.getShopifyItemId());
+        }
+        return existingProduct;
+    }
+    
+    /**
+     * Handles image download if not configured to skip
+     */
+    private void handleImageDownload(FeedItem item) {
+        if (!skipImageDownload) {
+            logger.info("Downloading images for SKU: " + item.getWebTagNumber());
+            try {
                 imageService.downloadImages(item);
-            } else {
-                logger.info("Skipping image download for SKU: " + item.getWebTagNumber() + " (skip.image.download=true)");
+            } catch (Exception e) {
+                logger.warn("Failed to download images for SKU: " + item.getWebTagNumber() + " - " + e.getMessage());
+                // Continue without failing the whole update
             }
-            
-            Product product = shopifyProductFactoryService.createProduct(item);
-            product.setId(item.getShopifyItemId());
-            logger.info("Existing ShopifyItemID: " + item.getShopifyItemId());
-
-            shopifyProductFactoryService.mergeProduct(existingProduct, product);
-            
-            // Log product details before sending to Shopify API
-            logProductDetails("UPDATING", product, item.getWebTagNumber());
-            
-            logger.info(LogService.toJson(product));
-            shopifyApiService.updateProduct(product);
-            
-            //Force delete the images and then re-upload.
+        } else {
+            logger.info("Skipping image download for SKU: " + item.getWebTagNumber() + " (skip.image.download=true)");
+        }
+    }
+    
+    /**
+     * Creates updated product and merges with existing product data
+     */
+    private Product createAndMergeUpdatedProduct(FeedItem item, Product existingProduct) throws Exception {
+        Product updatedProduct = shopifyProductFactoryService.createProduct(item);
+        updatedProduct.setId(item.getShopifyItemId());
+        logger.info("Existing ShopifyItemID: " + item.getShopifyItemId());
+        
+        shopifyProductFactoryService.mergeProduct(existingProduct, updatedProduct);
+        logProductDetails("UPDATING", updatedProduct, item.getWebTagNumber());
+        
+        return updatedProduct;
+    }
+    
+    /**
+     * Updates the product on Shopify
+     */
+    private void updateProductOnShopify(Product product, FeedItem item) throws Exception {
+        logger.info(LogService.toJson(product));
+        shopifyApiService.updateProduct(product);
+    }
+    
+    /**
+     * Handles image updates by deleting existing images and re-adding them
+     */
+    private void handleImageUpdatesForExistingProduct(Product existingProduct, Product updatedProduct) {
+        try {
+            // Force delete the images and then re-upload
             shopifyApiService.deleteAllImageByProductId(existingProduct.getId());
-            // Re-add images after updating product (GraphQL migration fix)
-            // Send images to Shopify when they are available
-            if (product.getImages() != null && !product.getImages().isEmpty()) {
-                logger.info("Re-adding " + product.getImages().size() + " images to updated product");
+            
+            if (updatedProduct.getImages() != null && !updatedProduct.getImages().isEmpty()) {
+                logger.info("Re-adding " + updatedProduct.getImages().size() + " images to updated product");
                 
-                // Log image details before sending to Shopify
-                logger.info("=== RE-ADDING IMAGES to Product ID: {} ===", existingProduct.getId());
-                for (int i = 0; i < product.getImages().size(); i++) {
-                    Image image = product.getImages().get(i);
-                    logger.info("  Image[{}] URL: {}", i, image.getSrc());
-                }
-                logger.info("=== End RE-ADDING IMAGES ===");
+                logImageDetailsForUpdate(existingProduct.getId(), updatedProduct.getImages());
+                
                 try {
-                    shopifyApiService.addImagesToProduct(existingProduct.getId(), product.getImages());
+                    shopifyApiService.addImagesToProduct(existingProduct.getId(), updatedProduct.getImages());
                 } catch (Exception e) {
                     logger.error("Failed to re-add images to product ID: " + existingProduct.getId(), e);
                     // Continue execution - don't fail the whole update if image re-addition fails
@@ -338,77 +386,119 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
             } else {
                 logger.info("Skipping image update - no images available");
             }
-            
-            // CRITICAL FIX: Re-fetch the product after update to get current inventory item ID
-            // Product updates (especially with image changes) can recreate variants with new inventory item IDs
-            logger.info("Re-fetching product after update to get current inventory item ID...");
-            Product refreshedProduct = shopifyApiService.getProductByProductId(item.getShopifyItemId());
-            if (refreshedProduct == null || refreshedProduct.getVariants().isEmpty()) {
-                logger.error("❌ Failed to re-fetch product after update - cannot update inventory");
-                throw new RuntimeException("Product not found after update: " + item.getShopifyItemId());
-            }
-            
-            // Get the current (possibly new) inventory item ID
-            String currentInventoryItemId = refreshedProduct.getVariants().get(0).getInventoryItemId();
-            logger.info("Current inventory item ID after update: " + currentInventoryItemId);
-            
-            // Update inventory levels using the current inventory item ID
-            List<InventoryLevel> inventoryLevels = product.getVariants().get(0).getInventoryLevels().get();
-            if (inventoryLevels != null && !inventoryLevels.isEmpty()) {
-                logger.info("Updating inventory levels for " + inventoryLevels.size() + " locations");
-                
-                // CRITICAL: Update inventory levels with the current inventory item ID
-                for (InventoryLevel level : inventoryLevels) {
-                    level.setInventoryItemId(currentInventoryItemId);
-                    logger.info("Updated inventory level - LocationId: " + level.getLocationId() + 
-                               ", InventoryItemId: " + level.getInventoryItemId() + 
-                               ", Available: " + level.getAvailable());
-                }
-                
-                // Validate that each inventory level has required fields
-                boolean allLevelsValid = true;
-                for (InventoryLevel level : inventoryLevels) {
-                    if (level.getInventoryItemId() == null || level.getLocationId() == null || level.getAvailable() == null) {
-                        logger.error("❌ Invalid inventory level detected - InventoryItemId: " + level.getInventoryItemId() + 
-                                   ", LocationId: " + level.getLocationId() + ", Available: " + level.getAvailable());
-                        allLevelsValid = false;
-                    }
-                }
-                
-                if (allLevelsValid) {
-                    shopifyApiService.updateInventoryLevels(inventoryLevels);
-                    logger.info("✅ Successfully updated inventory levels");
-                } else {
-                    logger.error("❌ Skipping inventory update due to invalid inventory level data");
-                    logger.error("❌ This may indicate an issue with REST vs GraphQL API compatibility");
-                }
-            } else {
-                logger.warn("⚠️ No inventory levels found to update for product: " + item.getShopifyItemId());
-            }
-            
-            //Delete existing collects
-            shopifyApiService.deleteAllCollectForProductId(item.getShopifyItemId());
-            
-            //Get the would be collection based on the item;
-            List<Collect> updatedCollections = 
-                    CollectionUtility.getCollectionForProduct(item.getShopifyItemId(), item, getCollectionMappings());
-            shopifyApiService.addProductAndCollectionsAssociations(updatedCollections);
-            
-            item.setStatus(FeedItem.STATUS_UPDATED);
-            feedItemService.updateAutonomous(item);
-
-            //Log and email
-            String message  = getItemActionLogMessage("UPDATED", item);
-            logger.info(message);
-            //sendEmailPublishAlertEmail(message, message);\
-            
         } catch (Exception e) {
-            logService.emailError(logger,
-                    "Shopify Bot: Failed to update Sku: "+item.getWebTagNumber()+" with exception: " + e.getMessage(), null, e);
-            item.setStatus(FeedItem.STATUS_UPDATE_FAILED);
-            item.setSystemMessages(e.getMessage());
-            feedItemService.updateAutonomous(item);
+            logger.error("Failed to handle image updates for product ID: " + existingProduct.getId(), e);
+            // Continue without failing the whole update process
         }
+    }
+    
+    /**
+     * Logs image details for debugging during updates
+     */
+    private void logImageDetailsForUpdate(String productId, List<Image> images) {
+        logger.info("=== RE-ADDING IMAGES to Product ID: {} ===", productId);
+        for (int i = 0; i < images.size(); i++) {
+            Image image = images.get(i);
+            logger.info("  Image[{}] URL: {}", i, image.getSrc());
+        }
+        logger.info("=== End RE-ADDING IMAGES ===");
+    }
+    
+    /**
+     * Updates inventory levels after product update, ensuring current inventory item IDs are used
+     */
+    private void updateInventoryAfterProductUpdate(FeedItem item, Product updatedProduct) throws Exception {
+        // CRITICAL FIX: Re-fetch the product after update to get current inventory item ID
+        logger.info("Re-fetching product after update to get current inventory item ID...");
+        Product refreshedProduct = shopifyApiService.getProductByProductId(item.getShopifyItemId());
+        
+        if (refreshedProduct == null || refreshedProduct.getVariants().isEmpty()) {
+            logger.error("❌ Failed to re-fetch product after update - cannot update inventory");
+            throw new RuntimeException("Product not found after update: " + item.getShopifyItemId());
+        }
+        
+        updateInventoryWithRefreshedData(refreshedProduct, updatedProduct);
+    }
+    
+    /**
+     * Updates inventory levels using refreshed product data
+     */
+    private void updateInventoryWithRefreshedData(Product refreshedProduct, Product updatedProduct) throws Exception {
+        String currentInventoryItemId = refreshedProduct.getVariants().get(0).getInventoryItemId();
+        logger.info("Current inventory item ID after update: " + currentInventoryItemId);
+        
+        List<InventoryLevel> inventoryLevels = updatedProduct.getVariants().get(0).getInventoryLevels().get();
+        if (inventoryLevels != null && !inventoryLevels.isEmpty()) {
+            logger.info("Updating inventory levels for " + inventoryLevels.size() + " locations");
+            
+            // Update each inventory level with the current inventory item ID
+            for (InventoryLevel level : inventoryLevels) {
+                level.setInventoryItemId(currentInventoryItemId);
+                logger.info("Updated inventory level - LocationId: " + level.getLocationId() + 
+                           ", InventoryItemId: " + level.getInventoryItemId() + 
+                           ", Available: " + level.getAvailable());
+            }
+            
+            if (validateInventoryLevels(inventoryLevels)) {
+                shopifyApiService.updateInventoryLevels(inventoryLevels);
+                logger.info("✅ Successfully updated inventory levels");
+            } else {
+                logger.error("❌ Skipping inventory update due to invalid inventory level data");
+            }
+        } else {
+            logger.warn("⚠️ No inventory levels found to update for product: " + updatedProduct.getId());
+        }
+    }
+    
+    /**
+     * Validates that all inventory levels have required fields
+     */
+    private boolean validateInventoryLevels(List<InventoryLevel> inventoryLevels) {
+        boolean allLevelsValid = true;
+        for (InventoryLevel level : inventoryLevels) {
+            if (level.getInventoryItemId() == null || level.getLocationId() == null || level.getAvailable() == null) {
+                logger.error("❌ Invalid inventory level detected - InventoryItemId: " + level.getInventoryItemId() + 
+                           ", LocationId: " + level.getLocationId() + ", Available: " + level.getAvailable());
+                allLevelsValid = false;
+            }
+        }
+        return allLevelsValid;
+    }
+    
+    /**
+     * Updates collection associations for the product
+     */
+    private void updateCollectionAssociations(FeedItem item) throws Exception {
+        // Delete existing collects
+        shopifyApiService.deleteAllCollectForProductId(item.getShopifyItemId());
+        
+        // Get updated collections and create associations
+        List<Collect> updatedCollections = 
+            CollectionUtility.getCollectionForProduct(item.getShopifyItemId(), item, getCollectionMappings());
+        shopifyApiService.addProductAndCollectionsAssociations(updatedCollections);
+    }
+    
+    /**
+     * Finalizes successful update by updating item status and logging
+     */
+    private void finalizeSuccessfulUpdate(FeedItem item) {
+        item.setStatus(FeedItem.STATUS_UPDATED);
+        feedItemService.updateAutonomous(item);
+        
+        String message = getItemActionLogMessage("UPDATED", item);
+        logger.info(message);
+    }
+    
+    /**
+     * Handles update failure by logging error and updating item status
+     */
+    private void handleUpdateFailure(FeedItem item, Exception e) {
+        logService.emailError(logger,
+            "Shopify Bot: Failed to update Sku: " + item.getWebTagNumber() + " with exception: " + e.getMessage(), 
+            null, e);
+        item.setStatus(FeedItem.STATUS_UPDATE_FAILED);
+        item.setSystemMessages(e.getMessage());
+        feedItemService.updateAutonomous(item);
     }
     
     @Override
@@ -489,8 +579,13 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
                 }
                 
                 if (allLevelsValid) {
-                    shopifyApiService.updateInventoryLevels(inventoryLevelsToUpdate);
-                    logger.info("✅ Successfully updated inventory levels for new product");
+                    try {
+                        shopifyApiService.updateInventoryLevels(inventoryLevelsToUpdate);
+                        logger.info("✅ Successfully updated inventory levels for new product");
+                    } catch (Exception e) {
+                        logger.error("❌ Failed to update inventory levels for new product: " + e.getMessage());
+                        // Continue - inventory update failure shouldn't stop the publish process
+                    }
                 } else {
                     logger.error("❌ Skipping inventory update due to invalid inventory level data");
                     logger.error("❌ This may indicate an issue with inventory level merging");
@@ -501,14 +596,19 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
             
             // IMPORTANT: Add collection associations BEFORE updating item status
             // This ensures the product is associated with collections when the test checks
-            Map<PredefinedCollection, CustomCollection> collectionMappings = getCollectionMappings();
-            List<Collect> collectsToAdd = CollectionUtility.getCollectionForProduct(newlyAddedProduct.getId(), item, collectionMappings);
-            
-            if (!collectsToAdd.isEmpty()) {
-                shopifyApiService.addProductAndCollectionsAssociations(collectsToAdd);
-                logger.info("Successfully added product to " + collectsToAdd.size() + " collections");
-            } else {
-                logger.warn("No collections found for product " + newlyAddedProduct.getId() + " (SKU: " + item.getWebTagNumber() + ")");
+            try {
+                Map<PredefinedCollection, CustomCollection> collectionMappings = getCollectionMappings();
+                List<Collect> collectsToAdd = CollectionUtility.getCollectionForProduct(newlyAddedProduct.getId(), item, collectionMappings);
+                
+                if (!collectsToAdd.isEmpty()) {
+                    shopifyApiService.addProductAndCollectionsAssociations(collectsToAdd);
+                    logger.info("Successfully added product to " + collectsToAdd.size() + " collections");
+                } else {
+                    logger.warn("No collections found for product " + newlyAddedProduct.getId() + " (SKU: " + item.getWebTagNumber() + ")");
+                }
+            } catch (Exception e) {
+                logger.error("Failed to add product to collections for SKU: " + item.getWebTagNumber(), e);
+                // Continue - collection association failure shouldn't stop the publish process
             }
             
             // CRITICAL: Publish the product to ALL available sales channels
@@ -544,69 +644,6 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
 
     }
     
-    private List<FeedItemChange> getShopifyItemsToUpdateDueToImageCountMismatch (Map<String, Product> allProductBySku, 
-    Map<String, FeedItem> allItemsInDBBySku){
-        List<FeedItemChange> feedItemsToUpdate = new ArrayList<>();
-        logger.info("Checking for image count.");
-        for (Product currentProduct: allProductBySku.values()) {
-            List<Variant> variant = currentProduct.getVariants();
-            String currentProductSku = variant.get(0).getSku();
-            FeedItem feedItemFromDb = allItemsInDBBySku.get(currentProductSku);
-            
-            //Check image count
-            int currentImageCnt = currentProduct.getImages() == null ? 0 : currentProduct.getImages().size();
-            if (feedItemFromDb != null && feedItemFromDb.getImageCount() != currentImageCnt) {
-                logger.error("Sku: " + currentProductSku + " Has "+ currentImageCnt
-                        +" images published on Shopify but DB has: "+feedItemFromDb.getImageCount()
-                        +" images!  Marking for update.");
-                feedItemsToUpdate.add(new FeedItemChange(feedItemFromDb, feedItemFromDb));
-            }
-        }
-        return feedItemsToUpdate;
-    }
-    
-    private void removeExtraListingsNotInDB(Map<String, Product> allProductBySku, 
-            Map<String, FeedItem> allItemsInDBBySku){
-        
-        logger.info("Removing extra shopify listings that are not in the DB...");
-        for (Product currentProduct: allProductBySku.values()) {
-            List<Variant> variant = currentProduct.getVariants();
-            String currentProductSku = variant.get(0).getSku();
-            FeedItem feedItemFromDb = allItemsInDBBySku.get(currentProductSku);
-            if (feedItemFromDb == null) { 
-                //Remove this from shopify as it's not tracked in the db.
-                logger.error("Shopify Bot: Sku: " + currentProductSku + " is not tracked in DB but exist on shopify as "+currentProduct.getId()+".  Removing from shopify.");
-                shopifyApiService.deleteProductByIdOrLogFailure(currentProduct.getId());
-            } else {
-                //Check if the item in db has matching shopify id.
-                if (feedItemFromDb.getShopifyItemId()==null 
-                        || !feedItemFromDb.getShopifyItemId().equals(currentProduct.getId())){
-                    logger.error("Sku: " + currentProductSku + 
-                            " : has ShopifyId in DB : " + feedItemFromDb.getShopifyItemId() +
-                            " : But Shopify has ID of : " + currentProduct.getId() + 
-                            " Will update DB! ");
-                    feedItemFromDb.setShopifyItemId(currentProduct.getId());
-                    feedItemService.updateAutonomous(feedItemFromDb);
-                }
-            }
-        }
-    }
-    
-    private void removeExtraItemsNotListedInShopify(Map<String, Product> allProductBySku, 
-            Map<String, FeedItem> allItemsInDBBySku) {
-        
-        logger.info("Removing items in DB that doesn't exist on shopify...");
-        List<FeedItem> allFeedItems = allItemsInDBBySku.values().stream().collect(Collectors.toList());
-        
-        for (FeedItem itemFromDb : allFeedItems) {
-            Product productFromShopify = allProductBySku.get(itemFromDb.getWebTagNumber());
-            if (productFromShopify == null) {
-                logger.error("Sku: "+itemFromDb.getWebTagNumber()+" is not listed in shopify removing from DB!");
-                feedItemService.deleteAutonomous(itemFromDb);
-            }
-        }
-    }
-
     private void sendEmailPublishAlertEmail(String title, String body){
         if (this.emailPublishEnabled)
             emailService.sendMessage(this.emailPublishSendTo, title, body);
