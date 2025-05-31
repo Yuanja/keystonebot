@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 /**
@@ -35,6 +36,10 @@ import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
  */
 @SpringJUnitConfig
 @SpringBootTest
+@TestPropertySource(properties = {
+    "cron.schedule=0 0 0 31 2 ?",  // Never runs (Feb 31st doesn't exist)
+    "spring.task.scheduling.enabled=false"  // Disable scheduling entirely during tests
+})
 public class ReconciliationAnalysisTest {
 
     private static final Logger logger = LogManager.getLogger(ReconciliationAnalysisTest.class);
