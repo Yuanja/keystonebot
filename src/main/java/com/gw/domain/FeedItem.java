@@ -918,6 +918,8 @@ public class FeedItem extends BaseListedItem {
         if (getClass() != obj.getClass())
             return false;
         FeedItem other = (FeedItem) obj;
+        
+        // Basic product information
         if (webDesigner == null) {
             if (other.webDesigner != null)
                 return false;
@@ -936,6 +938,29 @@ public class FeedItem extends BaseListedItem {
         } else if (!webDescriptionShort.equals(other.webDescriptionShort))
             return false;
         
+        // PRICING FIELDS - Only webPriceKeystone is considered for changes
+        // All other pricing fields (webPriceRetail, webPriceSale, webPriceEbay, 
+        // webPriceChronos, webPriceWholesale, costInvoiced) are ignored
+        if (webPriceKeystone == null) {
+            if (other.webPriceKeystone != null)
+                return false;
+        } else if (!webPriceKeystone.equals(other.webPriceKeystone))
+            return false;
+        
+        // STATUS AND FLAGS - Important for product visibility
+        if (webStatus == null) {
+            if (other.webStatus != null)
+                return false;
+        } else if (!webStatus.equals(other.webStatus))
+            return false;
+        
+        if (webStyle == null) {
+            if (other.webStyle != null)
+                return false;
+        } else if (!webStyle.equals(other.webStyle))
+            return false;
+        
+        // IMAGE PATHS - Critical for product display
         if (webImagePath1 == null) {
             if (other.webImagePath1 != null)
                 return false;
@@ -982,6 +1007,7 @@ public class FeedItem extends BaseListedItem {
         } else if (!webImagePath9.equals(other.webImagePath9))
             return false;
         
+        // MATERIAL AND SPECIFICATIONS
         if (webMetalType == null) {
             if (other.webMetalType != null)
                 return false;
@@ -994,35 +1020,26 @@ public class FeedItem extends BaseListedItem {
         } else if (!webNotes.equals(other.webNotes))
             return false;
         
-        if (webPriceEbay == null) {
-            if (other.webPriceEbay != null)
+        // WATCH CASE SPECIFICATIONS - Added missing fields
+        if (webWatchCase == null) {
+            if (other.webWatchCase != null)
                 return false;
-        } else if (!webPriceEbay.equals(other.webPriceEbay))
+        } else if (!webWatchCase.equals(other.webWatchCase))
             return false;
-        if (webPriceKeystone == null) {
-            if (other.webPriceKeystone != null)
+            
+        if (webWatchCaseCrown == null) {
+            if (other.webWatchCaseCrown != null)
                 return false;
-        } else if (!webPriceKeystone.equals(other.webPriceKeystone))
-            return false;
-        
-        if (webStatus == null) {
-            if (other.webStatus != null)
-                return false;
-        } else if (!webStatus.equals(other.webStatus))
-            return false;
-        if (webStyle == null) {
-            if (other.webStyle != null)
-                return false;
-        } else if (!webStyle.equals(other.webStyle))
+        } else if (!webWatchCaseCrown.equals(other.webWatchCaseCrown))
             return false;
         
+        // WATCH SPECIFICATIONS
         if (webWatchBoxPapers == null) {
             if (other.webWatchBoxPapers != null)
                 return false;
         } else if (!webWatchBoxPapers.equals(other.webWatchBoxPapers))
             return false;
         
-
         if (webWatchCondition == null) {
             if (other.webWatchCondition != null)
                 return false;
@@ -1034,7 +1051,6 @@ public class FeedItem extends BaseListedItem {
                 return false;
         } else if (!webWatchDial.equals(other.webWatchDial))
             return false;
-        
         
         if (webWatchDiameter == null) {
             if (other.webWatchDiameter != null)
@@ -1070,6 +1086,43 @@ public class FeedItem extends BaseListedItem {
             if (other.webWatchYear != null)
                 return false;
         } else if (!webWatchYear.equals(other.webWatchYear))
+            return false;
+        
+        // ADDITIONAL WATCH DETAILS - Added missing fields from copyFrom method
+        if (webSerialNumber == null) {
+            if (other.webSerialNumber != null)
+                return false;
+        } else if (!webSerialNumber.equals(other.webSerialNumber))
+            return false;
+            
+        if (webWatchDialMarkers == null) {
+            if (other.webWatchDialMarkers != null)
+                return false;
+        } else if (!webWatchDialMarkers.equals(other.webWatchDialMarkers))
+            return false;
+            
+        if (webWatchBandMaterial == null) {
+            if (other.webWatchBandMaterial != null)
+                return false;
+        } else if (!webWatchBandMaterial.equals(other.webWatchBandMaterial))
+            return false;
+            
+        if (webWatchBezelType == null) {
+            if (other.webWatchBezelType != null)
+                return false;
+        } else if (!webWatchBezelType.equals(other.webWatchBezelType))
+            return false;
+            
+        if (webWatchBandType == null) {
+            if (other.webWatchBandType != null)
+                return false;
+        } else if (!webWatchBandType.equals(other.webWatchBandType))
+            return false;
+            
+        if (webWatchGeneralDial == null) {
+            if (other.webWatchGeneralDial != null)
+                return false;
+        } else if (!webWatchGeneralDial.equals(other.webWatchGeneralDial))
             return false;
         
         return true;
