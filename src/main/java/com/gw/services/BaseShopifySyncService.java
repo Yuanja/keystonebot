@@ -98,6 +98,11 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
      */
     private boolean collectionsInitialized = false;
     
+    /**
+     * Flag to track if metafield definitions have been initialized
+     */
+    private boolean metafieldDefinitionsInitialized = false;
+    
     @Override 
     public abstract PredefinedCollection[] getPredefinedCollections();
 
@@ -124,14 +129,37 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
     }
     
     /**
+     * Ensures eBay metafield definitions are configured
+     * Uses caching to avoid repeated expensive API calls
+     */
+    private void ensureMetafieldDefinitions() throws Exception {
+        if (!metafieldDefinitionsInitialized) {
+            logger.info("Ensuring eBay metafield definitions exist...");
+            try {
+                shopifyApiService.createEbayMetafieldDefinitions();
+                metafieldDefinitionsInitialized = true;
+                logger.info("✅ eBay metafield definitions ensured");
+            } catch (Exception e) {
+                // Log but don't fail - definitions may already exist
+                logger.info("ℹ️ eBay metafield definitions status: " + e.getMessage());
+                metafieldDefinitionsInitialized = true; // Mark as initialized even if they already exist
+            }
+        } else {
+            logger.debug("eBay metafield definitions already initialized");
+        }
+    }
+    
+    /**
      * Invalidates the collection cache - useful when collections need to be refreshed
      * Can be called manually or triggered by external events
+     * Also invalidates metafield definition cache
      */
     @CacheEvict(value = "collections", allEntries = true)
     public void invalidateCollectionCache() {
-        logger.info("Invalidating collection cache...");
+        logger.info("Invalidating collection and metafield definition cache...");
         cachedCollectionByEnum = null;
         collectionsInitialized = false;
+        metafieldDefinitionsInitialized = false;
     }
     
     /**
@@ -176,6 +204,9 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
 		}
 		        
         ensureCollections();
+        
+        // Ensure eBay metafield definitions exist for proper product metadata
+        ensureMetafieldDefinitions();
 
         logger.info("Detecting any new Feed Items or changes...");
 		FeedItemChangeSet changeSet = compareFeedItemWithDB(feedItems);

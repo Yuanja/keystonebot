@@ -453,6 +453,18 @@ public class ShopifyGraphQLService {
                         productType
                         tags
                         updatedAt
+                        metafields(first: 50) {
+                            edges {
+                                node {
+                                    id
+                                    namespace
+                                    key
+                                    value
+                                    type
+                                    description
+                                }
+                            }
+                        }
                         images(first: 10) {
                             edges {
                                 node {
@@ -942,6 +954,18 @@ public class ShopifyGraphQLService {
             product.setStatus(productNode.get("status").asText());
         }
         
+        // Convert metafields (including eBay metafields)
+        if (productNode.has("metafields")) {
+            JsonNode metafieldsNode = productNode.get("metafields").get("edges");
+            List<Metafield> metafields = new ArrayList<>();
+            for (JsonNode edge : metafieldsNode) {
+                JsonNode metafieldNode = edge.get("node");
+                Metafield metafield = convertJsonToMetafield(metafieldNode);
+                metafields.add(metafield);
+            }
+            product.setMetafields(metafields);
+        }
+        
         // Convert variants
         if (productNode.has("variants")) {
             JsonNode variantsNode = productNode.get("variants").get("edges");
@@ -978,6 +1002,35 @@ public class ShopifyGraphQLService {
         }
         
         return product;
+    }
+    
+    /**
+     * Convert JSON metafield node to Metafield object
+     */
+    private Metafield convertJsonToMetafield(JsonNode metafieldNode) {
+        Metafield metafield = new Metafield();
+        
+        if (metafieldNode.has("id")) {
+            String gid = metafieldNode.get("id").asText();
+            metafield.setId(extractIdFromGid(gid));
+        }
+        if (metafieldNode.has("namespace")) {
+            metafield.setNamespace(metafieldNode.get("namespace").asText());
+        }
+        if (metafieldNode.has("key")) {
+            metafield.setKey(metafieldNode.get("key").asText());
+        }
+        if (metafieldNode.has("value")) {
+            metafield.setValue(metafieldNode.get("value").asText());
+        }
+        if (metafieldNode.has("type")) {
+            metafield.setType(metafieldNode.get("type").asText());
+        }
+        if (metafieldNode.has("description") && !metafieldNode.get("description").isNull()) {
+            metafield.setDescription(metafieldNode.get("description").asText());
+        }
+        
+        return metafield;
     }
     
     private Variant convertJsonToVariant(JsonNode variantNode) {
@@ -1202,6 +1255,33 @@ public class ShopifyGraphQLService {
         }
         if (product.getTags() != null) {
             input.put("tags", product.getTags());
+        }
+        
+        // Note: Product taxonomy categorization is NOT supported in Shopify's GraphQL ProductInput
+        // The error clearly states: "Field is not defined on ProductInput" for the category field
+        // This confirms that despite having a taxonomy ID (gid://shopify/TaxonomyCategory/aa-6-11),
+        // there is no way to set product taxonomy during creation via GraphQL API.
+        // 
+        // Alternative approaches would need to be used such as:
+        // - Setting taxonomy manually in Shopify Admin after product creation
+        // - Using REST API if it supports taxonomy assignment (needs investigation)
+        // - Waiting for future GraphQL API updates from Shopify
+        
+        // Add metafields support for eBay and other metafields
+        if (product.getMetafields() != null && !product.getMetafields().isEmpty()) {
+            List<Map<String, Object>> metafields = new ArrayList<>();
+            for (Metafield metafield : product.getMetafields()) {
+                Map<String, Object> metafieldInput = new HashMap<>();
+                metafieldInput.put("namespace", metafield.getNamespace());
+                metafieldInput.put("key", metafield.getKey());
+                metafieldInput.put("value", metafield.getValue());
+                metafieldInput.put("type", metafield.getType());
+                if (metafield.getDescription() != null) {
+                    metafieldInput.put("description", metafield.getDescription());
+                }
+                metafields.add(metafieldInput);
+            }
+            input.put("metafields", metafields);
         }
         
         // Note: Images cannot be added directly in ProductInput via GraphQL
@@ -2183,5 +2263,711 @@ public class ShopifyGraphQLService {
             logger.error("Error publishing product " + productId + " to publication " + publicationId, e);
             throw e;
         }
+    }
+    
+    /**
+     * Create metafield definition to make metafields visible in Shopify admin
+     */
+    public void createMetafieldDefinition(String namespace, String key, String name, String description, String type, String ownerType) throws Exception {
+        createMetafieldDefinition(namespace, key, name, description, type, ownerType, null);
+    }
+    
+    /**
+     * Create metafield definition with optional category constraint to make metafields visible in Shopify admin
+     */
+    public void createMetafieldDefinition(String namespace, String key, String name, String description, String type, String ownerType, String categoryId) throws Exception {
+        String mutation = """
+            mutation metafieldDefinitionCreate($definition: MetafieldDefinitionInput!) {
+                metafieldDefinitionCreate(definition: $definition) {
+                    createdDefinition {
+                        id
+                        key
+                        namespace
+                        name
+                        description
+                        type {
+                            name
+                        }
+                        ownerType
+                        visibleToStorefrontApi
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+            """;
+        
+        Map<String, Object> definition = new HashMap<>();
+        definition.put("namespace", namespace);
+        definition.put("key", key);
+        definition.put("name", name);
+        definition.put("description", description);
+        definition.put("ownerType", ownerType);
+        definition.put("visibleToStorefrontApi", true);
+        
+        // Set type as string directly (not as an object)
+        definition.put("type", type);
+        
+        // Note: Category constraints are not supported through GraphQL metafield validations
+        // The validation structure attempted here is not compatible with Shopify's schema
+        if (categoryId != null && !categoryId.trim().isEmpty()) {
+            logger.info("🏷️ Note: Category constraint requested for " + namespace + "." + key + " but not supported via GraphQL validations");
+        }
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("definition", definition);
+        
+        try {
+            JsonNode data = executeGraphQLQuery(mutation, variables);
+            JsonNode definitionCreate = data.get("metafieldDefinitionCreate");
+            
+            // Check for user errors
+            JsonNode userErrors = definitionCreate.get("userErrors");
+            if (userErrors != null && userErrors.size() > 0) {
+                String errorMessage = userErrors.toString();
+                if (errorMessage.contains("already exists")) {
+                    logger.info("Metafield definition already exists: " + namespace + "." + key);
+                } else {
+                    logger.error("Metafield definition creation failed with user errors: " + errorMessage);
+                    throw new RuntimeException("Metafield definition creation failed: " + errorMessage);
+                }
+            } else {
+                JsonNode createdDefinition = definitionCreate.get("createdDefinition");
+                if (createdDefinition != null) {
+                    logger.info("✅ Created metafield definition: " + namespace + "." + key + " (" + name + ")");
+                }
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error creating metafield definition: " + namespace + "." + key, e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Create all eBay metafield definitions to make them visible in Shopify admin
+     */
+    public void createEbayMetafieldDefinitions() throws Exception {
+        logger.info("🏷️ Creating eBay metafield definitions for admin visibility...");
+        
+        // Note: Category constraints are not supported through GraphQL metafield validations
+        // Metafields will be created without category restrictions
+        logger.info("ℹ️ Creating metafield definitions without category constraints (not supported in GraphQL)");
+        
+        // Define all eBay metafields with proper display names and descriptions
+        Map<String, Map<String, String>> ebayDefinitions = new HashMap<>();
+        
+        // Brand
+        Map<String, String> brand = new HashMap<>();
+        brand.put("name", "Brand");
+        brand.put("description", "Watch brand/manufacturer for eBay listings");
+        brand.put("type", "single_line_text_field");
+        ebayDefinitions.put("brand", brand);
+        
+        // Model
+        Map<String, String> model = new HashMap<>();
+        model.put("name", "Model");
+        model.put("description", "Watch model for eBay listings");
+        model.put("type", "single_line_text_field");
+        ebayDefinitions.put("model", model);
+        
+        // Reference Number
+        Map<String, String> referenceNumber = new HashMap<>();
+        referenceNumber.put("name", "Reference Number");
+        referenceNumber.put("description", "Manufacturer reference number for eBay listings");
+        referenceNumber.put("type", "single_line_text_field");
+        ebayDefinitions.put("reference_number", referenceNumber);
+        
+        // Serial Number
+        Map<String, String> serialNumber = new HashMap<>();
+        serialNumber.put("name", "Serial Number");
+        serialNumber.put("description", "Watch serial number for eBay listings");
+        serialNumber.put("type", "single_line_text_field");
+        ebayDefinitions.put("serial_number", serialNumber);
+        
+        // Year
+        Map<String, String> year = new HashMap<>();
+        year.put("name", "Year");
+        year.put("description", "Year of manufacture for eBay listings");
+        year.put("type", "single_line_text_field");
+        ebayDefinitions.put("year", year);
+        
+        // Case Material
+        Map<String, String> caseMaterial = new HashMap<>();
+        caseMaterial.put("name", "Case Material");
+        caseMaterial.put("description", "Case material for eBay listings");
+        caseMaterial.put("type", "single_line_text_field");
+        ebayDefinitions.put("case_material", caseMaterial);
+        
+        // Movement
+        Map<String, String> movement = new HashMap<>();
+        movement.put("name", "Movement");
+        movement.put("description", "Movement type for eBay listings");
+        movement.put("type", "single_line_text_field");
+        ebayDefinitions.put("movement", movement);
+        
+        // Case
+        Map<String, String> caseInfo = new HashMap<>();
+        caseInfo.put("name", "Case Information");
+        caseInfo.put("description", "Detailed case information for eBay listings");
+        caseInfo.put("type", "multi_line_text_field");
+        ebayDefinitions.put("case", caseInfo);
+        
+        // Dial
+        Map<String, String> dial = new HashMap<>();
+        dial.put("name", "Dial");
+        dial.put("description", "Dial information for eBay listings");
+        dial.put("type", "multi_line_text_field");
+        ebayDefinitions.put("dial", dial);
+        
+        // General Dial
+        Map<String, String> dialGeneral = new HashMap<>();
+        dialGeneral.put("name", "General Dial");
+        dialGeneral.put("description", "General dial information for eBay listings");
+        dialGeneral.put("type", "single_line_text_field");
+        ebayDefinitions.put("dial_general", dialGeneral);
+        
+        // Dial Markers
+        Map<String, String> dialMarkers = new HashMap<>();
+        dialMarkers.put("name", "Dial Markers");
+        dialMarkers.put("description", "Dial markers for eBay listings");
+        dialMarkers.put("type", "single_line_text_field");
+        ebayDefinitions.put("dial_markers", dialMarkers);
+        
+        // Strap
+        Map<String, String> strap = new HashMap<>();
+        strap.put("name", "Strap/Bracelet");
+        strap.put("description", "Strap or bracelet information for eBay listings");
+        strap.put("type", "multi_line_text_field");
+        ebayDefinitions.put("strap", strap);
+        
+        // Band Material
+        Map<String, String> bandMaterial = new HashMap<>();
+        bandMaterial.put("name", "Band Material");
+        bandMaterial.put("description", "Band material for eBay listings");
+        bandMaterial.put("type", "single_line_text_field");
+        ebayDefinitions.put("band_material", bandMaterial);
+        
+        // Band Type
+        Map<String, String> bandType = new HashMap<>();
+        bandType.put("name", "Band Type");
+        bandType.put("description", "Band type for eBay listings");
+        bandType.put("type", "single_line_text_field");
+        ebayDefinitions.put("band_type", bandType);
+        
+        // Condition
+        Map<String, String> condition = new HashMap<>();
+        condition.put("name", "Condition");
+        condition.put("description", "Watch condition for eBay listings");
+        condition.put("type", "single_line_text_field");
+        ebayDefinitions.put("condition", condition);
+        
+        // Diameter
+        Map<String, String> diameter = new HashMap<>();
+        diameter.put("name", "Case Diameter");
+        diameter.put("description", "Case diameter for eBay listings");
+        diameter.put("type", "single_line_text_field");
+        ebayDefinitions.put("diameter", diameter);
+        
+        // Bezel Type
+        Map<String, String> bezelType = new HashMap<>();
+        bezelType.put("name", "Bezel Type");
+        bezelType.put("description", "Bezel type for eBay listings");
+        bezelType.put("type", "single_line_text_field");
+        ebayDefinitions.put("bezel_type", bezelType);
+        
+        // Case Crown
+        Map<String, String> caseCrown = new HashMap<>();
+        caseCrown.put("name", "Case Crown");
+        caseCrown.put("description", "Case crown information for eBay listings");
+        caseCrown.put("type", "single_line_text_field");
+        ebayDefinitions.put("case_crown", caseCrown);
+        
+        // Box and Papers
+        Map<String, String> boxPapers = new HashMap<>();
+        boxPapers.put("name", "Box & Papers");
+        boxPapers.put("description", "Box and papers information for eBay listings");
+        boxPapers.put("type", "single_line_text_field");
+        ebayDefinitions.put("box_papers", boxPapers);
+        
+        // Category
+        Map<String, String> category = new HashMap<>();
+        category.put("name", "Category");
+        category.put("description", "Watch category for eBay listings");
+        category.put("type", "single_line_text_field");
+        ebayDefinitions.put("category", category);
+        
+        // Style
+        Map<String, String> style = new HashMap<>();
+        style.put("name", "Style");
+        style.put("description", "Watch style for eBay listings");
+        style.put("type", "single_line_text_field");
+        ebayDefinitions.put("style", style);
+        
+        // eBay Price
+        Map<String, String> priceEbay = new HashMap<>();
+        priceEbay.put("name", "eBay Price");
+        priceEbay.put("description", "Specific eBay pricing");
+        priceEbay.put("type", "number_decimal");
+        ebayDefinitions.put("price_ebay", priceEbay);
+        
+        // Auction Flag
+        Map<String, String> auctionFlag = new HashMap<>();
+        auctionFlag.put("name", "Auction Flag");
+        auctionFlag.put("description", "eBay auction flag");
+        auctionFlag.put("type", "single_line_text_field");
+        ebayDefinitions.put("auction_flag", auctionFlag);
+        
+        // Notes
+        Map<String, String> notes = new HashMap<>();
+        notes.put("name", "Additional Notes");
+        notes.put("description", "Additional notes for eBay listings");
+        notes.put("type", "multi_line_text_field");
+        ebayDefinitions.put("notes", notes);
+        
+        // Create all definitions
+        int created = 0;
+        int existing = 0;
+        
+        for (Map.Entry<String, Map<String, String>> entry : ebayDefinitions.entrySet()) {
+            String key = entry.getKey();
+            Map<String, String> def = entry.getValue();
+            
+            try {
+                createMetafieldDefinition("ebay", key, def.get("name"), def.get("description"), def.get("type"), "PRODUCT");
+                created++;
+            } catch (Exception e) {
+                if (e.getMessage().contains("already exists")) {
+                    existing++;
+                } else {
+                    logger.error("Failed to create definition for ebay." + key + ": " + e.getMessage());
+                }
+            }
+        }
+        
+        logger.info("🎉 eBay metafield definitions setup complete:");
+        logger.info("  ✅ Created: " + created + " new definitions");
+        logger.info("  ℹ️ Already existed: " + existing + " definitions");
+        logger.info("  📊 Total eBay definitions: " + ebayDefinitions.size());
+        logger.info("🖥️ eBay metafields should now be visible in Shopify Admin under Products > [Product] > Metafields");
+    }
+    
+    /**
+     * Get all metafield definitions for a specific namespace
+     */
+    public List<Map<String, String>> getMetafieldDefinitions(String namespace) throws Exception {
+        String query = """
+            query getMetafieldDefinitions($namespace: String!, $first: Int!) {
+                metafieldDefinitions(ownerType: PRODUCT, namespace: $namespace, first: $first) {
+                    edges {
+                        node {
+                            id
+                            key
+                            namespace
+                            name
+                            description
+                            type {
+                                name
+                            }
+                        }
+                    }
+                }
+            }
+            """;
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("namespace", namespace);
+        variables.put("first", 250);
+        
+        try {
+            JsonNode data = executeGraphQLQuery(query, variables);
+            JsonNode definitionsNode = data.get("metafieldDefinitions");
+            JsonNode edges = definitionsNode.get("edges");
+            
+            List<Map<String, String>> definitions = new ArrayList<>();
+            for (JsonNode edge : edges) {
+                JsonNode defNode = edge.get("node");
+                Map<String, String> definition = new HashMap<>();
+                definition.put("id", extractIdFromGid(defNode.get("id").asText()));
+                definition.put("key", defNode.get("key").asText());
+                definition.put("namespace", defNode.get("namespace").asText());
+                definition.put("name", defNode.get("name").asText());
+                definitions.add(definition);
+            }
+            
+            return definitions;
+        } catch (Exception e) {
+            logger.error("Error getting metafield definitions for namespace: " + namespace, e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Delete metafield definition by ID
+     */
+    public void deleteMetafieldDefinition(String definitionId) throws Exception {
+        String mutation = """
+            mutation metafieldDefinitionDelete($id: ID!) {
+                metafieldDefinitionDelete(id: $id) {
+                    deletedDefinitionId
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+            """;
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("id", "gid://shopify/MetafieldDefinition/" + definitionId);
+        
+        try {
+            JsonNode data = executeGraphQLQuery(mutation, variables);
+            JsonNode definitionDelete = data.get("metafieldDefinitionDelete");
+            
+            // Check for user errors
+            JsonNode userErrors = definitionDelete.get("userErrors");
+            if (userErrors != null && userErrors.size() > 0) {
+                logger.error("Metafield definition deletion failed with user errors: " + userErrors.toString());
+                throw new RuntimeException("Metafield definition deletion failed: " + userErrors.toString());
+            } else {
+                logger.info("✅ Deleted metafield definition ID: " + definitionId);
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error deleting metafield definition: " + definitionId, e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Remove all eBay metafield definitions
+     */
+    public void removeEbayMetafieldDefinitions() throws Exception {
+        logger.info("🧹 Removing existing eBay metafield definitions...");
+        
+        List<Map<String, String>> existingDefinitions = getMetafieldDefinitions("ebay");
+        
+        if (existingDefinitions.isEmpty()) {
+            logger.info("ℹ️ No existing eBay metafield definitions found to remove");
+            return;
+        }
+        
+        int removed = 0;
+        for (Map<String, String> definition : existingDefinitions) {
+            try {
+                deleteMetafieldDefinition(definition.get("id"));
+                removed++;
+            } catch (Exception e) {
+                logger.warn("Failed to delete metafield definition: " + definition.get("key") + " - " + e.getMessage());
+            }
+        }
+        
+        logger.info("🗑️ Removed " + removed + " existing eBay metafield definitions");
+    }
+    
+    /**
+     * Get all taxonomy categories from Shopify's product taxonomy
+     */
+    public List<Map<String, Object>> getAllTaxonomyCategories() throws Exception {
+        String query = """
+            query {
+                productTaxonomyNodes(first: 250) {
+                    edges {
+                        node {
+                            id
+                            name
+                            fullName
+                            isLeaf
+                            isRoot
+                        }
+                    }
+                }
+            }
+            """;
+        
+        try {
+            JsonNode data = executeGraphQLQuery(query);
+            JsonNode taxonomyNodes = data.get("productTaxonomyNodes");
+            JsonNode edges = taxonomyNodes.get("edges");
+            
+            List<Map<String, Object>> categories = new ArrayList<>();
+            for (JsonNode edge : edges) {
+                JsonNode node = edge.get("node");
+                Map<String, Object> category = new HashMap<>();
+                category.put("id", node.get("id").asText());
+                category.put("name", node.get("name").asText());
+                category.put("fullName", node.has("fullName") ? node.get("fullName").asText() : null);
+                category.put("isLeaf", node.get("isLeaf").asBoolean());
+                category.put("isRoot", node.get("isRoot").asBoolean());
+                categories.add(category);
+            }
+            
+            return categories;
+        } catch (Exception e) {
+            logger.error("Error getting taxonomy categories", e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Get children categories of a specific taxonomy category
+     */
+    public List<Map<String, Object>> getTaxonomyCategoryChildren(String categoryId) throws Exception {
+        String query = """
+            query getTaxonomyChildren($id: ID!) {
+                productTaxonomyNode(id: $id) {
+                    children(first: 100) {
+                        edges {
+                            node {
+                                id
+                                name
+                                fullName
+                                isLeaf
+                            }
+                        }
+                    }
+                }
+            }
+            """;
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("id", categoryId);
+        
+        try {
+            JsonNode data = executeGraphQLQuery(query, variables);
+            JsonNode taxonomyNode = data.get("productTaxonomyNode");
+            
+            if (taxonomyNode == null || taxonomyNode.isNull()) {
+                return new ArrayList<>();
+            }
+            
+            JsonNode children = taxonomyNode.get("children");
+            JsonNode edges = children.get("edges");
+            
+            List<Map<String, Object>> childCategories = new ArrayList<>();
+            for (JsonNode edge : edges) {
+                JsonNode node = edge.get("node");
+                Map<String, Object> category = new HashMap<>();
+                category.put("id", node.get("id").asText());
+                category.put("name", node.get("name").asText());
+                category.put("fullName", node.has("fullName") ? node.get("fullName").asText() : null);
+                category.put("isLeaf", node.get("isLeaf").asBoolean());
+                childCategories.add(category);
+            }
+            
+            return childCategories;
+        } catch (Exception e) {
+            logger.error("Error getting taxonomy category children for ID: " + categoryId, e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Search for a taxonomy category by name using Shopify's official Taxonomy API
+     * Based on https://shopify.dev/docs/api/admin-graphql/latest/objects/Taxonomy
+     */
+    public String searchTaxonomyCategory(String searchTerm) throws Exception {
+        String query = """
+            query searchTaxonomyCategory($search: String!) {
+                taxonomy {
+                    categories(search: $search, first: 10) {
+                        edges {
+                            node {
+                                id
+                                name
+                                fullName
+                                isLeaf
+                                isRoot
+                            }
+                        }
+                    }
+                }
+            }
+            """;
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("search", searchTerm);
+        
+        try {
+            JsonNode data = executeGraphQLQuery(query, variables);
+            JsonNode taxonomyNode = data.get("taxonomy");
+            
+            if (taxonomyNode == null || taxonomyNode.isNull()) {
+                logger.warn("No taxonomy data returned");
+                return null;
+            }
+            
+            JsonNode categoriesNode = taxonomyNode.get("categories");
+            if (categoriesNode == null) {
+                logger.warn("No categories found in taxonomy");
+                return null;
+            }
+            
+            JsonNode edges = categoriesNode.get("edges");
+            if (edges == null || edges.size() == 0) {
+                logger.info("No categories found matching search term: " + searchTerm);
+                return null;
+            }
+            
+            // Look for exact match first, then partial match
+            String exactMatchId = null;
+            String partialMatchId = null;
+            
+            for (JsonNode edge : edges) {
+                JsonNode node = edge.get("node");
+                String name = node.get("name").asText();
+                String fullName = node.has("fullName") && !node.get("fullName").isNull() ? 
+                                 node.get("fullName").asText() : "";
+                String id = node.get("id").asText();
+                
+                logger.info("Found category: " + name + " (Full: " + fullName + ") ID: " + id);
+                
+                if (searchTerm.equalsIgnoreCase(name)) {
+                    exactMatchId = id;
+                    break;
+                } else if (name.toLowerCase().contains(searchTerm.toLowerCase()) || 
+                          fullName.toLowerCase().contains(searchTerm.toLowerCase())) {
+                    if (partialMatchId == null) {
+                        partialMatchId = id;
+                    }
+                }
+            }
+            
+            return exactMatchId != null ? exactMatchId : partialMatchId;
+            
+        } catch (Exception e) {
+            logger.error("Error searching taxonomy category: " + searchTerm, e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Get detailed information about a specific taxonomy category
+     */
+    public Map<String, Object> getTaxonomyCategoryDetails(String categoryId) throws Exception {
+        String query = """
+            query getTaxonomyCategoryDetails($id: ID!) {
+                taxonomyCategory(id: $id) {
+                    id
+                    name
+                    fullName
+                    isLeaf
+                    isRoot
+                    attributes {
+                        id
+                        name
+                    }
+                }
+            }
+            """;
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("id", categoryId);
+        
+        try {
+            JsonNode data = executeGraphQLQuery(query, variables);
+            JsonNode categoryNode = data.get("taxonomyCategory");
+            
+            if (categoryNode == null || categoryNode.isNull()) {
+                logger.warn("Category not found with ID: " + categoryId);
+                return null;
+            }
+            
+            Map<String, Object> details = new HashMap<>();
+            details.put("id", categoryNode.get("id").asText());
+            details.put("name", categoryNode.get("name").asText());
+            details.put("fullName", categoryNode.has("fullName") && !categoryNode.get("fullName").isNull() ? 
+                                   categoryNode.get("fullName").asText() : "");
+            details.put("isLeaf", categoryNode.get("isLeaf").asBoolean());
+            details.put("isRoot", categoryNode.get("isRoot").asBoolean());
+            
+            // Handle attributes if present
+            if (categoryNode.has("attributes") && !categoryNode.get("attributes").isNull()) {
+                List<Map<String, String>> attributes = new ArrayList<>();
+                JsonNode attributesNode = categoryNode.get("attributes");
+                for (JsonNode attrNode : attributesNode) {
+                    Map<String, String> attr = new HashMap<>();
+                    attr.put("id", attrNode.get("id").asText());
+                    attr.put("name", attrNode.get("name").asText());
+                    attributes.add(attr);
+                }
+                details.put("attributes", attributes);
+            }
+            
+            return details;
+            
+        } catch (Exception e) {
+            logger.error("Error getting taxonomy category details: " + categoryId, e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Get all top-level taxonomy categories
+     */
+    public List<Map<String, Object>> getTaxonomyTopLevelCategories() throws Exception {
+        String query = """
+            query {
+                taxonomy {
+                    categories(first: 50) {
+                        edges {
+                            node {
+                                id
+                                name
+                                fullName
+                                isLeaf
+                                isRoot
+                            }
+                        }
+                    }
+                }
+            }
+            """;
+        
+        try {
+            JsonNode data = executeGraphQLQuery(query);
+            JsonNode taxonomyNode = data.get("taxonomy");
+            
+            if (taxonomyNode == null) {
+                return new ArrayList<>();
+            }
+            
+            JsonNode categoriesNode = taxonomyNode.get("categories");
+            if (categoriesNode == null) {
+                return new ArrayList<>();
+            }
+            
+            JsonNode edges = categoriesNode.get("edges");
+            List<Map<String, Object>> categories = new ArrayList<>();
+            
+            for (JsonNode edge : edges) {
+                JsonNode node = edge.get("node");
+                Map<String, Object> category = new HashMap<>();
+                category.put("id", node.get("id").asText());
+                category.put("name", node.get("name").asText());
+                category.put("fullName", node.has("fullName") && !node.get("fullName").isNull() ? 
+                                        node.get("fullName").asText() : "");
+                category.put("isLeaf", node.get("isLeaf").asBoolean());
+                category.put("isRoot", node.get("isRoot").asBoolean());
+                categories.add(category);
+            }
+            
+            return categories;
+            
+        } catch (Exception e) {
+            logger.error("Error getting taxonomy top-level categories", e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Get the Shopify taxonomy category ID for Watches
+     * This ID was discovered via the taxonomy search API: gid://shopify/TaxonomyCategory/aa-6-11
+     */
+    public static String getWatchesCategoryId() {
+        return "gid://shopify/TaxonomyCategory/aa-6-11";
     }
 } 

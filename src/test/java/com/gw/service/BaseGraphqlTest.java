@@ -73,6 +73,9 @@ public abstract class BaseGraphqlTest {
         feedItemService.deleteAllAutonomous();
         
         removeAllCollections();
+        
+        // Remove eBay metafield definitions for clean testing state
+        removeAllEbayMetafieldDefinitions();
 
         // Verify clean state
         List<Product> allProducts = shopifyApiService.getAllProducts();
@@ -87,6 +90,16 @@ public abstract class BaseGraphqlTest {
         
         List<CustomCollection> allCollections = shopifyApiService.getAllCustomCollections();
         Assertions.assertTrue(allCollections.isEmpty());
+    }
+    
+    protected void removeAllEbayMetafieldDefinitions() {
+        try {
+            logger.info("Removing all eBay metafield definitions...");
+            shopifyApiService.removeEbayMetafieldDefinitions();
+            logger.info("✅ eBay metafield definitions cleaned");
+        } catch (Exception e) {
+            logger.info("ℹ️ eBay metafield cleanup: " + e.getMessage());
+        }
     }
     
     protected List<FeedItem> getTopFeedItems(int count) throws Exception{
