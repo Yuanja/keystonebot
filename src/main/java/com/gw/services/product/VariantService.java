@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 /**
  * Service responsible for creating and managing product variants
- * Handles variant creation, options, and merging logic
+ * Handles variant creation, options, and merging logic with enhanced change detection
  */
 @Service
 public class VariantService {
@@ -61,13 +61,17 @@ public class VariantService {
         
         product.addVariant(variant);
         
-        logger.debug("Created default variant for SKU: {} with {} options", 
-            feedItem.getWebTagNumber(), product.getOptions() != null ? product.getOptions().size() : 0);
+        logger.info("Created default variant for SKU: {} with {} options [Color: {}, Size: {}, Material: {}]", 
+            feedItem.getWebTagNumber(), 
+            product.getOptions() != null ? product.getOptions().size() : 0,
+            feedItem.getWebWatchDial(),
+            feedItem.getWebWatchDiameter(),
+            feedItem.getWebMetalType());
     }
     
     /**
      * Sets variant options based on feed item properties
-     * Creates up to 3 options: Color, Size, Material
+     * Creates up to 3 options: Color, Size, Material using specific feedItem attributes
      * 
      * @param product The product to add options to
      * @param variant The variant to set option values on
@@ -76,22 +80,26 @@ public class VariantService {
     private void setVariantOptions(Product product, Variant variant, FeedItem feedItem) {
         int optionIndex = ShopifyConstants.OPTION_1_INDEX;
         
-        // Option 1: Color (from dial color)
-        if (feedItem.getWebWatchDial() != null) {
+        // Option 1: Color (from webWatchDial)
+        if (feedItem.getWebWatchDial() != null && !feedItem.getWebWatchDial().trim().isEmpty()) {
             setOptionValue(product, variant, ShopifyConstants.OPTION_COLOR, 
                 feedItem.getWebWatchDial(), optionIndex++);
+            logger.debug("Set Color option from webWatchDial: {}", feedItem.getWebWatchDial());
         }
         
-        // Option 2: Size (from diameter)
-        if (feedItem.getWebWatchDiameter() != null) {
+        // Option 2: Size (from webWatchDiameter)
+        if (feedItem.getWebWatchDiameter() != null && !feedItem.getWebWatchDiameter().trim().isEmpty()) {
             setOptionValue(product, variant, ShopifyConstants.OPTION_SIZE, 
                 feedItem.getWebWatchDiameter(), optionIndex++);
+            logger.debug("Set Size option from webWatchDiameter: {}", feedItem.getWebWatchDiameter());
         }
         
-        // Option 3: Material (from metal type)
-        if (feedItem.getWebMetalType() != null && optionIndex <= ShopifyConstants.MAX_SHOPIFY_OPTIONS) {
+        // Option 3: Material (from webMetalType)
+        if (feedItem.getWebMetalType() != null && !feedItem.getWebMetalType().trim().isEmpty() 
+            && optionIndex <= ShopifyConstants.MAX_SHOPIFY_OPTIONS) {
             setOptionValue(product, variant, ShopifyConstants.OPTION_MATERIAL, 
                 feedItem.getWebMetalType(), optionIndex);
+            logger.debug("Set Material option from webMetalType: {}", feedItem.getWebMetalType());
         }
     }
     
@@ -156,6 +164,9 @@ public class VariantService {
             if (existingVariant != null) {
                 logger.debug("Merging variant with SKU: {}", newVariant.getSku());
                 
+                // Compare and log variant option changes
+                logVariantOptionChanges(existingVariant, newVariant);
+                
                 // Preserve important IDs from existing variant
                 newVariant.setId(existingVariant.getId());
                 newVariant.setInventoryItemId(existingVariant.getInventoryItemId());
@@ -171,5 +182,105 @@ public class VariantService {
                 logger.debug("New variant with SKU: {} - no existing variant to merge", newVariant.getSku());
             }
         }
+    }
+    
+    /**
+     * Compares and logs changes in variant option values between existing and new variants
+     * 
+     * @param existingVariant The existing variant from Shopify
+     * @param newVariant The new variant from feed item data
+     */
+    private void logVariantOptionChanges(Variant existingVariant, Variant newVariant) {
+        boolean hasChanges = false;
+        
+        // Compare Option 1 (Color)
+        if (!optionValuesEqual(existingVariant.getOption1(), newVariant.getOption1())) {
+            logger.info("Color option changed for SKU: {} | '{}' -> '{}'", 
+                newVariant.getSku(), existingVariant.getOption1(), newVariant.getOption1());
+            hasChanges = true;
+        }
+        
+        // Compare Option 2 (Size)
+        if (!optionValuesEqual(existingVariant.getOption2(), newVariant.getOption2())) {
+            logger.info("Size option changed for SKU: {} | '{}' -> '{}'", 
+                newVariant.getSku(), existingVariant.getOption2(), newVariant.getOption2());
+            hasChanges = true;
+        }
+        
+        // Compare Option 3 (Material)
+        if (!optionValuesEqual(existingVariant.getOption3(), newVariant.getOption3())) {
+            logger.info("Material option changed for SKU: {} | '{}' -> '{}'", 
+                newVariant.getSku(), existingVariant.getOption3(), newVariant.getOption3());
+            hasChanges = true;
+        }
+        
+        if (!hasChanges) {
+            logger.debug("No variant option changes detected for SKU: {}", newVariant.getSku());
+        } else {
+            logger.info("Variant options updated for SKU: {} [Color: {}, Size: {}, Material: {}]",
+                newVariant.getSku(), newVariant.getOption1(), newVariant.getOption2(), newVariant.getOption3());
+        }
+    }
+    
+    /**
+     * Safely compares two option values, handling nulls appropriately
+     * 
+     * @param existing The existing option value
+     * @param updated The new option value
+     * @return true if values are equal (both null or same string value)
+     */
+    private boolean optionValuesEqual(String existing, String updated) {
+        if (existing == null && updated == null) {
+            return true;
+        }
+        if (existing == null || updated == null) {
+            return false;
+        }
+        return existing.equals(updated);
+    }
+    
+    /**
+     * Validates that variant options are properly set based on feed item attributes
+     * This is useful for testing and debugging variant option setup
+     * 
+     * @param variant The variant to validate
+     * @param feedItem The source feed item
+     * @return true if all expected options are properly set
+     */
+    public boolean validateVariantOptions(Variant variant, FeedItem feedItem) {
+        boolean isValid = true;
+        
+        // Validate Color option (webWatchDial)
+        if (feedItem.getWebWatchDial() != null && !feedItem.getWebWatchDial().trim().isEmpty()) {
+            if (!feedItem.getWebWatchDial().equals(variant.getOption1())) {
+                logger.warn("Color option mismatch for SKU: {} | Expected: '{}', Got: '{}'",
+                    variant.getSku(), feedItem.getWebWatchDial(), variant.getOption1());
+                isValid = false;
+            }
+        }
+        
+        // Validate Size option (webWatchDiameter)
+        if (feedItem.getWebWatchDiameter() != null && !feedItem.getWebWatchDiameter().trim().isEmpty()) {
+            if (!feedItem.getWebWatchDiameter().equals(variant.getOption2())) {
+                logger.warn("Size option mismatch for SKU: {} | Expected: '{}', Got: '{}'",
+                    variant.getSku(), feedItem.getWebWatchDiameter(), variant.getOption2());
+                isValid = false;
+            }
+        }
+        
+        // Validate Material option (webMetalType)
+        if (feedItem.getWebMetalType() != null && !feedItem.getWebMetalType().trim().isEmpty()) {
+            if (!feedItem.getWebMetalType().equals(variant.getOption3())) {
+                logger.warn("Material option mismatch for SKU: {} | Expected: '{}', Got: '{}'",
+                    variant.getSku(), feedItem.getWebMetalType(), variant.getOption3());
+                isValid = false;
+            }
+        }
+        
+        if (isValid) {
+            logger.debug("Variant options validation passed for SKU: {}", variant.getSku());
+        }
+        
+        return isValid;
     }
 } 

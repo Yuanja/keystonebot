@@ -235,11 +235,6 @@ public class EbayMetafieldBackfillService {
             ebayMetafields.add(createEbayMetafield("reference_number", feedItem.getWebWatchManufacturerReferenceNumber(), "single_line_text_field", "Manufacturer reference number"));
         }
         
-        // Serial Number
-        if (feedItem.getWebSerialNumber() != null) {
-            ebayMetafields.add(createEbayMetafield("serial_number", feedItem.getWebSerialNumber(), "single_line_text_field", "Watch serial number"));
-        }
-        
         // Year of Manufacture
         if (feedItem.getWebWatchYear() != null) {
             ebayMetafields.add(createEbayMetafield("year", feedItem.getWebWatchYear(), "single_line_text_field", "Year of manufacture"));
@@ -255,39 +250,14 @@ public class EbayMetafieldBackfillService {
             ebayMetafields.add(createEbayMetafield("movement", feedItem.getWebWatchMovement(), "single_line_text_field", "Movement type"));
         }
         
-        // Case Information
-        if (feedItem.getWebWatchCase() != null) {
-            ebayMetafields.add(createEbayMetafield("case", feedItem.getWebWatchCase(), "multi_line_text_field", "Case information"));
-        }
-        
         // Dial Information
         if (feedItem.getWebWatchDial() != null) {
             ebayMetafields.add(createEbayMetafield("dial", feedItem.getWebWatchDial(), "multi_line_text_field", "Dial information"));
         }
         
-        // General Dial Information
-        if (feedItem.getWebWatchGeneralDial() != null) {
-            ebayMetafields.add(createEbayMetafield("dial_general", feedItem.getWebWatchGeneralDial(), "single_line_text_field", "General dial information"));
-        }
-        
-        // Dial Markers
-        if (feedItem.getWebWatchDialMarkers() != null) {
-            ebayMetafields.add(createEbayMetafield("dial_markers", feedItem.getWebWatchDialMarkers(), "single_line_text_field", "Dial markers"));
-        }
-        
         // Strap/Bracelet Information
         if (feedItem.getWebWatchStrap() != null) {
             ebayMetafields.add(createEbayMetafield("strap", feedItem.getWebWatchStrap(), "multi_line_text_field", "Strap/bracelet information"));
-        }
-        
-        // Band Material
-        if (feedItem.getWebWatchBandMaterial() != null) {
-            ebayMetafields.add(createEbayMetafield("band_material", feedItem.getWebWatchBandMaterial(), "single_line_text_field", "Band material"));
-        }
-        
-        // Band Type
-        if (feedItem.getWebWatchBandType() != null) {
-            ebayMetafields.add(createEbayMetafield("band_type", feedItem.getWebWatchBandType(), "single_line_text_field", "Band type"));
         }
         
         // Condition
@@ -298,16 +268,6 @@ public class EbayMetafieldBackfillService {
         // Case Diameter
         if (feedItem.getWebWatchDiameter() != null) {
             ebayMetafields.add(createEbayMetafield("diameter", feedItem.getWebWatchDiameter(), "single_line_text_field", "Case diameter"));
-        }
-        
-        // Bezel Type
-        if (feedItem.getWebWatchBezelType() != null) {
-            ebayMetafields.add(createEbayMetafield("bezel_type", feedItem.getWebWatchBezelType(), "single_line_text_field", "Bezel type"));
-        }
-        
-        // Case Crown
-        if (feedItem.getWebWatchCaseCrown() != null) {
-            ebayMetafields.add(createEbayMetafield("case_crown", feedItem.getWebWatchCaseCrown(), "single_line_text_field", "Case crown information"));
         }
         
         // Box and Papers
@@ -323,21 +283,6 @@ public class EbayMetafieldBackfillService {
         // Style
         if (feedItem.getWebStyle() != null) {
             ebayMetafields.add(createEbayMetafield("style", feedItem.getWebStyle(), "single_line_text_field", "Watch style"));
-        }
-        
-        // eBay-specific pricing information
-        if (feedItem.getWebPriceEbay() != null) {
-            ebayMetafields.add(createEbayMetafield("price_ebay", feedItem.getWebPriceEbay(), "number_decimal", "eBay price"));
-        }
-        
-        // eBay auction flag
-        if (feedItem.getWebFlagEbayauction() != null) {
-            ebayMetafields.add(createEbayMetafield("auction_flag", feedItem.getWebFlagEbayauction(), "single_line_text_field", "eBay auction flag"));
-        }
-        
-        // Additional notes
-        if (feedItem.getWebNotes() != null) {
-            ebayMetafields.add(createEbayMetafield("notes", feedItem.getWebNotes(), "multi_line_text_field", "Additional notes"));
         }
         
         return ebayMetafields;

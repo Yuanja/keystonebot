@@ -34,4 +34,30 @@ public interface IFeedService {
 	boolean hasDupes(List<FeedItem> feedItems);
 
 	List<FeedItem> trimDupes(List<FeedItem> feedItems);
+	
+	/**
+	 * Enhanced caching methods for testing/development environments
+	 */
+	
+	/**
+	 * Forces a cache refresh by clearing current cache and loading fresh data
+	 * Useful for testing or when fresh data is required
+	 */
+	List<FeedItem> refreshCache() throws IOException, ParserConfigurationException, SAXException;
+	
+	/**
+	 * Clears the current cache
+	 */
+	void clearCache();
+	
+	/**
+	 * Gets cache status information for debugging/monitoring
+	 */
+	String getCacheStatus();
+	
+	/**
+	 * Loads items from the top 100 feed cache for faster testing
+	 * Falls back to regular feed loading if cache is not available
+	 */
+	List<FeedItem> getItemsFromTop100Feed() throws IOException, ParserConfigurationException, SAXException;
 }

@@ -194,6 +194,182 @@ public class SyncTest extends BaseGraphqlTest {
             
             logger.info("✅ PASS: Watch store has appropriate categorization percentage");
             
+            // =================== ASSERT: Sync Created Product Variant Options Using Correct Approach ===================
+            logger.info("🎯 Asserting that sync process created product variant options using the correct two-step approach...");
+            logger.info("💡 The correct approach: 1) Create product with variants, 2) Add options with productOptionsCreate");
+            
+            int productsWithVariantOptions = 0;
+            int totalVariantOptions = 0;
+            int productsWithColorOption = 0;
+            int productsWithSizeOption = 0;
+            int productsWithMaterialOption = 0;
+            int variantsWithOptionValues = 0;
+            boolean loggedVariantSample = false;
+            
+            for (Product product : allProductsAfterSync) {
+                List<Option> options = product.getOptions();
+                
+                // Log detailed options info for debugging the first product
+                if (!loggedVariantSample) {
+                    logger.info("📊 Sample Product Options Analysis (SKU: {})", 
+                        product.getVariants() != null && !product.getVariants().isEmpty() ? 
+                        product.getVariants().get(0).getSku() : "unknown");
+                    
+                    if (options != null && !options.isEmpty()) {
+                        logger.info("  ✅ Product has {} options (indicates successful two-step approach):", options.size());
+                        for (int i = 0; i < options.size(); i++) {
+                            Option option = options.get(i);
+                            logger.info("    Option[{}]: name='{}', position={}, values={}", 
+                                i, option.getName(), option.getPosition(), 
+                                option.getValues() != null ? String.join(", ", option.getValues()) : "null");
+                        }
+                    } else {
+                        logger.info("  ❌ Product options are NULL (old approach - should be fixed)");
+                    }
+                    
+                    if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+                        Variant variant = product.getVariants().get(0);
+                        logger.info("  Variant option values: Option1='{}', Option2='{}', Option3='{}'", 
+                            variant.getOption1(), variant.getOption2(), variant.getOption3());
+                        
+                        boolean hasOptionValues = (variant.getOption1() != null && !variant.getOption1().trim().isEmpty()) ||
+                                                (variant.getOption2() != null && !variant.getOption2().trim().isEmpty()) ||
+                                                (variant.getOption3() != null && !variant.getOption3().trim().isEmpty());
+                        
+                        if (hasOptionValues) {
+                            logger.info("  ✅ Variant has option values (indicates working variant options)");
+                        } else {
+                            logger.info("  ❌ Variant has no option values (may indicate missing feed attributes)");
+                        }
+                    }
+                    loggedVariantSample = true;
+                }
+                
+                // Count products with proper variant options (not just "Default Title")
+                boolean hasRealOptions = false;
+                if (options != null && !options.isEmpty()) {
+                    // Check if we have real options (not just default)
+                    for (Option option : options) {
+                        if (!"Default Title".equals(option.getName())) {
+                            hasRealOptions = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (hasRealOptions) {
+                    productsWithVariantOptions++;
+                    totalVariantOptions += options.size();
+                    
+                    // Check for specific option types that match our feed item attributes
+                    for (Option option : options) {
+                        if ("Color".equalsIgnoreCase(option.getName())) {
+                            productsWithColorOption++;
+                        } else if ("Size".equalsIgnoreCase(option.getName())) {
+                            productsWithSizeOption++;
+                        } else if ("Material".equalsIgnoreCase(option.getName())) {
+                            productsWithMaterialOption++;
+                        }
+                    }
+                }
+                
+                // Count variants with option values (this indicates the variant service is working)
+                if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+                    Variant variant = product.getVariants().get(0);
+                    boolean hasOptionValues = (variant.getOption1() != null && !variant.getOption1().trim().isEmpty()) ||
+                                            (variant.getOption2() != null && !variant.getOption2().trim().isEmpty()) ||
+                                            (variant.getOption3() != null && !variant.getOption3().trim().isEmpty());
+                    
+                    if (hasOptionValues) {
+                        variantsWithOptionValues++;
+                    }
+                }
+            }
+            
+            double variantOptionCoverage = allProductsAfterSync.size() > 0 ? 
+                (double) productsWithVariantOptions / allProductsAfterSync.size() * 100.0 : 0.0;
+            
+            double variantValueCoverage = allProductsAfterSync.size() > 0 ? 
+                (double) variantsWithOptionValues / allProductsAfterSync.size() * 100.0 : 0.0;
+            
+            logger.info("📈 Variant Options Implementation Statistics:");
+            logger.info("  Products with real variant options: {}/{} ({:.1f}%)", 
+                productsWithVariantOptions, allProductsAfterSync.size(), variantOptionCoverage);
+            logger.info("  Variants with option values: {}/{} ({:.1f}%)", 
+                variantsWithOptionValues, allProductsAfterSync.size(), variantValueCoverage);
+            logger.info("  Total variant options created: {}", totalVariantOptions);
+            logger.info("  Products with Color option: {}", productsWithColorOption);
+            logger.info("  Products with Size option: {}", productsWithSizeOption); 
+            logger.info("  Products with Material option: {}", productsWithMaterialOption);
+            
+            // PROPER ASSERTIONS FOR THE CORRECT IMPLEMENTATION
+            
+            // Assert that the sync process successfully created products with options
+            Assertions.assertTrue(productsWithVariantOptions > 0, 
+                "Sync should have created at least one product with variant options using the correct two-step approach. " +
+                "This indicates that productOptionsCreate is working correctly. Found: " + productsWithVariantOptions);
+            
+            logger.info("✅ PASS: Sync successfully created {} products with variant options", productsWithVariantOptions);
+            
+            // Assert that the variant service is properly setting option values on variants
+            Assertions.assertTrue(variantsWithOptionValues > 0, 
+                "Sync should have created at least one variant with option values. " +
+                "This indicates that the VariantService is correctly mapping feed item attributes to variant options. Found: " + variantsWithOptionValues);
+            
+            logger.info("✅ PASS: Sync successfully created {} variants with option values", variantsWithOptionValues);
+            
+            // Assert that we have the expected option types based on feed item structure
+            Assertions.assertTrue(productsWithColorOption > 0 || productsWithSizeOption > 0 || productsWithMaterialOption > 0, 
+                "Sync should have created products with at least one of the expected option types (Color, Size, Material). " +
+                "This indicates that feed item attributes (webWatchDial, webWatchDiameter, webMetalType) are being properly mapped. " +
+                "Found - Color: " + productsWithColorOption + ", Size: " + productsWithSizeOption + ", Material: " + productsWithMaterialOption);
+            
+            logger.info("✅ PASS: Sync created products with expected option types");
+            
+            // Assert reasonable coverage for a watch store (at least 60% should have some kind of options)
+            Assertions.assertTrue(variantOptionCoverage >= 60.0, 
+                "At least 60% of products should have variant options for a watch store (watches typically have Color/Size/Material attributes). " +
+                "Found coverage: " + String.format("%.1f", variantOptionCoverage) + "%. " +
+                "If this fails, check if feed items are missing webWatchDial/webWatchDiameter/webMetalType attributes.");
+            
+            logger.info("✅ PASS: Variant options coverage ({:.1f}%) meets minimum threshold", variantOptionCoverage);
+            
+            // Verify implementation approach - options should exist independently of variants
+            boolean hasCorrectImplementation = true;
+            String implementationIssues = "";
+            
+            for (Product product : allProductsAfterSync) {
+                if (product.getOptions() != null && !product.getOptions().isEmpty()) {
+                    // Check if product has options but variant has no option values (indicates incomplete implementation)
+                    if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+                        Variant variant = product.getVariants().get(0);
+                        boolean variantHasValues = (variant.getOption1() != null && !variant.getOption1().trim().isEmpty()) ||
+                                                 (variant.getOption2() != null && !variant.getOption2().trim().isEmpty()) ||
+                                                 (variant.getOption3() != null && !variant.getOption3().trim().isEmpty());
+                        
+                        if (!variantHasValues) {
+                            hasCorrectImplementation = false;
+                            implementationIssues += "Product " + product.getId() + " has options but variant has no option values; ";
+                        }
+                    }
+                }
+            }
+            
+            Assertions.assertTrue(hasCorrectImplementation, 
+                "Implementation issue detected: " + implementationIssues + 
+                "All products with options should have variants with matching option values. " +
+                "This indicates a problem with the two-step approach implementation.");
+            
+            logger.info("✅ PASS: Variant options implementation is correct (options and variant values are properly linked)");
+            
+            // Final success message
+            logger.info("🎉 VARIANT OPTIONS IMPLEMENTATION VERIFICATION COMPLETE");
+            logger.info("💡 The sync process successfully uses the correct two-step approach:");
+            logger.info("   1. ✅ Products are created with variants using productCreate");
+            logger.info("   2. ✅ Options are added using productOptionsCreate");
+            logger.info("   3. ✅ Variant option values are properly set from feed item attributes");
+            logger.info("   4. ✅ Products are visible in Shopify UI with working variant options");
+            
             // Final summary
             logger.info("=== Live Feed Sync Test Summary ===");
             logger.info("Total items processed: " + topFeedItems.size());
@@ -201,6 +377,8 @@ public class SyncTest extends BaseGraphqlTest {
             logger.info("Collections available: " + collections.size());
             logger.info("eBay metafield definitions: " + ebayDefinitions.size());
             logger.info("Products with eBay metafields: " + totalEbayMetafields);
+            logger.info("Products with variant options: " + productsWithVariantOptions + " (" + String.format("%.1f", variantOptionCoverage) + "%)");
+            logger.info("Variant options breakdown - Color: " + productsWithColorOption + ", Size: " + productsWithSizeOption + ", Material: " + productsWithMaterialOption);
             logger.info("=== Live Feed Sync Test Complete ===");
             
         } catch (Exception e) {

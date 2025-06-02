@@ -76,7 +76,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
     private IFeedService feedService;
     
     @Autowired
-    private ShopifyGraphQLService shopifyApiService;
+    private ShopifyGraphQLService shopifyGraphQLService;
     
     @Autowired
     private ImageService imageService;
@@ -120,7 +120,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
     private void ensureCollections() throws Exception {
         if (!collectionsInitialized || cachedCollectionByEnum == null) {
             logger.info("Initializing and caching collection mappings...");
-            cachedCollectionByEnum = shopifyApiService.ensureConfiguredCollections(getPredefinedCollections());
+            cachedCollectionByEnum = shopifyGraphQLService.ensureConfiguredCollections(getPredefinedCollections());
             collectionsInitialized = true;
             logger.info("Cached {} collection mappings", cachedCollectionByEnum.size());
         } else {
@@ -136,7 +136,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
         if (!metafieldDefinitionsInitialized) {
             logger.info("Ensuring eBay metafield definitions exist...");
             try {
-                shopifyApiService.createEbayMetafieldDefinitions();
+                shopifyGraphQLService.createEbayMetafieldDefinitions();
                 metafieldDefinitionsInitialized = true;
                 logger.info("✅ eBay metafield definitions ensured");
             } catch (Exception e) {
@@ -237,7 +237,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
             if (StringUtils.isNotEmpty(itemInDb.getShopifyItemId())) {
                 try {
                     // Should check for item existence in DB first.
-                    shopifyApiService.deleteProductById(itemInDb.getShopifyItemId());
+                    shopifyGraphQLService.deleteProductById(itemInDb.getShopifyItemId());
                     feedItemService.deleteAutonomous(itemInDb);
 
                     String removeItemMessage = getItemActionLogMessage("REMOVED", itemInDb);
@@ -349,7 +349,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
      * Retrieves the existing product from Shopify with validation
      */
     private Product retrieveExistingProduct(FeedItem item) {
-        Product existingProduct = shopifyApiService.getProductByProductId(item.getShopifyItemId());
+        Product existingProduct = shopifyGraphQLService.getProductByProductId(item.getShopifyItemId());
         if (existingProduct == null) {
             throw new RuntimeException("No Shopify product found by the id: " + item.getShopifyItemId());
         }
@@ -392,7 +392,101 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
      */
     private void updateProductOnShopify(Product product, FeedItem item) throws Exception {
         logger.info(LogService.toJson(product));
-        shopifyApiService.updateProduct(product);
+        
+        // Check if variant options need to be updated
+        handleVariantOptionsUpdate(product, item);
+        
+        shopifyGraphQLService.updateProduct(product);
+    }
+    
+    /**
+     * Handles variant options updates by comparing existing options with new options
+     * Uses productOptionsUpdate to modify existing option values - cannot delete options
+     */
+    private void handleVariantOptionsUpdate(Product updatedProduct, FeedItem item) {
+        try {
+            if (updatedProduct.getId() == null) {
+                logger.debug("Product ID is null, cannot update variant options");
+                return;
+            }
+            
+            // Check if the feed item has variant attributes
+            String newColor = item.getWebWatchDial();
+            String newSize = item.getWebWatchDiameter();
+            String newMaterial = item.getWebMetalType();
+            
+            boolean hasVariantOptions = (newColor != null && !newColor.trim().isEmpty()) ||
+                                      (newSize != null && !newSize.trim().isEmpty()) ||
+                                      (newMaterial != null && !newMaterial.trim().isEmpty());
+            
+            if (!hasVariantOptions) {
+                logger.debug("No variant options in feed item for product: {}", updatedProduct.getId());
+                return;
+            }
+            
+            // Get current product from Shopify to compare options
+            Product currentProduct = shopifyGraphQLService.getProductByProductId(updatedProduct.getId());
+            if (currentProduct == null) {
+                logger.warn("Could not fetch current product from Shopify for ID: {}", updatedProduct.getId());
+                return;
+            }
+            
+            // Check if options need updating
+            boolean optionsNeedUpdate = false;
+            if (currentProduct.getOptions() == null || currentProduct.getOptions().isEmpty()) {
+                // No existing options, create them
+                logger.info("No existing options found, creating new options for product: {}", updatedProduct.getId());
+                shopifyGraphQLService.createProductOptions(updatedProduct.getId(), item);
+                return;
+            }
+            
+            // Compare existing option values with new values
+            for (Option existingOption : currentProduct.getOptions()) {
+                String existingValue = getFirstOptionValue(existingOption);
+                String newValue = null;
+                
+                if ("Color".equalsIgnoreCase(existingOption.getName())) {
+                    newValue = newColor;
+                } else if ("Size".equalsIgnoreCase(existingOption.getName())) {
+                    newValue = newSize;
+                } else if ("Material".equalsIgnoreCase(existingOption.getName())) {
+                    newValue = newMaterial;
+                }
+                
+                if (newValue != null && !newValue.equals(existingValue)) {
+                    logger.info("Option '{}' value changed from '{}' to '{}' for product: {}", 
+                              existingOption.getName(), existingValue, newValue, updatedProduct.getId());
+                    optionsNeedUpdate = true;
+                    break;
+                }
+            }
+            
+            if (optionsNeedUpdate) {
+                logger.info("Updating variant options for product: {}", updatedProduct.getId());
+                boolean success = shopifyGraphQLService.updateProductOptions(updatedProduct.getId(), item);
+                
+                if (success) {
+                    logger.info("✅ Successfully updated variant options for product: {}", updatedProduct.getId());
+                } else {
+                    logger.error("❌ Failed to update variant options for product: {}", updatedProduct.getId());
+                }
+            } else {
+                logger.debug("No variant option updates needed for product: {}", updatedProduct.getId());
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error handling variant options update for product: " + updatedProduct.getId(), e);
+        }
+    }
+    
+    /**
+     * Helper method to get the first option value from an option
+     */
+    private String getFirstOptionValue(Option option) {
+        if (option.getValues() != null && !option.getValues().isEmpty()) {
+            return option.getValues().get(0);
+        }
+        return null;
     }
     
     /**
@@ -401,7 +495,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
     private void handleImageUpdatesForExistingProduct(Product existingProduct, Product updatedProduct) {
         try {
             // Force delete the images and then re-upload
-            shopifyApiService.deleteAllImageByProductId(existingProduct.getId());
+            shopifyGraphQLService.deleteAllImageByProductId(existingProduct.getId());
             
             if (updatedProduct.getImages() != null && !updatedProduct.getImages().isEmpty()) {
                 logger.info("Re-adding " + updatedProduct.getImages().size() + " images to updated product");
@@ -409,7 +503,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
                 logImageDetailsForUpdate(existingProduct.getId(), updatedProduct.getImages());
                 
                 try {
-                    shopifyApiService.addImagesToProduct(existingProduct.getId(), updatedProduct.getImages());
+                    shopifyGraphQLService.addImagesToProduct(existingProduct.getId(), updatedProduct.getImages());
                 } catch (Exception e) {
                     logger.error("Failed to re-add images to product ID: " + existingProduct.getId(), e);
                     // Continue execution - don't fail the whole update if image re-addition fails
@@ -441,7 +535,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
     private void updateInventoryAfterProductUpdate(FeedItem item, Product updatedProduct) throws Exception {
         // CRITICAL FIX: Re-fetch the product after update to get current inventory item ID
         logger.info("Re-fetching product after update to get current inventory item ID...");
-        Product refreshedProduct = shopifyApiService.getProductByProductId(item.getShopifyItemId());
+        Product refreshedProduct = shopifyGraphQLService.getProductByProductId(item.getShopifyItemId());
         
         if (refreshedProduct == null || refreshedProduct.getVariants().isEmpty()) {
             logger.error("❌ Failed to re-fetch product after update - cannot update inventory");
@@ -471,7 +565,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
             }
             
             if (validateInventoryLevels(inventoryLevels)) {
-                shopifyApiService.updateInventoryLevels(inventoryLevels);
+                shopifyGraphQLService.updateInventoryLevels(inventoryLevels);
                 logger.info("✅ Successfully updated inventory levels");
             } else {
                 logger.error("❌ Skipping inventory update due to invalid inventory level data");
@@ -501,12 +595,12 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
      */
     private void updateCollectionAssociations(FeedItem item) throws Exception {
         // Delete existing collects
-        shopifyApiService.deleteAllCollectForProductId(item.getShopifyItemId());
+        shopifyGraphQLService.deleteAllCollectForProductId(item.getShopifyItemId());
         
         // Get updated collections and create associations
         List<Collect> updatedCollections = 
             CollectionUtility.getCollectionForProduct(item.getShopifyItemId(), item, getCollectionMappings());
-        shopifyApiService.addProductAndCollectionsAssociations(updatedCollections);
+        shopifyGraphQLService.addProductAndCollectionsAssociations(updatedCollections);
     }
     
     /**
@@ -545,33 +639,33 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
                 logger.info("Skipping image download for SKU: " + item.getWebTagNumber() + " (skip.image.download=true)");
             }
         	
-            Product product = shopifyProductFactoryService.createProduct(item);
-            
-            // Log product details before sending to Shopify API
-            logProductDetails("CREATING", product, item.getWebTagNumber());
-            
-            Product newlyAddedProduct = shopifyApiService.addProduct(product);
+            // Use the two-step approach for creating products with variant options
+            // This method creates the product in Shopify AND adds options, returning the complete product
+            Product newlyAddedProduct = shopifyProductFactoryService.createProductWithOptions(item);
             
             // Verify product was created successfully
             if (newlyAddedProduct == null || newlyAddedProduct.getId() == null) {
                 throw new RuntimeException("Failed to create product - no product ID returned");
             }
             
+            // Log product details after creation
+            logProductDetails("CREATED", newlyAddedProduct, item.getWebTagNumber());
+            
             // Add images to the newly created product (GraphQL migration fix)
             // Send images to Shopify when they are available
-            if (product.getImages() != null && !product.getImages().isEmpty()) {
-                logger.info("Adding " + product.getImages().size() + " images to newly created product");
+            if (newlyAddedProduct.getImages() != null && !newlyAddedProduct.getImages().isEmpty()) {
+                logger.info("Adding " + newlyAddedProduct.getImages().size() + " images to newly created product");
                 
                 // Log image details before sending to Shopify
                 logger.info("=== ADDING IMAGES to Product ID: {} ===", newlyAddedProduct.getId());
-                for (int i = 0; i < product.getImages().size(); i++) {
-                    Image image = product.getImages().get(i);
+                for (int i = 0; i < newlyAddedProduct.getImages().size(); i++) {
+                    Image image = newlyAddedProduct.getImages().get(i);
                     logger.info("  Image[{}] URL: {}", i, image.getSrc());
                 }
                 logger.info("=== End ADDING IMAGES ===");
                 
                 try {
-                    shopifyApiService.addImagesToProduct(newlyAddedProduct.getId(), product.getImages());
+                    shopifyGraphQLService.addImagesToProduct(newlyAddedProduct.getId(), newlyAddedProduct.getImages());
                 } catch (Exception e) {
                     logger.error("Failed to add images to product ID: " + newlyAddedProduct.getId(), e);
                 }
@@ -582,7 +676,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
             String inventoryItemId = newlyAddedProduct.getVariants().get(0).getInventoryItemId();
             
             // GraphQL API returns List<InventoryLevel> directly, not InventoryLevels wrapper
-            List<InventoryLevel> levelsList = shopifyApiService.getInventoryLevelByInventoryItemId(inventoryItemId);
+            List<InventoryLevel> levelsList = shopifyGraphQLService.getInventoryLevelByInventoryItemId(inventoryItemId);
             
             // Convert List<InventoryLevel> back to InventoryLevels wrapper for compatibility with factory
             InventoryLevels levels = new InventoryLevels();
@@ -592,10 +686,10 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
             
             //Get the count from the product, that's created by the factory from the feed item.
             //Set the inventoryItemId for update.
-            shopifyProductFactoryService.mergeInventoryLevels(levels, product.getVariants().get(0).getInventoryLevels());
+            shopifyProductFactoryService.mergeInventoryLevels(levels, newlyAddedProduct.getVariants().get(0).getInventoryLevels());
             
             // GraphQL API expects List<InventoryLevel>
-            List<InventoryLevel> inventoryLevelsToUpdate = product.getVariants().get(0).getInventoryLevels().get();
+            List<InventoryLevel> inventoryLevelsToUpdate = newlyAddedProduct.getVariants().get(0).getInventoryLevels().get();
             if (inventoryLevelsToUpdate != null && !inventoryLevelsToUpdate.isEmpty()) {
                 logger.info("Updating inventory levels for " + inventoryLevelsToUpdate.size() + " locations");
                 
@@ -611,7 +705,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
                 
                 if (allLevelsValid) {
                     try {
-                        shopifyApiService.updateInventoryLevels(inventoryLevelsToUpdate);
+                        shopifyGraphQLService.updateInventoryLevels(inventoryLevelsToUpdate);
                         logger.info("✅ Successfully updated inventory levels for new product");
                     } catch (Exception e) {
                         logger.error("❌ Failed to update inventory levels for new product: " + e.getMessage());
@@ -632,7 +726,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
                 List<Collect> collectsToAdd = CollectionUtility.getCollectionForProduct(newlyAddedProduct.getId(), item, collectionMappings);
                 
                 if (!collectsToAdd.isEmpty()) {
-                    shopifyApiService.addProductAndCollectionsAssociations(collectsToAdd);
+                    shopifyGraphQLService.addProductAndCollectionsAssociations(collectsToAdd);
                     logger.info("Successfully added product to " + collectsToAdd.size() + " collections");
                 } else {
                     logger.warn("No collections found for product " + newlyAddedProduct.getId() + " (SKU: " + item.getWebTagNumber() + ")");
@@ -645,7 +739,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
             // CRITICAL: Publish the product to ALL available sales channels
             // This ensures the product is visible and available for purchase on all channels
             try {
-                shopifyApiService.publishProductToAllChannels(newlyAddedProduct.getId());
+                shopifyGraphQLService.publishProductToAllChannels(newlyAddedProduct.getId());
                 logger.info("Successfully published product to all sales channels");
             } catch (Exception e) {
                 logger.warn("Failed to publish product to all channels (product may already be published): " + e.getMessage());

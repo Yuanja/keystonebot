@@ -121,6 +121,17 @@ public class ProductImageService {
      * @param newImages New images from feed item
      */
     public void mergeImages(String productId, List<Image> existingImages, List<Image> newImages) {
+        // Handle null safety for existing images
+        if (existingImages == null) {
+            existingImages = new ArrayList<>();
+        }
+        
+        // Handle null safety for new images
+        if (newImages == null) {
+            logger.debug("No new images to merge for product: {} (newImages is null)", productId);
+            return;
+        }
+        
         logger.debug("Merging {} existing images with {} new images for product: {}", 
             existingImages.size(), newImages.size(), productId);
         

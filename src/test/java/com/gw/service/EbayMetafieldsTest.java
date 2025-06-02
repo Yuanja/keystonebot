@@ -78,12 +78,6 @@ public class EbayMetafieldsTest extends BaseGraphqlTest {
         if (testItem.getWebWatchDiameter() != null) {
             verifyEbayMetafield(ebayMetafields, "diameter", testItem.getWebWatchDiameter());
         }
-        if (testItem.getWebSerialNumber() != null) {
-            verifyEbayMetafield(ebayMetafields, "serial_number", testItem.getWebSerialNumber());
-        }
-        if (testItem.getWebPriceEbay() != null) {
-            verifyEbayMetafield(ebayMetafields, "price_ebay", testItem.getWebPriceEbay());
-        }
         
         logger.info("=== eBay Metafields Test Summary ===");
         logger.info("✅ Product created successfully with Shopify ID: " + testItem.getShopifyItemId());

@@ -103,9 +103,42 @@ public abstract class BaseGraphqlTest {
     }
     
     protected List<FeedItem> getTopFeedItems(int count) throws Exception{
-        // Load all items from the live feed
+        // Log cache status for debugging
+        if (keyStoneFeedService instanceof com.gw.services.BaseFeedService) {
+            String cacheStatus = keyStoneFeedService.getCacheStatus();
+            logger.info("📊 Feed cache status: {}", cacheStatus);
+        }
+        
+        // In dev mode, try to use the top 100 cached items for faster testing
+        if (count <= 100) {
+            try {
+                List<FeedItem> top100Items = keyStoneFeedService.getItemsFromTop100Feed();
+                if (!top100Items.isEmpty()) {
+                    logger.info("🚀 Using top 100 cached items for faster testing");
+                    // Sort by webTagNumber in descending order and take the requested count
+                    List<FeedItem> topFeedItems = top100Items.stream()
+                        .filter(item -> item.getWebTagNumber() != null && !item.getWebTagNumber().trim().isEmpty())
+                        .sorted((a, b) -> {
+                            try {
+                                Integer aNum = Integer.parseInt(a.getWebTagNumber());
+                                Integer bNum = Integer.parseInt(b.getWebTagNumber());
+                                return bNum.compareTo(aNum); // Descending order (highest first)
+                            } catch (NumberFormatException e) {
+                                return b.getWebTagNumber().compareTo(a.getWebTagNumber());
+                            }
+                        })
+                        .limit(count)
+                        .collect(Collectors.toList());
+                    return topFeedItems;
+                }
+            } catch (Exception e) {
+                logger.debug("Could not load from top 100 cache, falling back to regular loading: {}", e.getMessage());
+            }
+        }
+        
+        // Load all items from the feed source (with caching if available)
         List<FeedItem> allFeedItems = keyStoneFeedService.getItemsFromFeed();
-        logger.info("Loaded " + allFeedItems.size() + " total items from live feed");
+        logger.info("Loaded " + allFeedItems.size() + " total items from feed source");
         
         // Sort by webTagNumber in descending order and take the highest requested count
         List<FeedItem> topFeedItems = allFeedItems.stream()
@@ -124,6 +157,42 @@ public abstract class BaseGraphqlTest {
             .limit(count)
             .collect(Collectors.toList());
         return topFeedItems;
+    }
+    
+    /**
+     * Forces a fresh cache refresh for testing when live data is needed
+     * Use this method when you need to test with the absolute latest feed data
+     */
+    protected List<FeedItem> getTopFeedItemsFresh(int count) throws Exception {
+        logger.info("🔄 Forcing fresh feed data (bypassing cache)...");
+        
+        // Force refresh the cache with live data
+        List<FeedItem> allFeedItems = keyStoneFeedService.refreshCache();
+        logger.info("Loaded {} total items from fresh feed", allFeedItems.size());
+        
+        // Sort and filter as usual
+        List<FeedItem> topFeedItems = allFeedItems.stream()
+            .filter(item -> item.getWebTagNumber() != null && !item.getWebTagNumber().trim().isEmpty())
+            .sorted((a, b) -> {
+                try {
+                    Integer aNum = Integer.parseInt(a.getWebTagNumber());
+                    Integer bNum = Integer.parseInt(b.getWebTagNumber());
+                    return bNum.compareTo(aNum);
+                } catch (NumberFormatException e) {
+                    return b.getWebTagNumber().compareTo(a.getWebTagNumber());
+                }
+            })
+            .limit(count)
+            .collect(Collectors.toList());
+        return topFeedItems;
+    }
+    
+    /**
+     * Clears the feed cache - useful for testing cache behavior
+     */
+    protected void clearFeedCache() {
+        logger.info("🗑️ Clearing feed cache for test isolation...");
+        keyStoneFeedService.clearCache();
     }
 
     protected Document getDocument(String filePath) throws ParserConfigurationException, SAXException, IOException {
