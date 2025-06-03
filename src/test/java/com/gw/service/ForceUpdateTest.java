@@ -2,12 +2,18 @@ package com.gw.service;
 
 import com.gw.domain.FeedItem;
 import com.gw.domain.FeedItemChangeSet;
+import com.gw.services.FeedItemService;
+import com.gw.services.keystone.KeyStoneFeedService;
+import com.gw.services.keystone.KeystoneShopifySyncService;
+import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,6 +33,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * 3. Validate and recreate eBay metafields if not properly configured
  * 4. Detailed logging and progress tracking
  * 5. Production-safe batch processing
+ * 
+ * IMPORTANT: This test does NOT extend BaseGraphqlTest to avoid the destructive
+ * setUp() method that would delete all products and data!
  * 
  * Usage:
  * 
@@ -49,18 +58,33 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Can target specific items for surgical updates
  * - Sorts by web_tag_number for predictable processing order
  * - Validates and recreates eBay metafields when needed
+ * - DOES NOT CLEAR EXISTING DATA (unlike BaseGraphqlTest)
  */
+@SpringJUnitConfig
+@SpringBootTest
 @TestPropertySource(properties = {
     "shopify.force.update=true"
 })
-@ActiveProfiles("${spring.profiles.active:keystone-dev}")
-public class ForceUpdateTest extends BaseGraphqlTest {
+public class ForceUpdateTest {
     
     private static final Logger logger = LogManager.getLogger(ForceUpdateTest.class);
     
     // Configuration
     private static final int BATCH_SIZE = 25; // Process items in smaller batches for production safety
     private static final boolean DRY_RUN = false; // Set to true for analysis only
+    
+    // Inject dependencies directly (no setUp method to clear data!)
+    @Autowired
+    protected ShopifyGraphQLService shopifyApiService;
+    
+    @Autowired
+    protected KeystoneShopifySyncService syncService;
+
+    @Autowired
+    protected FeedItemService feedItemService;
+    
+    @Autowired
+    protected KeyStoneFeedService keyStoneFeedService;
     
     /**
      * Force update all items in production
