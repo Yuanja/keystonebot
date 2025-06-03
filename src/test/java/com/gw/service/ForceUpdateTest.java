@@ -836,6 +836,7 @@ public class ForceUpdateTest {
     
     /**
      * Validate the structure and content of metafield definitions
+     * Enhanced to validate both keys AND types against the EbayMetafieldDefinition enum
      */
     private boolean validateMetafieldStructure(List<Map<String, String>> metafields) {
         int expectedCount = EbayMetafieldDefinition.getCount();
@@ -853,17 +854,66 @@ public class ForceUpdateTest {
             .sorted()
             .collect(Collectors.toList());
         
-        boolean structureValid = currentKeys.equals(expectedKeys);
+        boolean keysValid = currentKeys.equals(expectedKeys);
         
-        if (!structureValid) {
-            logger.warn("⚠️ Metafield structure validation failed");
+        if (!keysValid) {
+            logger.warn("⚠️ Metafield key validation failed");
             logger.warn("  Expected keys: " + expectedKeys);
             logger.warn("  Current keys: " + currentKeys);
-        } else {
-            logger.info("✅ Metafield structure validation passed - all " + expectedCount + " expected keys found");
+            return false;
         }
         
-        return structureValid;
+        // NEW: Validate types for each metafield
+        boolean typesValid = true;
+        for (Map<String, String> metafield : metafields) {
+            String key = metafield.get("key");
+            String currentType = extractTypeFromMetafieldMap(metafield);
+            
+            // Find the expected type from enum
+            EbayMetafieldDefinition definition = EbayMetafieldDefinition.findByKey(key);
+            if (definition != null) {
+                String expectedType = definition.getType();
+                if (!expectedType.equals(currentType)) {
+                    logger.warn("⚠️ Type mismatch for metafield '" + key + "': expected '" + expectedType + "', found '" + currentType + "'");
+                    typesValid = false;
+                }
+            }
+        }
+        
+        if (!typesValid) {
+            logger.warn("⚠️ Metafield type validation failed - some types don't match enum definitions");
+            return false;
+        }
+        
+        logger.info("✅ Metafield structure validation passed - all " + expectedCount + " expected keys and types found");
+        return true;
+    }
+    
+    /**
+     * Extract type from metafield map (handles both GraphQL response formats)
+     */
+    private String extractTypeFromMetafieldMap(Map<String, String> metafield) {
+        String type = metafield.get("type");
+        if (type != null) {
+            // Handle nested type object from GraphQL (type.name)
+            if (type.startsWith("{") && type.contains("name")) {
+                // This might be a JSON string representation of the type object
+                try {
+                    // Simple extraction for type.name pattern
+                    if (type.contains("single_line_text_field")) {
+                        return "single_line_text_field";
+                    } else if (type.contains("multi_line_text_field")) {
+                        return "multi_line_text_field";
+                    } else if (type.contains("number_decimal")) {
+                        return "number_decimal";
+                    }
+                } catch (Exception e) {
+                    logger.debug("Could not parse type object: " + type);
+                }
+            }
+            return type;
+        }
+        return "unknown";
     }
     
     /**

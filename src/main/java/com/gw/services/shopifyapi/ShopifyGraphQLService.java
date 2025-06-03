@@ -2843,6 +2843,14 @@ public class ShopifyGraphQLService {
                 definition.put("namespace", defNode.get("namespace").asText());
                 definition.put("name", defNode.get("name").asText());
                 
+                // FIXED: Properly extract type from type.name field
+                if (defNode.has("type") && !defNode.get("type").isNull()) {
+                    JsonNode typeNode = defNode.get("type");
+                    if (typeNode.has("name")) {
+                        definition.put("type", typeNode.get("name").asText());
+                    }
+                }
+                
                 // Include pinnedPosition if it exists (pinned metafields have a position, unpinned do not)
                 if (defNode.has("pinnedPosition") && !defNode.get("pinnedPosition").isNull()) {
                     definition.put("pinnedPosition", defNode.get("pinnedPosition").asText());
