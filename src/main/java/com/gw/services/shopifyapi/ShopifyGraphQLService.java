@@ -599,7 +599,30 @@ public class ShopifyGraphQLService {
                                 node {
                                     id
                                     url
-                                    altText
+                                }
+                            }
+                        }
+                        variants(first: 100) {
+                            edges {
+                                node {
+                                    id
+                                    title
+                                    price
+                                    sku
+                                    selectedOptions {
+                                        name
+                                        value
+                                    }
+                                }
+                            }
+                        }
+                        metafields(first: 100) {
+                            edges {
+                                node {
+                                    id
+                                    namespace
+                                    key
+                                    value
                                 }
                             }
                         }
@@ -612,11 +635,11 @@ public class ShopifyGraphQLService {
             }
             """;
         
-        Map<String, Object> input = createProductInput(product);
-        input.put("id", "gid://shopify/Product/" + product.getId());
-        
         Map<String, Object> variables = new HashMap<>();
-        variables.put("input", input);
+        variables.put("input", createProductInput(product, true)); // true = isUpdate
+        
+        logger.info("Updating product with ID: {}", product.getId());
+        logger.debug("Update mutation variables: {}", variables);
         
         try {
             JsonNode data = executeGraphQLQuery(mutation, variables);
@@ -628,6 +651,8 @@ public class ShopifyGraphQLService {
                 logger.error("Product update failed with user errors: " + userErrors.toString());
                 throw new RuntimeException("Product update failed: " + userErrors.toString());
             }
+            
+            logger.info("Product updated successfully: {}", product.getId());
             
         } catch (Exception e) {
             logger.error("Error updating product: " + product.getId(), e);
@@ -1343,17 +1368,22 @@ public class ShopifyGraphQLService {
         return collection;
     }
     
-    private Map<String, Object> createProductInput(Product product) {
+    /**
+     * Creates ProductInput for GraphQL mutations (both create and update)
+     * For create operations, variant option values are excluded (will be set via productOptionsCreate)
+     * For update operations, variant option values are excluded (handled separately via remove/recreate options)
+     */
+    private Map<String, Object> createProductInput(Product product, boolean isUpdate) {
         Map<String, Object> input = new HashMap<>();
         
         if (product.getTitle() != null) {
             input.put("title", product.getTitle());
         }
-        if (product.getBodyHtml() != null) {
-            input.put("descriptionHtml", product.getBodyHtml());
-        }
         if (product.getHandle() != null) {
             input.put("handle", product.getHandle());
+        }
+        if (product.getBodyHtml() != null) {
+            input.put("bodyHtml", product.getBodyHtml());
         }
         if (product.getVendor() != null) {
             input.put("vendor", product.getVendor());
@@ -1364,18 +1394,16 @@ public class ShopifyGraphQLService {
         if (product.getTags() != null) {
             input.put("tags", product.getTags());
         }
+        if (product.getStatus() != null) {
+            input.put("status", product.getStatus());
+        }
         
-        // Note: Product taxonomy categorization is NOT supported in Shopify's GraphQL ProductInput
-        // The error clearly states: "Field is not defined on ProductInput" for the category field
-        // This confirms that despite having a taxonomy ID (gid://shopify/TaxonomyCategory/aa-6-11),
-        // there is no way to set product taxonomy during creation via GraphQL API.
-        // 
-        // Alternative approaches would need to be used such as:
-        // - Setting taxonomy manually in Shopify Admin after product creation
-        // - Using REST API if it supports taxonomy assignment (needs investigation)
-        // - Waiting for future GraphQL API updates from Shopify
+        if (product.getId() != null) {
+            input.put("id", "gid://shopify/Product/" + product.getId());
+        }
         
-        // Add metafields support for eBay and other metafields
+        // Add metafields if present
+        // Add metafields
         if (product.getMetafields() != null && !product.getMetafields().isEmpty()) {
             List<Map<String, Object>> metafields = new ArrayList<>();
             for (Metafield metafield : product.getMetafields()) {
@@ -1395,13 +1423,11 @@ public class ShopifyGraphQLService {
         // Note: Images cannot be added directly in ProductInput via GraphQL
         // They must be added separately using productImageCreate mutation after product creation
         
-        // CRITICAL: Do NOT include options in productCreate
-        // Options must be created separately using productOptionsCreate mutation after product creation
-        // The old approach of including options in the initial productCreate is no longer supported
+        // CRITICAL: Do NOT include options in productCreate/productUpdate
+        // Options must be created separately using productOptionsCreate mutation
+        // For updates, options are managed via updateProductOptions (remove & recreate)
         
         // Handle variants with COMPLETE inventory management settings
-        // NOTE: Variant option values (option1, option2, option3) CANNOT be included in productCreate
-        // Options must be added separately using productOptionsCreate mutation after product creation
         if (product.getVariants() != null && !product.getVariants().isEmpty()) {
             List<Map<String, Object>> variants = new ArrayList<>();
             for (Variant variant : product.getVariants()) {
@@ -1417,9 +1443,23 @@ public class ShopifyGraphQLService {
                     variantInput.put("price", variant.getPrice());
                 }
                 
-                // CRITICAL: Do NOT include option1, option2, option3 in productCreate
-                // These values are not allowed in ProductVariantInput and cause GraphQL errors
-                // Options must be created separately using productOptionsCreate mutation
+                // CRITICAL DIFFERENCE: Include option values during UPDATE but not during CREATE
+                if (false) {  // DISABLED: Never include option values - they are handled separately
+                    // During UPDATE: Include option values to match the recreated options
+                    if (variant.getOption1() != null) {
+                        variantInput.put("option1", variant.getOption1());
+                    }
+                    if (variant.getOption2() != null) {
+                        variantInput.put("option2", variant.getOption2());
+                    }
+                    if (variant.getOption3() != null) {
+                        variantInput.put("option3", variant.getOption3());
+                    }
+                } else {
+                    // OPTIONS ARE ALWAYS HANDLED SEPARATELY via updateProductOptions (remove & recreate)
+                    // Do NOT include option1, option2, option3 in ProductInput - this causes GraphQL errors
+                    // Options must be created separately using productOptionsCreate mutation
+                }
                 
                 // Include inventory management settings for proper inventory tracking
                 if (variant.getInventoryManagement() != null) {
@@ -1449,6 +1489,13 @@ public class ShopifyGraphQLService {
         }
         
         return input;
+    }
+    
+    /**
+     * Backward compatibility: createProductInput without isUpdate parameter (defaults to create mode)
+     */
+    private Map<String, Object> createProductInput(Product product) {
+        return createProductInput(product, false);
     }
     
     /**
@@ -2590,17 +2637,23 @@ public class ShopifyGraphQLService {
         
         // Additional Notes - REMOVED per user request
         
-        // Create all definitions
+        // Create all definitions and collect their IDs for pinning
         int created = 0;
         int existing = 0;
+        List<String> definitionIds = new ArrayList<>();
         
         for (Map.Entry<String, Map<String, String>> entry : ebayDefinitions.entrySet()) {
             String key = entry.getKey();
             Map<String, String> def = entry.getValue();
             
             try {
-                createMetafieldDefinition("ebay", key, def.get("name"), def.get("description"), def.get("type"), "PRODUCT");
-                created++;
+                String definitionId = createMetafieldDefinitionWithId("ebay", key, def.get("name"), def.get("description"), def.get("type"), "PRODUCT");
+                if (definitionId != null) {
+                    definitionIds.add(definitionId);
+                    created++;
+                } else {
+                    existing++;
+                }
             } catch (Exception e) {
                 if (e.getMessage().contains("already exists")) {
                     existing++;
@@ -2614,7 +2667,149 @@ public class ShopifyGraphQLService {
         logger.info("  ✅ Created: " + created + " new definitions");
         logger.info("  ℹ️ Already existed: " + existing + " definitions");
         logger.info("  📊 Total eBay definitions: " + ebayDefinitions.size());
-        logger.info("🖥️ eBay metafields should now be visible in Shopify Admin under Products > [Product] > Metafields");
+        
+        // Pin all newly created metafield definitions for better admin UX
+        if (!definitionIds.isEmpty()) {
+            logger.info("📌 Pinning " + definitionIds.size() + " newly created eBay metafield definitions...");
+            int pinnedCount = 0;
+            for (String definitionId : definitionIds) {
+                try {
+                    pinMetafieldDefinition(definitionId);
+                    pinnedCount++;
+                } catch (Exception e) {
+                    logger.warn("Failed to pin metafield definition ID " + definitionId + ": " + e.getMessage());
+                }
+            }
+            logger.info("📌 Successfully pinned " + pinnedCount + " out of " + definitionIds.size() + " eBay metafield definitions");
+        } else {
+            logger.info("📌 No new definitions to pin (all definitions already existed)");
+        }
+        
+        logger.info("🖥️ eBay metafields should now be visible and pinned in Shopify Admin under Products > [Product] > Metafields");
+    }
+    
+    /**
+     * Create metafield definition and return the definition ID for further operations like pinning
+     */
+    private String createMetafieldDefinitionWithId(String namespace, String key, String name, String description, String type, String ownerType) throws Exception {
+        String mutation = """
+            mutation metafieldDefinitionCreate($definition: MetafieldDefinitionInput!) {
+                metafieldDefinitionCreate(definition: $definition) {
+                    createdDefinition {
+                        id
+                        key
+                        namespace
+                        name
+                        description
+                        type {
+                            name
+                        }
+                        ownerType
+                        visibleToStorefrontApi
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+            """;
+        
+        Map<String, Object> definition = new HashMap<>();
+        definition.put("namespace", namespace);
+        definition.put("key", key);
+        definition.put("name", name);
+        definition.put("description", description);
+        definition.put("ownerType", ownerType);
+        definition.put("visibleToStorefrontApi", true);
+        
+        // Set type as string directly (not as an object)
+        definition.put("type", type);
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("definition", definition);
+        
+        try {
+            JsonNode data = executeGraphQLQuery(mutation, variables);
+            JsonNode definitionCreate = data.get("metafieldDefinitionCreate");
+            
+            // Check for user errors
+            JsonNode userErrors = definitionCreate.get("userErrors");
+            if (userErrors != null && userErrors.size() > 0) {
+                String errorMessage = userErrors.toString();
+                if (errorMessage.contains("already exists")) {
+                    logger.info("Metafield definition already exists: " + namespace + "." + key);
+                    return null; // Return null to indicate existing definition (not newly created)
+                } else {
+                    logger.error("Metafield definition creation failed with user errors: " + errorMessage);
+                    throw new RuntimeException("Metafield definition creation failed: " + errorMessage);
+                }
+            } else {
+                JsonNode createdDefinition = definitionCreate.get("createdDefinition");
+                if (createdDefinition != null) {
+                    String definitionId = extractIdFromGid(createdDefinition.get("id").asText());
+                    logger.info("✅ Created metafield definition: " + namespace + "." + key + " (" + name + ") with ID: " + definitionId);
+                    return definitionId;
+                }
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error creating metafield definition: " + namespace + "." + key, e);
+            throw e;
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Pin a metafield definition to make it prominently visible in Shopify admin
+     */
+    public void pinMetafieldDefinition(String definitionId) throws Exception {
+        String mutation = """
+            mutation metafieldDefinitionPin($definitionId: ID!) {
+                metafieldDefinitionPin(definitionId: $definitionId) {
+                    pinnedDefinition {
+                        id
+                        key
+                        namespace
+                        name
+                        pinnedPosition
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+            """;
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("definitionId", "gid://shopify/MetafieldDefinition/" + definitionId);
+        
+        try {
+            JsonNode data = executeGraphQLQuery(mutation, variables);
+            JsonNode definitionPin = data.get("metafieldDefinitionPin");
+            
+            // Check for user errors
+            JsonNode userErrors = definitionPin.get("userErrors");
+            if (userErrors != null && userErrors.size() > 0) {
+                String errorMessage = userErrors.toString();
+                logger.error("Metafield definition pinning failed with user errors: " + errorMessage);
+                throw new RuntimeException("Metafield definition pinning failed: " + errorMessage);
+            } else {
+                JsonNode pinnedDefinition = definitionPin.get("pinnedDefinition");
+                if (pinnedDefinition != null) {
+                    String namespace = pinnedDefinition.get("namespace").asText();
+                    String key = pinnedDefinition.get("key").asText();
+                    int pinnedPosition = pinnedDefinition.get("pinnedPosition").asInt();
+                    logger.info("📌 Pinned metafield definition: " + namespace + "." + key + " at position " + pinnedPosition);
+                }
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error pinning metafield definition ID: " + definitionId, e);
+            throw e;
+        }
     }
     
     /**
@@ -2631,6 +2826,7 @@ public class ShopifyGraphQLService {
                             namespace
                             name
                             description
+                            pinnedPosition
                             type {
                                 name
                             }
@@ -2657,6 +2853,12 @@ public class ShopifyGraphQLService {
                 definition.put("key", defNode.get("key").asText());
                 definition.put("namespace", defNode.get("namespace").asText());
                 definition.put("name", defNode.get("name").asText());
+                
+                // Include pinnedPosition if it exists (pinned metafields have a position, unpinned do not)
+                if (defNode.has("pinnedPosition") && !defNode.get("pinnedPosition").isNull()) {
+                    definition.put("pinnedPosition", defNode.get("pinnedPosition").asText());
+                }
+                
                 definitions.add(definition);
             }
             
@@ -3160,8 +3362,9 @@ public class ShopifyGraphQLService {
     }
 
     /**
-     * Update existing product options using GraphQL productOptionUpdate mutation
-     * This is the correct approach for changing option values using the proper Shopify API
+     * Update existing product options using GraphQL by removing all existing options and recreating them
+     * This is the most reliable approach since there's always exactly one variant per product
+     * and all option values belong to that single variant
      * 
      * @param productId The Shopify product ID
      * @param feedItem The feed item containing the updated option data
@@ -3169,40 +3372,24 @@ public class ShopifyGraphQLService {
      */
     public boolean updateProductOptions(String productId, FeedItem feedItem) {
         try {
-            // First get current product to find existing options
-            Product currentProduct = getProductByProductId(productId);
-            if (currentProduct == null || currentProduct.getOptions() == null || currentProduct.getOptions().isEmpty()) {
-                logger.debug("No existing options to update for product ID: {}", productId);
-                // If no options exist, create them
-                return createProductOptions(productId, feedItem);
+            logger.info("🔄 Updating product options for product ID: {} by removing and recreating all options", productId);
+            
+            // Step 1: Remove all existing options
+            boolean optionsRemoved = removeProductOptions(productId);
+            if (!optionsRemoved) {
+                logger.error("Failed to remove existing options for product ID: {}", productId);
+                return false;
             }
             
-            logger.info("Updating {} existing options for product ID: {}", currentProduct.getOptions().size(), productId);
-            
-            // Update each option individually using productOptionUpdate
-            boolean allSuccessful = true;
-            
-            for (Option existingOption : currentProduct.getOptions()) {
-                String newValue = getNewValueForOption(existingOption.getName(), feedItem);
-                
-                if (newValue != null && !newValue.trim().isEmpty()) {
-                    boolean updated = updateSingleProductOption(productId, existingOption, newValue);
-                    if (!updated) {
-                        allSuccessful = false;
-                        logger.error("Failed to update option '{}' for product ID: {}", existingOption.getName(), productId);
-                    }
-                } else {
-                    logger.debug("Skipping option '{}' - no corresponding feed attribute or value is empty", existingOption.getName());
-                }
+            // Step 2: Create new options using the same logic as product creation
+            boolean optionsCreated = createProductOptions(productId, feedItem);
+            if (!optionsCreated) {
+                logger.error("Failed to create new options for product ID: {}", productId);
+                return false;
             }
             
-            if (allSuccessful) {
-                logger.info("✅ Successfully updated all options for product ID: {}", productId);
-            } else {
-                logger.error("❌ Some option updates failed for product ID: {}", productId);
-            }
-            
-            return allSuccessful;
+            logger.info("✅ Successfully updated product options for product ID: {} (removed and recreated)", productId);
+            return true;
             
         } catch (Exception e) {
             logger.error("Failed to update product options for product ID: " + productId, e);
@@ -3211,19 +3398,34 @@ public class ShopifyGraphQLService {
     }
     
     /**
-     * Update a single product option using productOptionUpdate mutation
+     * Remove all options from a product using GraphQL productOptionsDelete mutation
+     * This is used when updating products where options need to be recreated
      * 
      * @param productId The Shopify product ID
-     * @param existingOption The existing option to update
-     * @param newValue The new value for the option
-     * @return true if the option was successfully updated
+     * @return true if options were successfully removed
      */
-    private boolean updateSingleProductOption(String productId, Option existingOption, String newValue) {
+    public boolean removeProductOptions(String productId) {
         try {
-            // Build the GraphQL mutation for productOptionUpdate (singular)
+            // First get current product to find existing options
+            Product currentProduct = getProductByProductId(productId);
+            if (currentProduct == null || currentProduct.getOptions() == null || currentProduct.getOptions().isEmpty()) {
+                logger.debug("No existing options to remove for product ID: {}", productId);
+                return true; // No options to remove is considered success
+            }
+            
+            logger.info("Removing {} existing options for product ID: {}", currentProduct.getOptions().size(), productId);
+            
+            // Build list of option IDs to delete
+            List<String> optionIds = new ArrayList<>();
+            for (Option option : currentProduct.getOptions()) {
+                optionIds.add("gid://shopify/ProductOption/" + option.getId());
+                logger.debug("  Will remove option: {} (ID: {})", option.getName(), option.getId());
+            }
+            
+            // Use productOptionsDelete mutation to remove all options at once
             String mutation = """
-                mutation productOptionUpdate($productId: ID!, $option: OptionUpdateInput!, $optionValuesToUpdate: [OptionValueUpdateInput!]) {
-                  productOptionUpdate(productId: $productId, option: $option, optionValuesToUpdate: $optionValuesToUpdate) {
+                mutation productOptionsDelete($productId: ID!, $options: [ID!]!) {
+                  productOptionsDelete(productId: $productId, options: $options) {
                     userErrors {
                       field
                       message
@@ -3231,153 +3433,58 @@ public class ShopifyGraphQLService {
                     }
                     product {
                       id
-                      title
                       options {
                         id
                         name
-                        position
-                        optionValues {
-                          id
-                          name
-                        }
                       }
                     }
                   }
                 }
                 """;
             
-            // Build the variables
             Map<String, Object> variables = new HashMap<>();
             variables.put("productId", "gid://shopify/Product/" + productId);
-            
-            // Build option update input
-            Map<String, Object> optionUpdate = new HashMap<>();
-            optionUpdate.put("id", "gid://shopify/ProductOption/" + existingOption.getId());
-            variables.put("option", optionUpdate);
-            
-            // Build option values to update
-            List<Map<String, Object>> optionValuesToUpdate = new ArrayList<>();
-            
-            // Get the current option value ID (assuming first value for simplicity)
-            if (existingOption.getValues() != null && !existingOption.getValues().isEmpty()) {
-                // We need to get the actual option value ID from the GraphQL API
-                // For now, we'll use the simple approach of replacing the value
-                Map<String, Object> valueUpdate = new HashMap<>();
-                // We'd need the actual optionValue ID here, which requires a more complex query
-                // For now, let's use optionValuesToAdd and optionValuesToDelete approach
-                logger.warn("Option value update requires option value IDs - using add/delete approach instead");
-                return updateOptionValuesByReplace(productId, existingOption, newValue);
-            }
-            
-            variables.put("optionValuesToUpdate", optionValuesToUpdate);
-            
-            logger.debug("Updating option '{}' with value: {}", existingOption.getName(), newValue);
+            variables.put("options", optionIds);
             
             // Execute the GraphQL mutation
             JsonNode response = executeGraphQLQuery(mutation, variables);
             
             if (response != null) {
-                JsonNode productOptionUpdate = response.get("productOptionUpdate");
-                if (productOptionUpdate != null) {
-                    JsonNode userErrors = productOptionUpdate.get("userErrors");
+                JsonNode productOptionsDelete = response.get("productOptionsDelete");
+                if (productOptionsDelete != null) {
+                    JsonNode userErrors = productOptionsDelete.get("userErrors");
                     if (userErrors != null && userErrors.isArray() && userErrors.size() > 0) {
-                        logger.error("ProductOptionUpdate failed with user errors:");
+                        logger.error("ProductOptionsDelete failed with user errors:");
                         for (JsonNode error : userErrors) {
                             logger.error("  Error: {}", error.toString());
                         }
                         return false;
                     } else {
-                        logger.debug("✅ Successfully updated option '{}' for product ID: {}", existingOption.getName(), productId);
+                        logger.info("✅ Successfully removed {} options from product ID: {}", optionIds.size(), productId);
                         return true;
                     }
                 } else {
-                    logger.error("No productOptionUpdate field found in response");
+                    logger.error("No productOptionsDelete field found in response");
                 }
             }
             
-            logger.error("Unexpected GraphQL response structure for productOptionUpdate");
+            logger.error("Unexpected GraphQL response structure for productOptionsDelete");
             return false;
             
         } catch (Exception e) {
-            logger.error("Failed to update single option for product ID: " + productId, e);
+            logger.error("Failed to remove product options for product ID: " + productId, e);
             return false;
         }
     }
     
     /**
-     * Update option values by replacing them (delete old, add new)
-     * This is a simpler approach when we don't have option value IDs
+     * Delete a single product option using GraphQL productOptionDelete mutation
+     * NOTE: This method is deprecated - option deletion is not supported
      */
-    private boolean updateOptionValuesByReplace(String productId, Option existingOption, String newValue) {
-        try {
-            String mutation = """
-                mutation productOptionUpdate($productId: ID!, $option: OptionUpdateInput!, $optionValuesToAdd: [OptionValueCreateInput!], $optionValuesToDelete: [ID!]) {
-                  productOptionUpdate(productId: $productId, option: $option, optionValuesToAdd: $optionValuesToAdd, optionValuesToDelete: $optionValuesToDelete) {
-                    userErrors {
-                      field
-                      message
-                      code
-                    }
-                    product {
-                      id
-                      options {
-                        id
-                        name
-                        optionValues {
-                          id
-                          name
-                        }
-                      }
-                    }
-                  }
-                }
-                """;
-            
-            Map<String, Object> variables = new HashMap<>();
-            variables.put("productId", "gid://shopify/Product/" + productId);
-            
-            Map<String, Object> optionUpdate = new HashMap<>();
-            optionUpdate.put("id", "gid://shopify/ProductOption/" + existingOption.getId());
-            variables.put("option", optionUpdate);
-            
-            // Add new value
-            List<Map<String, Object>> optionValuesToAdd = new ArrayList<>();
-            Map<String, Object> newValueInput = new HashMap<>();
-            newValueInput.put("name", newValue);
-            optionValuesToAdd.add(newValueInput);
-            variables.put("optionValuesToAdd", optionValuesToAdd);
-            
-            // Note: We'd need option value IDs to delete old values
-            // For now, this will add the new value alongside the old one
-            // In a production system, you'd need to query for option value IDs first
-            
-            logger.info("Adding new option value '{}' to option '{}' for product ID: {}", newValue, existingOption.getName(), productId);
-            
-            JsonNode response = executeGraphQLQuery(mutation, variables);
-            
-            if (response != null) {
-                JsonNode productOptionUpdate = response.get("productOptionUpdate");
-                if (productOptionUpdate != null) {
-                    JsonNode userErrors = productOptionUpdate.get("userErrors");
-                    if (userErrors != null && userErrors.isArray() && userErrors.size() > 0) {
-                        logger.error("ProductOptionUpdate failed with user errors:");
-                        for (JsonNode error : userErrors) {
-                            logger.error("  Error: {}", error.toString());
-                        }
-                        return false;
-                    } else {
-                        logger.info("✅ Successfully updated option '{}' values for product ID: {}", existingOption.getName(), productId);
-                        return true;
-                    }
-                }
-            }
-            
-            return false;
-            
-        } catch (Exception e) {
-            logger.error("Failed to update option values by replace for product ID: " + productId, e);
-            return false;
-        }
+    private boolean deleteProductOption(String productId, String optionId) {
+        logger.warn("deleteProductOption is deprecated - option deletion is not supported by Shopify GraphQL API");
+        logger.warn("Use updateProductOptions instead to modify existing option values");
+        return false;
     }
     
     /**
@@ -3395,26 +3502,130 @@ public class ShopifyGraphQLService {
     }
     
     /**
-     * Remove all options from a product using GraphQL productOptionsDelete mutation
-     * This is used when updating products where options need to be recreated
-     * NOTE: This method is deprecated - use updateProductOptions instead
-     * 
-     * @param productId The Shopify product ID
-     * @return true if options were successfully removed
+     * Update product metafields separately using GraphQL
+     * This is useful when product update is skipped but metafields still need to be updated
      */
-    public boolean removeProductOptions(String productId) {
-        logger.warn("removeProductOptions is deprecated - option deletion is not supported by Shopify GraphQL API");
-        logger.warn("Use updateProductOptions instead to modify existing option values");
-        return false;
+    public void updateProductMetafields(String productId, List<Metafield> metafields) throws Exception {
+        if (productId == null || metafields == null || metafields.isEmpty()) {
+            logger.debug("No metafields to update for product ID: {}", productId);
+            return;
+        }
+        
+        logger.info("Updating {} metafields for product ID: {}", metafields.size(), productId);
+        
+        for (Metafield metafield : metafields) {
+            if (metafield.getNamespace() != null && metafield.getKey() != null && metafield.getValue() != null) {
+                updateSingleMetafield(productId, metafield);
+            }
+        }
+        
+        logger.info("✅ Successfully updated {} metafields for product ID: {}", metafields.size(), productId);
     }
     
     /**
-     * Delete a single product option using GraphQL productOptionDelete mutation
-     * NOTE: This method is deprecated - option deletion is not supported
+     * Update a single metafield for a product
      */
-    private boolean deleteProductOption(String productId, String optionId) {
-        logger.warn("deleteProductOption is deprecated - option deletion is not supported by Shopify GraphQL API");
-        logger.warn("Use updateProductOptions instead to modify existing option values");
-        return false;
+    private void updateSingleMetafield(String productId, Metafield metafield) throws Exception {
+        String mutation = """
+            mutation metafieldSet($metafields: [MetafieldsSetInput!]!) {
+                metafieldsSet(metafields: $metafields) {
+                    metafields {
+                        id
+                        namespace
+                        key
+                        value
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+            """;
+        
+        Map<String, Object> metafieldInput = new HashMap<>();
+        metafieldInput.put("ownerId", "gid://shopify/Product/" + productId);
+        metafieldInput.put("namespace", metafield.getNamespace());
+        metafieldInput.put("key", metafield.getKey());
+        metafieldInput.put("value", metafield.getValue());
+        metafieldInput.put("type", metafield.getType() != null ? metafield.getType() : "single_line_text_field");
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("metafields", List.of(metafieldInput));
+        
+        try {
+            JsonNode data = executeGraphQLQuery(mutation, variables);
+            JsonNode metafieldsSet = data.get("metafieldsSet");
+            
+            // Check for user errors
+            JsonNode userErrors = metafieldsSet.get("userErrors");
+            if (userErrors != null && userErrors.size() > 0) {
+                logger.error("Metafield update failed for {}.{}: {}", 
+                    metafield.getNamespace(), metafield.getKey(), userErrors.toString());
+                throw new RuntimeException("Metafield update failed: " + userErrors.toString());
+            }
+            
+            logger.debug("Updated metafield: {}.{} = {}", 
+                metafield.getNamespace(), metafield.getKey(), metafield.getValue());
+            
+        } catch (Exception e) {
+            logger.error("Error updating metafield {}.{} for product {}", 
+                metafield.getNamespace(), metafield.getKey(), productId, e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Update product title separately using GraphQL
+     * This is useful when product update is skipped but title still needs to be updated
+     */
+    public void updateProductTitle(String productId, String title) throws Exception {
+        if (productId == null || title == null) {
+            logger.debug("No title update needed for product ID: {} (title: {})", productId, title);
+            return;
+        }
+        
+        logger.info("Updating title for product ID: {} to: {}", productId, title);
+        
+        String mutation = """
+            mutation productUpdate($input: ProductInput!) {
+                productUpdate(input: $input) {
+                    product {
+                        id
+                        title
+                        updatedAt
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+            """;
+        
+        Map<String, Object> input = new HashMap<>();
+        input.put("id", "gid://shopify/Product/" + productId);
+        input.put("title", title);
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("input", input);
+        
+        try {
+            JsonNode data = executeGraphQLQuery(mutation, variables);
+            JsonNode productUpdate = data.get("productUpdate");
+            
+            // Check for user errors
+            JsonNode userErrors = productUpdate.get("userErrors");
+            if (userErrors != null && userErrors.size() > 0) {
+                logger.error("Product title update failed for product {}: {}", productId, userErrors.toString());
+                throw new RuntimeException("Product title update failed: " + userErrors.toString());
+            }
+            
+            logger.debug("Updated title for product: {} to: {}", productId, title);
+            
+        } catch (Exception e) {
+            logger.error("Error updating title for product {}", productId, e);
+            throw e;
+        }
     }
 } 

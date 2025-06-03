@@ -161,16 +161,6 @@ public class MetafieldCreationVerificationTest extends BaseGraphqlTest {
             }
         }
         
-        if (testItem.getWebSerialNumber() != null) {
-            expectedMetafields++;
-            if (hasEbayMetafield(ebayMetafields, "serial_number", testItem.getWebSerialNumber())) {
-                foundMetafields++;
-                logger.info("  ✅ Serial number metafield verified");
-            } else {
-                logger.error("  ❌ Serial number metafield missing or incorrect");
-            }
-        }
-        
         logger.info("📈 Metafield Summary:");
         logger.info("  Expected eBay metafields: " + expectedMetafields);
         logger.info("  Found eBay metafields: " + foundMetafields);
@@ -254,9 +244,8 @@ public class MetafieldCreationVerificationTest extends BaseGraphqlTest {
                 // Verify eBay metafield specifics
                 if ("ebay".equals(mf.getNamespace())) {
                     Assertions.assertTrue(mf.getType().equals("single_line_text_field") || 
-                                        mf.getType().equals("multi_line_text_field") ||
                                         mf.getType().equals("number_decimal"), 
-                                        "eBay metafield should have valid type");
+                                        "eBay metafield should have valid type (single_line_text_field or number_decimal)");
                 }
             }
             

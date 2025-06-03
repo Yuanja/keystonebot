@@ -375,9 +375,11 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
     
     /**
      * Creates updated product and merges with existing product data
+     * Uses createProductWithOptions to ensure metafields and variant options are properly included
      */
     private Product createAndMergeUpdatedProduct(FeedItem item, Product existingProduct) throws Exception {
-        Product updatedProduct = shopifyProductFactoryService.createProduct(item);
+        // Use createProductWithOptions to ensure metafields are included in the updated product
+        Product updatedProduct = shopifyProductFactoryService.createProductWithOptions(item);
         updatedProduct.setId(item.getShopifyItemId());
         logger.info("Existing ShopifyItemID: " + item.getShopifyItemId());
         
@@ -389,25 +391,69 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
     
     /**
      * Updates the product on Shopify
+     * Always updates basic product information, handles variant options separately
      */
     private void updateProductOnShopify(Product product, FeedItem item) throws Exception {
         logger.info(LogService.toJson(product));
         
-        // Check if variant options need to be updated
-        handleVariantOptionsUpdate(product, item);
+        // ALWAYS update basic product information (title, vendor, productType, description, metafields, etc.)
+        // Create a clean product object that excludes variant/option information to avoid conflicts
+        logger.info("Updating basic product information for product ID: {}", product.getId());
+        Product basicUpdateProduct = createBasicUpdateProduct(product);
+        shopifyGraphQLService.updateProduct(basicUpdateProduct);
+        logger.info("✅ Successfully updated basic product information");
         
-        shopifyGraphQLService.updateProduct(product);
+        // SEPARATELY handle variant options updates if needed
+        // This is independent of the basic product update
+        try {
+            boolean variantOptionsUpdated = handleVariantOptionsUpdate(product, item);
+            if (variantOptionsUpdated) {
+                logger.info("✅ Variant options were also updated");
+            } else {
+                logger.debug("No variant option updates were needed");
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to update variant options (continuing with basic product update): " + e.getMessage());
+            // Don't fail the entire update if variant options fail - basic product info was already updated
+        }
+    }
+    
+    /**
+     * Creates a clean product object for basic updates that excludes variant/option information
+     * This prevents conflicts when updating basic product fields
+     */
+    private Product createBasicUpdateProduct(Product fullProduct) {
+        Product basicProduct = new Product();
+        
+        // Copy only basic product fields, excluding variants and options
+        basicProduct.setId(fullProduct.getId());
+        basicProduct.setTitle(fullProduct.getTitle());
+        basicProduct.setBodyHtml(fullProduct.getBodyHtml());
+        basicProduct.setVendor(fullProduct.getVendor());
+        basicProduct.setProductType(fullProduct.getProductType());
+        basicProduct.setHandle(fullProduct.getHandle());
+        basicProduct.setTags(fullProduct.getTags());
+        basicProduct.setStatus(fullProduct.getStatus());
+        basicProduct.setMetafields(fullProduct.getMetafields());
+        
+        // Explicitly exclude variants and options to avoid conflicts
+        // These are handled separately in handleVariantOptionsUpdate
+        basicProduct.setVariants(null);
+        basicProduct.setOptions(null);
+        
+        logger.debug("Created basic update product with fields: title, description, vendor, productType, handle, tags, status, metafields");
+        return basicProduct;
     }
     
     /**
      * Handles variant options updates by comparing existing options with new options
      * Uses productOptionsUpdate to modify existing option values - cannot delete options
      */
-    private void handleVariantOptionsUpdate(Product updatedProduct, FeedItem item) {
+    private boolean handleVariantOptionsUpdate(Product product, FeedItem item) {
         try {
-            if (updatedProduct.getId() == null) {
+            if (product.getId() == null) {
                 logger.debug("Product ID is null, cannot update variant options");
-                return;
+                return false;
             }
             
             // Check if the feed item has variant attributes
@@ -420,24 +466,24 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
                                       (newMaterial != null && !newMaterial.trim().isEmpty());
             
             if (!hasVariantOptions) {
-                logger.debug("No variant options in feed item for product: {}", updatedProduct.getId());
-                return;
+                logger.debug("No variant options in feed item for product: {}", product.getId());
+                return false;
             }
             
             // Get current product from Shopify to compare options
-            Product currentProduct = shopifyGraphQLService.getProductByProductId(updatedProduct.getId());
+            Product currentProduct = shopifyGraphQLService.getProductByProductId(product.getId());
             if (currentProduct == null) {
-                logger.warn("Could not fetch current product from Shopify for ID: {}", updatedProduct.getId());
-                return;
+                logger.warn("Could not fetch current product from Shopify for ID: {}", product.getId());
+                return false;
             }
             
             // Check if options need updating
             boolean optionsNeedUpdate = false;
             if (currentProduct.getOptions() == null || currentProduct.getOptions().isEmpty()) {
                 // No existing options, create them
-                logger.info("No existing options found, creating new options for product: {}", updatedProduct.getId());
-                shopifyGraphQLService.createProductOptions(updatedProduct.getId(), item);
-                return;
+                logger.info("No existing options found, creating new options for product: {}", product.getId());
+                shopifyGraphQLService.createProductOptions(product.getId(), item);
+                return true;
             }
             
             // Compare existing option values with new values
@@ -455,27 +501,31 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
                 
                 if (newValue != null && !newValue.equals(existingValue)) {
                     logger.info("Option '{}' value changed from '{}' to '{}' for product: {}", 
-                              existingOption.getName(), existingValue, newValue, updatedProduct.getId());
+                              existingOption.getName(), existingValue, newValue, product.getId());
                     optionsNeedUpdate = true;
                     break;
                 }
             }
             
             if (optionsNeedUpdate) {
-                logger.info("Updating variant options for product: {}", updatedProduct.getId());
-                boolean success = shopifyGraphQLService.updateProductOptions(updatedProduct.getId(), item);
+                logger.info("Updating variant options for product: {}", product.getId());
+                boolean success = shopifyGraphQLService.updateProductOptions(product.getId(), item);
                 
                 if (success) {
-                    logger.info("✅ Successfully updated variant options for product: {}", updatedProduct.getId());
+                    logger.info("✅ Successfully updated variant options for product: {}", product.getId());
+                    return true;
                 } else {
-                    logger.error("❌ Failed to update variant options for product: {}", updatedProduct.getId());
+                    logger.error("❌ Failed to update variant options for product: {}", product.getId());
+                    return false;
                 }
             } else {
-                logger.debug("No variant option updates needed for product: {}", updatedProduct.getId());
+                logger.debug("No variant option updates needed for product: {}", product.getId());
+                return false;
             }
             
         } catch (Exception e) {
-            logger.error("Error handling variant options update for product: " + updatedProduct.getId(), e);
+            logger.error("Error handling variant options update for product: " + product.getId(), e);
+            return false;
         }
     }
     

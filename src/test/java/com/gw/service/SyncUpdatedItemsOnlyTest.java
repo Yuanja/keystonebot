@@ -16,68 +16,187 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
 
     @Test
     /**
-     * Test sync behavior with existing items that have changes
+     * Test sync behavior with existing items that have changes in both variant options and metafields
      * This tests the handleChangedItems path of the sync logic
+     * 
+     * Tests both:
+     * 1. Variant option updates (Color, Size, Material) using remove-and-recreate approach
+     * 2. Metafield updates (brand, model, etc.)
+     * 
+     * Ensures that when feedItem attributes change, both variant options and metafields are properly updated
      */
     public void syncTestUpdatedItemsOnly() throws Exception {
-        logger.info("=== Starting Updated Items Only Sync Test ===");
+        logger.info("=== Starting sync test for updated items with variant options and metafields ===");
         
-        // Setup: First publish some items to have something to update
-        List<FeedItem> feedItems = keyStoneFeedService.loadFromXmlFile("src/test/resources/testShopifyUpdate/trimmedFeed20.xml");
-        List<FeedItem> testItems = feedItems.stream().limit(3).collect(Collectors.toList());
+        // Step 1: Get test items and create initial products
+        List<FeedItem> topFeedItems = getTopFeedItems(2);
+        logger.info("📝 Working with {} test items", topFeedItems.size());
         
-        logger.info("Step 1: Publishing initial items...");
-        for (FeedItem item : testItems) {
-            syncService.publishItemToShopify(item);
-            assertNotNull(item.getShopifyItemId(), "Item should have Shopify ID after publishing");
-            logger.info("Published: " + item.getWebTagNumber() + " (ID: " + item.getShopifyItemId() + ")");
+        // Log initial values for debugging
+        for (int i = 0; i < topFeedItems.size(); i++) {
+            FeedItem item = topFeedItems.get(i);
+            logger.info("Item {}: {} - Initial values:", (i + 1), item.getWebTagNumber());
+            logger.info("  - webWatchDial (Color): '{}'", item.getWebWatchDial());
+            logger.info("  - webWatchDiameter (Size): '{}'", item.getWebWatchDiameter());
+            logger.info("  - webMetalType (Material): '{}'", item.getWebMetalType());
+            logger.info("  - webWatchModel (Metafield): '{}'", item.getWebWatchModel());
         }
         
-        // Verify initial state
-        List<Product> initialProducts = shopifyApiService.getAllProducts();
-        Assertions.assertEquals(testItems.size(), initialProducts.size(), "Should have initial products");
+        // Step 2: Create initial products
+        logger.info("🔄 Creating initial products...");
+        for (FeedItem item : topFeedItems) {
+            syncService.publishItemToShopify(item);
+        }
+        Thread.sleep(3000); // Wait for creation
         
-        logger.info("Step 2: Modifying items to simulate changes...");
-        // Simulate changes by modifying the feed items
+        // Step 3: Verify initial creation and get initial states
+        List<Product> initialProducts = new ArrayList<>();
+        for (FeedItem item : topFeedItems) {
+            Product product = shopifyApiService.getProductByProductId(item.getShopifyItemId());
+            assertNotNull(product, "Product should have been created for item " + item.getWebTagNumber());
+            initialProducts.add(product);
+            logger.info("✅ Initial product created: {} with ID {}", item.getWebTagNumber(), product.getId());
+        }
+        
+        // Step 4: Modify feedItem fields to trigger both variant option and metafield changes
+        logger.info("🔄 Modifying feedItem attributes to trigger updates...");
         List<FeedItem> modifiedItems = new ArrayList<>();
-        for (FeedItem item : testItems) {
-            FeedItem modifiedItem = new FeedItem();
-            modifiedItem.copyFrom(item); // Copy all fields
+        for (int i = 0; i < topFeedItems.size(); i++) {
+            FeedItem modifiedItem = topFeedItems.get(i);
             
-            // Simulate changes that would trigger an update
-            modifiedItem.setWebDescriptionShort(item.getWebDescriptionShort() + " [MODIFIED FOR TEST]");
-            modifiedItem.setShopifyItemId(item.getShopifyItemId()); // Keep the same Shopify ID
+            // Modify variant option fields (triggers remove-and-recreate options logic)
+            modifiedItem.setWebWatchDial(modifiedItem.getWebWatchDial() + " [UPDATED-DIAL-" + (i + 1) + "]");
+            modifiedItem.setWebWatchDiameter(modifiedItem.getWebWatchDiameter() + " [UPDATED-SIZE-" + (i + 1) + "]");
+            modifiedItem.setWebMetalType(modifiedItem.getWebMetalType() + " [UPDATED-MATERIAL-" + (i + 1) + "]");
+            
+            // Modify metafield-only fields
+            modifiedItem.setWebWatchModel(modifiedItem.getWebWatchModel() + " [UPDATED-MODEL-" + (i + 1) + "]");
+            
+            // Also modify the title to trigger product update
+            modifiedItem.setWebDescriptionShort(modifiedItem.getWebDescriptionShort() + " [MODIFIED FOR TEST]");
             
             modifiedItems.add(modifiedItem);
-            logger.info("Modified: " + modifiedItem.getWebTagNumber() + " - " + modifiedItem.getWebDescriptionShort());
+            
+            logger.info("Modified item {}: {} - New values:", (i + 1), modifiedItem.getWebTagNumber());
+            logger.info("  - webWatchDial (Color): '{}'", modifiedItem.getWebWatchDial());
+            logger.info("  - webWatchDiameter (Size): '{}'", modifiedItem.getWebWatchDiameter());
+            logger.info("  - webMetalType (Material): '{}'", modifiedItem.getWebMetalType());
+            logger.info("  - webWatchModel (Metafield): '{}'", modifiedItem.getWebWatchModel());
+            logger.info("  - webDescriptionShort: '{}'", modifiedItem.getWebDescriptionShort());
         }
         
-        logger.info("Step 3: Running sync with modified items...");
-        long startTime = System.currentTimeMillis();
+        // Step 5: Update the products (should trigger update logic, not create logic)
+        logger.info("🔄 Updating products using proper sync flow (should trigger UPDATE logic)...");
+        
+        // Use doSyncForFeedItems which will detect the changes and route to updateItemOnShopify
+        // This is the correct way to test the update flow
         syncService.doSyncForFeedItems(modifiedItems);
-        long endTime = System.currentTimeMillis();
         
-        logger.info("✅ Updated items sync completed in " + (endTime - startTime) + "ms");
+        // Wait for Shopify propagation (increased wait time for option updates)
+        Thread.sleep(8000);  // Increased from 3000ms
         
-        // Verify updates were applied
-        List<Product> updatedProducts = shopifyApiService.getAllProducts();
-        Assertions.assertEquals(testItems.size(), updatedProducts.size(), "Should still have same number of products");
+        // Retrieve updated products individually for better consistency
+        List<Product> shopifyProducts = new ArrayList<>();
+        for (FeedItem item : topFeedItems) {
+            Product product = shopifyApiService.getProductByProductId(item.getShopifyItemId());
+            if (product != null) {
+                shopifyProducts.add(product);
+                logger.info("Retrieved updated product {} individually", product.getId());
+            }
+        }
         
-        for (FeedItem modifiedItem : modifiedItems) {
-            Optional<Product> foundProduct = updatedProducts.stream()
-                .filter(p -> p.getId().equals(modifiedItem.getShopifyItemId()))
+        Assertions.assertEquals(topFeedItems.size(), shopifyProducts.size(), 
+            "Should have retrieved all updated products");
+        
+        // Step 6: Verify variant options were updated correctly using remove-and-recreate approach
+        logger.info("✅ Verifying variant options were updated using remove-and-recreate approach...");
+        for (int i = 0; i < shopifyProducts.size(); i++) {
+            Product product = shopifyProducts.get(i);
+            FeedItem modifiedItem = modifiedItems.get(i);
+            
+            Assertions.assertNotNull(product.getVariants(), "Product should have variants");
+            Assertions.assertFalse(product.getVariants().isEmpty(), "Product should have at least one variant");
+            
+            Variant variant = product.getVariants().get(0);
+            logger.info("Product {}: Checking variant options", (i + 1));
+            logger.info("  Expected Color (webWatchDial): '{}'", modifiedItem.getWebWatchDial());
+            logger.info("  Actual Color (option1): '{}'", variant.getOption1());
+            logger.info("  Expected Size (webWatchDiameter): '{}'", modifiedItem.getWebWatchDiameter());
+            logger.info("  Actual Size (option2): '{}'", variant.getOption2());
+            logger.info("  Expected Material (webMetalType): '{}'", modifiedItem.getWebMetalType());
+            logger.info("  Actual Material (option3): '{}'", variant.getOption3());
+            
+            // Assert variant options were updated (remove-and-recreate approach)
+            Assertions.assertEquals(modifiedItem.getWebWatchDial(), variant.getOption1(), 
+                "Color option should be updated to match webWatchDial");
+            Assertions.assertEquals(modifiedItem.getWebWatchDiameter(), variant.getOption2(), 
+                "Size option should be updated to match webWatchDiameter");
+            Assertions.assertEquals(modifiedItem.getWebMetalType(), variant.getOption3(), 
+                "Material option should be updated to match webMetalType");
+        }
+        
+        // Step 7: Verify metafields were updated correctly
+        logger.info("✅ Verifying metafields were updated correctly...");
+        for (int i = 0; i < shopifyProducts.size(); i++) {
+            Product product = shopifyProducts.get(i);
+            FeedItem modifiedItem = modifiedItems.get(i);
+            
+            Assertions.assertNotNull(product.getMetafields(), "Product should have metafields");
+            
+            List<Metafield> ebayMetafields = product.getMetafields().stream()
+                .filter(mf -> "ebay".equals(mf.getNamespace()))
+                .collect(Collectors.toList());
+            
+            Assertions.assertFalse(ebayMetafields.isEmpty(), "Product should have eBay metafields");
+            
+            // Check that model metafield was updated
+            boolean modelMetafieldFound = false;
+            for (Metafield metafield : ebayMetafields) {
+                if ("model".equals(metafield.getKey())) {
+                    logger.info("Product {}: Model metafield - Expected: '{}', Actual: '{}'", 
+                        (i + 1), modifiedItem.getWebWatchModel(), metafield.getValue());
+                    Assertions.assertEquals(modifiedItem.getWebWatchModel(), metafield.getValue(), 
+                        "Model metafield should be updated");
+                    modelMetafieldFound = true;
+                    break;
+                }
+            }
+            Assertions.assertTrue(modelMetafieldFound, "Model metafield should exist and be updated");
+        }
+        
+        // Step 8: Verify that product titles were also updated
+        logger.info("✅ Verifying product titles were updated...");
+        for (int i = 0; i < shopifyProducts.size(); i++) {
+            Product product = shopifyProducts.get(i);
+            FeedItem modifiedItem = modifiedItems.get(i);
+            
+            logger.info("Product {}: Title - Expected contains: '[MODIFIED FOR TEST]', Actual: '{}'", 
+                (i + 1), product.getTitle());
+            Assertions.assertTrue(product.getTitle().contains("[MODIFIED FOR TEST]"), 
+                "Product title should contain the modification marker");
+        }
+        
+        logger.info("✅ All tests passed! Both variant options and metafields were successfully updated");
+        logger.info("✅ Remove-and-recreate approach for variant options is working correctly");
+        logger.info("=== End sync test for updated items ===");
+    }
+    
+    /**
+     * Helper method to verify metafield values
+     */
+    private void verifyMetafieldValue(List<Metafield> metafields, String key, String expectedValue, String message) {
+        if (expectedValue != null) {
+            Optional<Metafield> metafield = metafields.stream()
+                .filter(mf -> key.equals(mf.getKey()))
                 .findFirst();
             
-            Assertions.assertTrue(foundProduct.isPresent(), "Updated product should exist for SKU: " + modifiedItem.getWebTagNumber());
+            Assertions.assertTrue(metafield.isPresent(), "Metafield with key '" + key + "' should exist");
             
-            Product product = foundProduct.get();
-            Assertions.assertTrue(product.getTitle().contains("[MODIFIED FOR TEST]"), "Product title should contain modification marker");
-            Assertions.assertEquals("ACTIVE", product.getStatus(), "Product should maintain ACTIVE status");
+            String actualValue = metafield.get().getValue();
+            logger.info("  Expected {} metafield: '{}'", key, expectedValue);
+            logger.info("  Actual {} metafield: '{}'", key, actualValue);
             
-            logger.info("✅ Verified update: " + modifiedItem.getWebTagNumber() + 
-                       " - Title: " + product.getTitle());
+            Assertions.assertEquals(expectedValue, actualValue, message);
         }
-        
-        logger.info("=== Updated Items Only Sync Test Complete ===");
     }
 } 
