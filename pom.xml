@@ -427,6 +427,222 @@
                 </plugins>
             </build>
         </profile>
+        
+        <!-- FORCE UPDATE PROFILES FOR PRODUCTION -->
+        
+        <!-- Profile for analyzing force update impact (read-only) -->
+        <profile>
+            <id>analyze-force-update</id>
+            <properties>
+                <maven.test.skip>false</maven.test.skip>
+                <test>ForceUpdateTest#analyzeForceUpdateImpact</test>
+                <spring.profiles.active>keystone-dev</spring.profiles.active>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/ForceUpdateTest.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <spring.profiles.active>keystone-dev</spring.profiles.active>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+        <!-- Profile for force updating all items in development -->
+        <profile>
+            <id>force-update-all-dev</id>
+            <properties>
+                <maven.test.skip>false</maven.test.skip>
+                <test>ForceUpdateTest#forceUpdateAllItems</test>
+                <spring.profiles.active>keystone-dev</spring.profiles.active>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/ForceUpdateTest.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <spring.profiles.active>keystone-dev</spring.profiles.active>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+        <!-- Profile for force updating specific item in development -->
+        <profile>
+            <id>force-update-item-dev</id>
+            <properties>
+                <maven.test.skip>false</maven.test.skip>
+                <test>ForceUpdateTest#forceUpdateSpecificItem</test>
+                <spring.profiles.active>keystone-dev</spring.profiles.active>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/ForceUpdateTest.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <spring.profiles.active>keystone-dev</spring.profiles.active>
+                                <force.update.web_tag_number>${force.update.web_tag_number}</force.update.web_tag_number>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+        <!-- PRODUCTION FORCE UPDATE PROFILES - Use with extreme caution -->
+        
+        <!-- Profile for production force update impact analysis (read-only) -->
+        <profile>
+            <id>analyze-force-update-prod</id>
+            <properties>
+                <maven.test.skip>false</maven.test.skip>
+                <test>ForceUpdateTest#analyzeForceUpdateImpact</test>
+                <spring.profiles.active>keystone-prod</spring.profiles.active>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/ForceUpdateTest.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <spring.profiles.active>keystone-prod</spring.profiles.active>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+        <!-- Profile for production force update all items (DANGEROUS) -->
+        <profile>
+            <id>force-update-all-prod</id>
+            <properties>
+                <maven.test.skip>false</maven.test.skip>
+                <test>ForceUpdateTest#forceUpdateAllItems</test>
+                <spring.profiles.active>keystone-prod</spring.profiles.active>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/ForceUpdateTest.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <spring.profiles.active>keystone-prod</spring.profiles.active>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+        <!-- Profile for production force update specific item -->
+        <profile>
+            <id>force-update-item-prod</id>
+            <properties>
+                <maven.test.skip>false</maven.test.skip>
+                <test>ForceUpdateTest#forceUpdateSpecificItem</test>
+                <spring.profiles.active>keystone-prod</spring.profiles.active>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/ForceUpdateTest.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <spring.profiles.active>keystone-prod</spring.profiles.active>
+                                <force.update.web_tag_number>${force.update.web_tag_number}</force.update.web_tag_number>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+        <!-- EBAY METAFIELD VALIDATION AND FIX PROFILES -->
+        
+        <!-- Profile for validating and fixing eBay metafields in development -->
+        <profile>
+            <id>fix-ebay-metafields-dev</id>
+            <properties>
+                <maven.test.skip>false</maven.test.skip>
+                <test>ForceUpdateTest#validateAndFixEbayMetafields</test>
+                <spring.profiles.active>keystone-dev</spring.profiles.active>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/ForceUpdateTest.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <spring.profiles.active>keystone-dev</spring.profiles.active>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+        <!-- Profile for validating and fixing eBay metafields in production -->
+        <profile>
+            <id>fix-ebay-metafields-prod</id>
+            <properties>
+                <maven.test.skip>false</maven.test.skip>
+                <test>ForceUpdateTest#validateAndFixEbayMetafields</test>
+                <spring.profiles.active>keystone-prod</spring.profiles.active>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/ForceUpdateTest.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <spring.profiles.active>keystone-prod</spring.profiles.active>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 
     <repositories>

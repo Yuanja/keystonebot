@@ -21,7 +21,7 @@ public class SyncTest extends BaseGraphqlTest {
      */
     public void syncTest() throws Exception {
         logger.info("=== Starting Live Feed Sync Test Using doSyncForFeedItems Interface ===");
-        logger.info("Loading live feed and selecting highest 5 webTagNumber items...");
+        logger.info("Loadingb live feed and selecting highest 5 webTagNumber items...");
 
         List<FeedItem> topFeedItems = getTopFeedItems(5);
         
