@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -91,6 +92,35 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
         // Use doSyncForFeedItems which will detect the changes and route to updateItemOnShopify
         // This is the correct way to test the update flow
         syncService.doSyncForFeedItems(modifiedItems);
+        
+        // CRITICAL ASSERTION: Verify no duplicate products were created
+        logger.info("🔍 Verifying no duplicate products were created during update...");
+        List<Product> productsAfterSync = shopifyApiService.getAllProducts();
+        
+        // Should have exactly the same number of products as we started with (no duplicates)
+        Assertions.assertEquals(topFeedItems.size(), productsAfterSync.size(), 
+            "Should have same number of products after update - no duplicates should be created. " +
+            "Expected: " + topFeedItems.size() + ", Actual: " + productsAfterSync.size());
+        
+        // Additional validation: Check for duplicate SKUs in Shopify
+        Map<String, List<Product>> productsBySku = productsAfterSync.stream()
+            .filter(p -> p.getVariants() != null && !p.getVariants().isEmpty())
+            .collect(Collectors.groupingBy(p -> p.getVariants().get(0).getSku()));
+        
+        for (Map.Entry<String, List<Product>> entry : productsBySku.entrySet()) {
+            String sku = entry.getKey();
+            List<Product> productsWithSku = entry.getValue();
+            if (productsWithSku.size() > 1) {
+                logger.error("❌ DUPLICATE SKU DETECTED: {} has {} products", sku, productsWithSku.size());
+                for (Product dupProduct : productsWithSku) {
+                    logger.error("  - Product ID: {}, Title: {}", dupProduct.getId(), dupProduct.getTitle());
+                }
+            }
+            Assertions.assertEquals(1, productsWithSku.size(), 
+                "SKU " + sku + " should have exactly 1 product, but found " + productsWithSku.size() + " duplicates");
+        }
+        
+        logger.info("✅ No duplicate products found - sync correctly updated existing products");
         
         // Wait for Shopify propagation (increased wait time for option updates)
         Thread.sleep(8000);  // Increased from 3000ms

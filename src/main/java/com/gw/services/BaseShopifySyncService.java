@@ -475,14 +475,19 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
     
     /**
      * Creates updated product and merges with existing product data
-     * Uses createProductWithOptions to ensure metafields and variant options are properly included
+     * FIXED: No longer calls createProductWithOptions which creates new products
+     * Instead builds product object directly for updating existing products
      */
     private Product createAndMergeUpdatedProduct(FeedItem item, Product existingProduct) throws Exception {
-        // Use createProductWithOptions to ensure metafields are included in the updated product
-        Product updatedProduct = shopifyProductFactoryService.createProductWithOptions(item);
+        // FIXED: Use createProduct to build object without creating new product on Shopify
+        // This builds the product structure with all metafields and options but doesn't send to Shopify
+        Product updatedProduct = shopifyProductFactoryService.createProduct(item);
+        
+        // Set the existing product ID to ensure we update the correct product
         updatedProduct.setId(item.getShopifyItemId());
         logger.info("Existing ShopifyItemID: " + item.getShopifyItemId());
         
+        // Merge existing product data with updated data
         shopifyProductFactoryService.mergeProduct(existingProduct, updatedProduct);
         logProductDetails("UPDATING", updatedProduct, item.getWebTagNumber());
         

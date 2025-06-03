@@ -1868,6 +1868,7 @@ public class ShopifyGraphQLService {
      * Get collects for product ID using GraphQL
      * Note: In GraphQL, product-collection relationships are handled differently
      * This method provides compatibility with the REST API approach
+     * Smart collections (those with rulesets) are filtered out since they manage membership automatically
      */
     public List<Collect> getCollectsForProductId(String productId) {
         String query = """
@@ -1878,6 +1879,11 @@ public class ShopifyGraphQLService {
                             node {
                                 id
                                 title
+                                ruleSet {
+                                    rules {
+                                        column
+                                    }
+                                }
                             }
                         }
                     }
@@ -1898,13 +1904,37 @@ public class ShopifyGraphQLService {
             
             JsonNode collectionsNode = productNode.get("collections").get("edges");
             List<Collect> collects = new ArrayList<>();
+            int smartCollectionsFiltered = 0;
             
             for (JsonNode edge : collectionsNode) {
                 JsonNode collectionNode = edge.get("node");
+                
+                // Check if this is a smart collection (has a ruleSet)
+                JsonNode ruleSet = collectionNode.get("ruleSet");
+                boolean isSmartCollection = ruleSet != null && !ruleSet.isNull() && 
+                                          ruleSet.has("rules") && ruleSet.get("rules").isArray() && 
+                                          ruleSet.get("rules").size() > 0;
+                
+                if (isSmartCollection) {
+                    smartCollectionsFiltered++;
+                    String collectionTitle = collectionNode.get("title").asText();
+                    logger.debug("🤖 Filtered out smart collection '{}' (manages membership automatically)", collectionTitle);
+                    continue; // Skip smart collections
+                }
+                
+                // Only include manual collections
                 Collect collect = new Collect();
                 collect.setProductId(productId);
                 collect.setCollectionId(extractIdFromGid(collectionNode.get("id").asText()));
+                
                 collects.add(collect);
+            }
+            
+            if (smartCollectionsFiltered > 0) {
+                logger.info("📊 Product {} collections: {} manual collections returned, {} smart collections filtered out", 
+                    productId, collects.size(), smartCollectionsFiltered);
+            } else {
+                logger.debug("📊 Product {} has {} manual collections", productId, collects.size());
             }
             
             return collects;
@@ -2009,7 +2039,9 @@ public class ShopifyGraphQLService {
     }
     
     /**
-     * Delete all collects for product ID (compatibility method)
+     * Delete all collects for product ID for only the predefined collections (compatibility method)
+     * This will only remove the product from collections that are managed by the application
+     * and leave any manually added collections untouched
      */
     public void deleteAllCollectForProductId(String productId, Map<PredefinedCollection, CustomCollection> collectionByEnum) {
         if (collectionByEnum == null || collectionByEnum.isEmpty()) {
@@ -2020,10 +2052,11 @@ public class ShopifyGraphQLService {
         // Get all current collections for the product
         List<Collect> allCollects = getCollectsForProductId(productId);
         
-        // Create a set of managed collection IDs for quick lookup
-        Set<String> managedCollectionIds = collectionByEnum.values().stream()
-            .map(CustomCollection::getId)
-            .collect(Collectors.toSet());
+        // Create a map of managed collection IDs to their titles for easy lookup
+        Map<String, String> managedCollectionTitles = collectionByEnum.values().stream()
+            .collect(Collectors.toMap(CustomCollection::getId, CustomCollection::getTitle));
+        
+        Set<String> managedCollectionIds = managedCollectionTitles.keySet();
         
         logger.info("Removing product {} from {} managed collections (out of {} total collections)", 
             productId, managedCollectionIds.size(), allCollects.size());
@@ -2034,20 +2067,15 @@ public class ShopifyGraphQLService {
             .forEach(collect -> {
                 try {
                     String collectionId = collect.getCollectionId();
+                    String collectionTitle = managedCollectionTitles.get(collectionId);
+                    
                     deleteCollectByProductAndCollection(productId, collectionId);
-                    
-                    // Find the collection name for better logging
-                    String collectionName = collectionByEnum.values().stream()
-                        .filter(c -> c.getId().equals(collectionId))
-                        .map(CustomCollection::getTitle)
-                        .findFirst()
-                        .orElse("Unknown");
-                    
-                    logger.info("✅ Removed product {} from managed collection: {} ({})", 
-                        productId, collectionName, collectionId);
+                    logger.info("✅ Removed product {} from managed collection: '{}' ({})", 
+                        productId, collectionTitle, collectionId);
                 } catch (Throwable e) {
-                    logger.warn("Failed to remove product {} from managed collection {}: {}", 
-                        productId, collect.getCollectionId(), e.getMessage());
+                    String collectionTitle = managedCollectionTitles.get(collect.getCollectionId());
+                    logger.warn("Failed to remove product {} from managed collection '{}' ({}): {}", 
+                        productId, collectionTitle, collect.getCollectionId(), e.getMessage());
                 }
             });
         
@@ -2061,23 +2089,34 @@ public class ShopifyGraphQLService {
                 productId, untouchedCount);
         }
     }
-
+    
     /**
-     * Delete all collects for product ID (compatibility method - removes from ALL collections)
-     * @deprecated Use deleteAllCollectForProductId(String, Map) to only remove from managed collections
+     * Get collection title by ID using GraphQL (helper method for logging)
      */
-    @Deprecated
-    public void deleteAllCollectForProductId(String productId) {
-        logger.warn("⚠️ Using deprecated deleteAllCollectForProductId without collection filter - this removes from ALL collections");
-        List<Collect> allCollects = getCollectsForProductId(productId);
-        allCollects.stream().forEach(c -> {
-            try {
-                deleteCollectByProductAndCollection(productId, c.getCollectionId());
+    private String getCollectionTitleById(String collectionId) {
+        String query = """
+            query getCollectionTitle($id: ID!) {
+                collection(id: $id) {
+                    title
+                }
             }
-            catch (Throwable e) {
-                logger.warn("Failed to remove product " + productId + " from collection " + c.getCollectionId() + ": " + e.getMessage());
+            """;
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("id", "gid://shopify/Collection/" + collectionId);
+        
+        try {
+            JsonNode data = executeGraphQLQuery(query, variables);
+            JsonNode collectionNode = data.get("collection");
+            
+            if (collectionNode != null && !collectionNode.isNull()) {
+                return collectionNode.get("title").asText();
             }
-        });
+        } catch (Exception e) {
+            logger.debug("Could not retrieve collection title for ID: " + collectionId);
+        }
+        
+        return "Unknown Collection";
     }
     
     /**
@@ -3577,5 +3616,23 @@ public class ShopifyGraphQLService {
             logger.error("Error updating title for product {}", productId, e);
             throw e;
         }
+    }
+
+    /**
+     * Delete all collects for product ID (compatibility method - removes from ALL collections)
+     * @deprecated Use deleteAllCollectForProductId(String, Map) to only remove from managed collections
+     */
+    @Deprecated
+    public void deleteAllCollectForProductId(String productId) {
+        logger.warn("⚠️ Using deprecated deleteAllCollectForProductId without collection filter - this removes from ALL collections");
+        List<Collect> allCollects = getCollectsForProductId(productId);
+        allCollects.stream().forEach(c -> {
+            try {
+                deleteCollectByProductAndCollection(productId, c.getCollectionId());
+            }
+            catch (Throwable e) {
+                logger.warn("Failed to remove product " + productId + " from collection " + c.getCollectionId() + ": " + e.getMessage());
+            }
+        });
     }
 } 
