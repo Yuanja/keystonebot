@@ -3,6 +3,7 @@ package com.gw.services.product;
 import com.gw.services.shopifyapi.objects.Option;
 import com.gw.services.shopifyapi.objects.Product;
 import com.gw.services.shopifyapi.objects.Variant;
+import com.gw.services.shopifyapi.objects.Metafield;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Objects;
 
 /**
  * Reusable Product Merge Service
@@ -139,24 +142,94 @@ public class ProductMergeService {
     }
     
     /**
-     * Smart metafield merging with preservation strategy
+     * Smart metafield merging with preservation strategy and type migration support
      */
     private int mergeMetafields(Product existing, Product updated) {
         logger.debug("📋 Merging product metafields");
         
-        // Strategy: Preserve existing metafields if updated product has none
-        // This allows eBay metafields and other metafields to persist during updates
+        // Strategy: Merge metafields intelligently with type migration support
         if (updated.getMetafields() == null || updated.getMetafields().isEmpty()) {
             updated.setMetafields(existing.getMetafields());
             
             int preservedCount = existing.getMetafields() != null ? existing.getMetafields().size() : 0;
             logger.debug("💾 Preserved {} existing metafields during merge", preservedCount);
             return 0; // No changes, just preservation
+        }
+        
+        // Enhanced merge: Handle type conflicts for existing metafields
+        if (existing.getMetafields() != null && !existing.getMetafields().isEmpty()) {
+            return mergeMetafieldsWithTypeUpdate(existing.getMetafields(), updated.getMetafields(), updated);
         } else {
             int newCount = updated.getMetafields().size();
             logger.debug("🆕 Using {} new metafields from updated product", newCount);
             return 1; // Indicate metafields changed
         }
+    }
+    
+    /**
+     * Merge metafields with intelligent type migration support
+     * This handles the case where existing metafields have different types than new ones
+     */
+    private int mergeMetafieldsWithTypeUpdate(List<Metafield> existing, List<Metafield> updated, Product updatedProduct) {
+        Map<String, Metafield> existingByKey = existing.stream()
+            .collect(Collectors.toMap(
+                mf -> mf.getNamespace() + "." + mf.getKey(), 
+                mf -> mf
+            ));
+        
+        int changeCount = 0;
+        List<Metafield> mergedMetafields = new ArrayList<>();
+        
+        // Process updated metafields
+        for (Metafield updatedMetafield : updated) {
+            String metafieldKey = updatedMetafield.getNamespace() + "." + updatedMetafield.getKey();
+            Metafield existingMetafield = existingByKey.get(metafieldKey);
+            
+            if (existingMetafield != null) {
+                // Preserve the existing metafield ID
+                updatedMetafield.setId(existingMetafield.getId());
+                
+                // Check for type conflicts and log them
+                if (!Objects.equals(existingMetafield.getType(), updatedMetafield.getType())) {
+                    logger.info("🔄 Metafield type migration detected for {}: {} → {}", 
+                        metafieldKey, 
+                        existingMetafield.getType(), 
+                        updatedMetafield.getType());
+                    changeCount++;
+                }
+                
+                // Check for value changes
+                if (!Objects.equals(existingMetafield.getValue(), updatedMetafield.getValue())) {
+                    logger.debug("📝 Metafield value changed for {}: {} → {}", 
+                        metafieldKey, 
+                        existingMetafield.getValue(), 
+                        updatedMetafield.getValue());
+                    changeCount++;
+                }
+                
+                mergedMetafields.add(updatedMetafield);
+                existingByKey.remove(metafieldKey); // Mark as processed
+            } else {
+                // New metafield
+                logger.debug("✨ New metafield added: {}", metafieldKey);
+                mergedMetafields.add(updatedMetafield);
+                changeCount++;
+            }
+        }
+        
+        // Add any remaining existing metafields that weren't in the updated list
+        for (Metafield remainingMetafield : existingByKey.values()) {
+            logger.debug("💾 Preserving existing metafield: {}.{}", 
+                remainingMetafield.getNamespace(), remainingMetafield.getKey());
+            mergedMetafields.add(remainingMetafield);
+        }
+        
+        // Update the updated product with merged metafields
+        updatedProduct.setMetafields(mergedMetafields);
+        
+        logger.debug("🔄 Metafield merge completed: {} changes, {} total metafields", 
+            changeCount, mergedMetafields.size());
+        return changeCount;
     }
     
     /**
