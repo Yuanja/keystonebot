@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -2010,7 +2011,64 @@ public class ShopifyGraphQLService {
     /**
      * Delete all collects for product ID (compatibility method)
      */
+    public void deleteAllCollectForProductId(String productId, Map<PredefinedCollection, CustomCollection> collectionByEnum) {
+        if (collectionByEnum == null || collectionByEnum.isEmpty()) {
+            logger.debug("No predefined collections provided, skipping collection removal for product ID: {}", productId);
+            return;
+        }
+        
+        // Get all current collections for the product
+        List<Collect> allCollects = getCollectsForProductId(productId);
+        
+        // Create a set of managed collection IDs for quick lookup
+        Set<String> managedCollectionIds = collectionByEnum.values().stream()
+            .map(CustomCollection::getId)
+            .collect(Collectors.toSet());
+        
+        logger.info("Removing product {} from {} managed collections (out of {} total collections)", 
+            productId, managedCollectionIds.size(), allCollects.size());
+        
+        // Only remove from collections that are in our managed set
+        allCollects.stream()
+            .filter(collect -> managedCollectionIds.contains(collect.getCollectionId()))
+            .forEach(collect -> {
+                try {
+                    String collectionId = collect.getCollectionId();
+                    deleteCollectByProductAndCollection(productId, collectionId);
+                    
+                    // Find the collection name for better logging
+                    String collectionName = collectionByEnum.values().stream()
+                        .filter(c -> c.getId().equals(collectionId))
+                        .map(CustomCollection::getTitle)
+                        .findFirst()
+                        .orElse("Unknown");
+                    
+                    logger.info("✅ Removed product {} from managed collection: {} ({})", 
+                        productId, collectionName, collectionId);
+                } catch (Throwable e) {
+                    logger.warn("Failed to remove product {} from managed collection {}: {}", 
+                        productId, collect.getCollectionId(), e.getMessage());
+                }
+            });
+        
+        // Log info about collections we're leaving untouched
+        long untouchedCount = allCollects.stream()
+            .filter(collect -> !managedCollectionIds.contains(collect.getCollectionId()))
+            .count();
+        
+        if (untouchedCount > 0) {
+            logger.info("ℹ️ Left product {} in {} non-managed collections (will not be removed)", 
+                productId, untouchedCount);
+        }
+    }
+
+    /**
+     * Delete all collects for product ID (compatibility method - removes from ALL collections)
+     * @deprecated Use deleteAllCollectForProductId(String, Map) to only remove from managed collections
+     */
+    @Deprecated
     public void deleteAllCollectForProductId(String productId) {
+        logger.warn("⚠️ Using deprecated deleteAllCollectForProductId without collection filter - this removes from ALL collections");
         List<Collect> allCollects = getCollectsForProductId(productId);
         allCollects.stream().forEach(c -> {
             try {
