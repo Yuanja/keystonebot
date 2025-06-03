@@ -590,6 +590,60 @@
             </build>
         </profile>
         
+        <!-- DATABASE-ONLY SYNC PROFILES - Sync database without Shopify operations -->
+        
+        <!-- Profile for database-only sync in development -->
+        <profile>
+            <id>sync-database-only-dev</id>
+            <properties>
+                <maven.test.skip>false</maven.test.skip>
+                <test>ForceUpdateTest#syncDatabaseOnly</test>
+                <spring.profiles.active>keystone-dev</spring.profiles.active>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/ForceUpdateTest.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <spring.profiles.active>keystone-dev</spring.profiles.active>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+        <!-- Profile for database-only sync in production -->
+        <profile>
+            <id>sync-database-only-prod</id>
+            <properties>
+                <maven.test.skip>false</maven.test.skip>
+                <test>ForceUpdateTest#syncDatabaseOnly</test>
+                <spring.profiles.active>keystone-prod</spring.profiles.active>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/ForceUpdateTest.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <spring.profiles.active>keystone-prod</spring.profiles.active>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
         <!-- EBAY METAFIELD VALIDATION AND FIX PROFILES -->
         
         <!-- Profile for validating and fixing eBay metafields in development -->

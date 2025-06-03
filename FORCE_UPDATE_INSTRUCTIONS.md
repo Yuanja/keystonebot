@@ -6,9 +6,10 @@ The Force Update Test provides comprehensive force update capabilities for produ
 
 1. **Force update ALL items** with fresh feed data (smallest web_tag_number first)
 2. **Force update specific items** by web_tag_number using database data
-3. **Validate and fix eBay metafields** to ensure proper configuration and pinning
-4. **Analyze impact** before making changes (read-only dry run)
-5. **Production-safe batch processing** with detailed logging
+3. **Sync database only** without making any Shopify API calls
+4. **Validate and fix eBay metafields** to ensure proper configuration and pinning
+5. **Analyze impact** before making changes (read-only dry run)
+6. **Production-safe batch processing** with detailed logging
 
 ## ⚠️ Important Safety Notes
 
@@ -133,6 +134,83 @@ mvn test -P force-update-all-prod
 - 📦 Controlled batches of 25 items
 - ⏱️ 2-second delays between batches
 - 📊 Comprehensive progress tracking
+
+### 5. 🗄️ DATABASE-ONLY SYNC (No Shopify Operations)
+
+Sync the database with feed data without making any Shopify API calls. This is useful for updating database state without affecting Shopify products.
+
+#### Development Database Sync:
+```bash
+mvn test -P sync-database-only-dev
+```
+
+#### Production Database Sync:
+```bash
+mvn test -P sync-database-only-prod
+```
+
+**What this does:**
+- Refreshes live feed data
+- Compares feed with database
+- Adds new items to database (status: FEED_SYNCED)
+- Updates changed items in database (preserves Shopify IDs and statuses)
+- Removes deleted items from database (⚠️ Shopify products remain orphaned)
+- **NO Shopify API calls are made**
+
+**Output Example:**
+```
+📊 Change Analysis:
+  - New items (not in DB): 15
+  - Changed items (different data): 23
+  - Deleted items (in DB but not in feed): 2
+  - Total feed items: 1,247
+
+📊 Database-only sync results:
+  - Total operations: 40
+  - Total errors: 0
+  - Success rate: 100.00%
+
+ℹ️ NOTE: No Shopify products were modified - database only sync
+```
+
+### 6. 🔧 VALIDATE AND FIX EBAY METAFIELDS
+
+Ensure eBay metafield definitions are properly configured and pinned in Shopify admin.
+
+#### Development:
+```bash
+mvn test -P fix-ebay-metafields-dev
+```
+
+#### Production:
+```bash
+mvn test -P fix-ebay-metafields-prod
+```
+
+**What it does:**
+- 🔍 **Analyzes current metafield state** (count, structure, pinning status)
+- 🗑️ **Removes corrupted metafields** if structure is invalid or incomplete
+- 🏗️ **Recreates fresh metafields** with correct definitions and pinning
+- 📌 **Fixes pinning only** if metafields exist but aren't pinned
+- ✅ **Validates results** to ensure everything is correct
+
+**Output Example:**
+```
+📊 Current eBay Metafield State:
+  - Found metafields: 13
+  - Expected metafields: 13
+  - Pinned metafields: 13/13
+  - All pinned: true
+
+📋 Current eBay Metafields:
+  - brand (Brand) - 📌 Position 1
+  - case_material (Case Material) - 📌 Position 2
+  - category (Category) - 📌 Position 3
+  ...
+
+✅ All eBay metafields are correctly configured and pinned
+🎉 No action needed - metafields are in perfect state!
+```
 
 ## Typical Production Workflow
 

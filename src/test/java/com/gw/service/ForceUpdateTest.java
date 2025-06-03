@@ -1,6 +1,7 @@
 package com.gw.service;
 
 import com.gw.domain.FeedItem;
+import com.gw.domain.FeedItemChange;
 import com.gw.domain.FeedItemChangeSet;
 import com.gw.domain.EbayMetafieldDefinition;
 import com.gw.services.FeedItemService;
@@ -326,6 +327,206 @@ public class ForceUpdateTest {
         } catch (Exception e) {
             logger.error("❌ Error during eBay metafield validation/fix: " + e.getMessage(), e);
             throw e;
+        }
+    }
+    
+    /**
+     * Sync database only - no Shopify operations
+     * Refreshes the database with feed data without making any Shopify API calls
+     * This is useful for updating database state without affecting Shopify products
+     */
+    @Test
+    public void syncDatabaseOnly() throws Exception {
+        logger.info("=== Starting Database-Only Sync ===");
+        logger.info("🗄️ This will sync database with feed data only");
+        logger.info("📡 Will refresh live feed data");
+        logger.info("🚫 NO Shopify operations will be performed");
+        logger.info("🔢 Processing from smallest web_tag_number first");
+        
+        if (DRY_RUN) {
+            logger.warn("🧪 DRY RUN MODE - No actual changes will be made");
+        }
+        
+        // Step 1: Get baseline database statistics
+        logger.info("📊 Step 1: Analyzing current database state...");
+        List<FeedItem> dbItemsBefore = feedItemService.findAll();
+        long publishedItemsBefore = dbItemsBefore.stream().filter(item -> item.getShopifyItemId() != null).count();
+        
+        logger.info("📋 Database State (Before):");
+        logger.info("  - Total items in database: " + dbItemsBefore.size());
+        logger.info("  - Items with Shopify ID: " + publishedItemsBefore);
+        
+        // Status breakdown before
+        Map<String, Long> statusCountsBefore = dbItemsBefore.stream()
+               .collect(Collectors.groupingBy(item -> 
+                   item.getStatus() != null ? item.getStatus() : "NULL", Collectors.counting()));
+        statusCountsBefore.forEach((status, count) -> 
+               logger.info("  - Status '" + status + "': " + count + " items"));
+        
+        // Step 2: Refresh feed from live source
+        logger.info("📡 Step 2: Refreshing live feed data...");
+        List<FeedItem> feedItems = keyStoneFeedService.getItemsFromFeed();
+        logger.info("📊 Fresh feed items loaded: " + feedItems.size());
+        
+        // Step 3: Sort by web_tag_number (smallest first)
+        List<FeedItem> sortedFeedItems = feedItems.stream()
+            .sorted(Comparator.comparing(FeedItem::getWebTagNumber, 
+                Comparator.nullsLast(Comparator.naturalOrder())))
+            .collect(Collectors.toList());
+        
+        logger.info("🔢 Items sorted by web_tag_number (smallest first)");
+        logger.info("📋 First 5 items: " + sortedFeedItems.stream()
+            .limit(5)
+            .map(FeedItem::getWebTagNumber)
+            .collect(Collectors.toList()));
+        
+        // Step 4: Analyze changes (database comparison only)
+        logger.info("🔍 Step 3: Analyzing changes between feed and database...");
+        FeedItemChangeSet changeSet = feedItemService.compareFeedItemWithDB(false, sortedFeedItems);
+        
+        int newItems = changeSet.getNewItems() != null ? changeSet.getNewItems().size() : 0;
+        int changedItems = changeSet.getChangedItems() != null ? changeSet.getChangedItems().size() : 0;
+        int deletedItems = changeSet.getDeletedItems() != null ? changeSet.getDeletedItems().size() : 0;
+        
+        logger.info("📊 Change Analysis:");
+        logger.info("  - New items (not in DB): " + newItems);
+        logger.info("  - Changed items (different data): " + changedItems);
+        logger.info("  - Deleted items (in DB but not in feed): " + deletedItems);
+        logger.info("  - Total feed items: " + sortedFeedItems.size());
+        
+        if (newItems == 0 && changedItems == 0 && deletedItems == 0) {
+            logger.info("✅ Database is already synchronized with feed - no changes needed!");
+            return;
+        }
+        
+        // Step 5: Perform database-only sync operations
+        if (!DRY_RUN) {
+            syncDatabaseWithFeedData(changeSet);
+        } else {
+            logger.info("🧪 DRY RUN: Would sync database with " + (newItems + changedItems + deletedItems) + " total changes");
+        }
+        
+        // Step 6: Analyze final database state
+        logger.info("📊 Step 4: Analyzing final database state...");
+        List<FeedItem> dbItemsAfter = feedItemService.findAll();
+        long publishedItemsAfter = dbItemsAfter.stream().filter(item -> item.getShopifyItemId() != null).count();
+        
+        logger.info("📋 Database State (After):");
+        logger.info("  - Total items in database: " + dbItemsAfter.size());
+        logger.info("  - Items with Shopify ID: " + publishedItemsAfter);
+        logger.info("  - Net change in total items: " + (dbItemsAfter.size() - dbItemsBefore.size()));
+        logger.info("  - Net change in published items: " + (publishedItemsAfter - publishedItemsBefore));
+        
+        // Status breakdown after
+        Map<String, Long> statusCountsAfter = dbItemsAfter.stream()
+               .collect(Collectors.groupingBy(item -> 
+                   item.getStatus() != null ? item.getStatus() : "NULL", Collectors.counting()));
+        statusCountsAfter.forEach((status, count) -> 
+               logger.info("  - Status '" + status + "': " + count + " items"));
+        
+        logger.info("🎉 Database-only sync completed successfully!");
+        logger.info("ℹ️ NOTE: No Shopify products were modified - database only sync");
+    }
+    
+    /**
+     * Perform database synchronization with feed data without any Shopify operations
+     */
+    private void syncDatabaseWithFeedData(FeedItemChangeSet changeSet) throws Exception {
+        logger.info("🔄 Step 4: Performing database-only synchronization...");
+        
+        int totalProcessed = 0;
+        int totalErrors = 0;
+        
+        // Handle new items (add to database only)
+        if (changeSet.getNewItems() != null && !changeSet.getNewItems().isEmpty()) {
+            logger.info("➕ Adding " + changeSet.getNewItems().size() + " new items to database...");
+            for (FeedItem newItem : changeSet.getNewItems()) {
+                try {
+                    // Set appropriate status for new items (not published to Shopify)
+                    newItem.setStatus("FEED_SYNCED");
+                    newItem.setShopifyItemId(null); // Ensure no Shopify ID
+                    feedItemService.saveAutonomous(newItem);
+                    totalProcessed++;
+                    logger.debug("✅ Added new item to database: " + newItem.getWebTagNumber());
+                } catch (Exception e) {
+                    logger.error("❌ Failed to add item to database: " + newItem.getWebTagNumber() + " - " + e.getMessage());
+                    totalErrors++;
+                }
+            }
+            logger.info("✅ Completed adding new items: " + (changeSet.getNewItems().size() - totalErrors) + " successful, " + totalErrors + " errors");
+        }
+        
+        // Handle changed items (update database only)
+        if (changeSet.getChangedItems() != null && !changeSet.getChangedItems().isEmpty()) {
+            logger.info("📝 Updating " + changeSet.getChangedItems().size() + " changed items in database...");
+            int changedErrors = 0;
+            for (FeedItemChange change : changeSet.getChangedItems()) {
+                try {
+                    FeedItem itemFromDb = change.getFromDb();
+                    FeedItem itemFromFeed = change.getFromFeed();
+                    
+                    // Preserve Shopify-related fields from database
+                    String originalShopifyId = itemFromDb.getShopifyItemId();
+                    String originalStatus = itemFromDb.getStatus();
+                    java.util.Date originalPublishedDate = itemFromDb.getPublishedDate();
+                    
+                    // Copy feed data to database item
+                    itemFromDb.copyFrom(itemFromFeed);
+                    
+                    // Restore Shopify-related fields (don't overwrite from feed)
+                    itemFromDb.setShopifyItemId(originalShopifyId);
+                    if (originalShopifyId != null && !originalShopifyId.trim().isEmpty()) {
+                        // Keep existing status for published items
+                        itemFromDb.setStatus(originalStatus);
+                        itemFromDb.setPublishedDate(originalPublishedDate);
+                    } else {
+                        // Update status for unpublished items
+                        itemFromDb.setStatus("FEED_SYNCED");
+                    }
+                    
+                    feedItemService.updateAutonomous(itemFromDb);
+                    totalProcessed++;
+                    logger.debug("✅ Updated item in database: " + itemFromDb.getWebTagNumber());
+                } catch (Exception e) {
+                    logger.error("❌ Failed to update item in database: " + change.getFromDb().getWebTagNumber() + " - " + e.getMessage());
+                    changedErrors++;
+                    totalErrors++;
+                }
+            }
+            logger.info("✅ Completed updating changed items: " + (changeSet.getChangedItems().size() - changedErrors) + " successful, " + changedErrors + " errors");
+        }
+        
+        // Handle deleted items (remove from database only)
+        if (changeSet.getDeletedItems() != null && !changeSet.getDeletedItems().isEmpty()) {
+            logger.info("🗑️ Removing " + changeSet.getDeletedItems().size() + " deleted items from database...");
+            logger.warn("⚠️ CAUTION: Items removed from database but Shopify products will remain");
+            int deletedErrors = 0;
+            for (FeedItem deletedItem : changeSet.getDeletedItems()) {
+                try {
+                    if (deletedItem.getShopifyItemId() != null && !deletedItem.getShopifyItemId().trim().isEmpty()) {
+                        logger.warn("⚠️ Removing database item that has Shopify ID: " + deletedItem.getWebTagNumber() + 
+                                   " (Shopify ID: " + deletedItem.getShopifyItemId() + ") - Shopify product will remain orphaned");
+                    }
+                    feedItemService.deleteAutonomous(deletedItem);
+                    totalProcessed++;
+                    logger.debug("✅ Removed item from database: " + deletedItem.getWebTagNumber());
+                } catch (Exception e) {
+                    logger.error("❌ Failed to remove item from database: " + deletedItem.getWebTagNumber() + " - " + e.getMessage());
+                    deletedErrors++;
+                    totalErrors++;
+                }
+            }
+            logger.info("✅ Completed removing deleted items: " + (changeSet.getDeletedItems().size() - deletedErrors) + " successful, " + deletedErrors + " errors");
+        }
+        
+        logger.info("📊 Database-only sync results:");
+        logger.info("  - Total operations: " + totalProcessed);
+        logger.info("  - Total errors: " + totalErrors);
+        logger.info("  - Success rate: " + String.format("%.2f%%", 
+                    totalProcessed > 0 ? (double) (totalProcessed - totalErrors) / totalProcessed * 100 : 100.0));
+        
+        if (totalErrors > 0) {
+            logger.warn("⚠️ " + totalErrors + " errors occurred during database sync - check logs for details");
         }
     }
     
