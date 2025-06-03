@@ -902,11 +902,10 @@ public class ForceUpdateTest {
                     // Simple extraction for type.name pattern
                     if (type.contains("single_line_text_field")) {
                         return "single_line_text_field";
-                    } else if (type.contains("multi_line_text_field")) {
-                        return "multi_line_text_field";
                     } else if (type.contains("number_decimal")) {
                         return "number_decimal";
                     }
+                    // Note: multi_line_text_field removed since all eBay metafields now use single_line_text_field
                 } catch (Exception e) {
                     logger.debug("Could not parse type object: " + type);
                 }
