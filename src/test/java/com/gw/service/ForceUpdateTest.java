@@ -139,8 +139,8 @@ public class ForceUpdateTest {
     }
     
     /**
-     * Force update a specific item by web_tag_number
-     * Uses existing database data (does not refresh feed)
+     * Force update a specific item by web_tag_number using database data
+     * Uses updateItemOnShopify directly for more efficient single-item updates
      */
     @Test
     public void forceUpdateSpecificItem() throws Exception {
@@ -156,31 +156,62 @@ public class ForceUpdateTest {
         logger.info("=== Starting Production Force Update (Specific Item) ===");
         logger.info("🎯 Target web_tag_number: " + targetWebTagNumber);
         logger.info("🗄️ Using existing database data (not refreshing feed)");
+        logger.info("⚡ Using direct updateItemOnShopify for efficient single-item update");
         
         if (DRY_RUN) {
             logger.warn("🧪 DRY RUN MODE - No actual changes will be made");
+            return;
         }
         
-        // Step 1: Find the specific item in database
-        logger.info("🔍 Step 1: Finding item in database...");
-        FeedItem targetItem = feedItemService.findByWebTagNumber(targetWebTagNumber);
-        
-        if (targetItem == null) {
-            throw new IllegalArgumentException("❌ Item not found in database: " + targetWebTagNumber);
+        try {
+            // Step 1: Find the specific item in database
+            logger.info("🔍 Step 1: Finding item in database...");
+            FeedItem targetItem = feedItemService.findByWebTagNumber(targetWebTagNumber);
+            
+            if (targetItem == null) {
+                throw new IllegalArgumentException("❌ Item not found in database: " + targetWebTagNumber);
+            }
+            
+            logger.info("✅ Found item: " + targetItem.getWebTagNumber());
+            logger.info("📊 Current status: " + targetItem.getStatus());
+            logger.info("🛍️ Shopify ID: " + targetItem.getShopifyItemId());
+            
+            if (targetItem.getShopifyItemId() == null || targetItem.getShopifyItemId().trim().isEmpty()) {
+                logger.warn("⚠️ Item has no Shopify ID - cannot update. You may need to publish it first.");
+                throw new IllegalArgumentException("❌ Item " + targetWebTagNumber + " has no Shopify ID - cannot update");
+            }
+            
+            // Step 2: Update the specific item directly using updateItemOnShopify
+            logger.info("🔄 Step 2: Updating item on Shopify using updateItemOnShopify...");
+            logger.info("📝 Item details:");
+            logger.info("  - SKU: " + targetItem.getWebTagNumber());
+            logger.info("  - Title: " + (targetItem.getWebDescriptionShort() != null ? 
+                        targetItem.getWebDescriptionShort().substring(0, Math.min(50, targetItem.getWebDescriptionShort().length())) + "..." : "N/A"));
+            logger.info("  - Shopify ID: " + targetItem.getShopifyItemId());
+            
+            // Set status to force update to trigger all update logic
+            String originalStatus = targetItem.getStatus();
+            targetItem.setStatus("FORCE_UPDATE");
+            
+            // Call updateItemOnShopify directly (more efficient than batch processing)
+            syncService.updateItemOnShopify(targetItem);
+            
+            logger.info("✅ Successfully updated item using updateItemOnShopify");
+            
+            // Step 3: Validate the specific item update
+            validateSpecificItemUpdate(targetWebTagNumber);
+            
+            logger.info("🎉 Specific item force update completed successfully!");
+            logger.info("📋 Summary:");
+            logger.info("  - Item: " + targetWebTagNumber);
+            logger.info("  - Method: Direct updateItemOnShopify");
+            logger.info("  - Original status: " + originalStatus);
+            logger.info("  - Final status: " + targetItem.getStatus());
+            
+        } catch (Exception e) {
+            logger.error("❌ Force update failed for item: " + targetWebTagNumber, e);
+            throw e;
         }
-        
-        logger.info("✅ Found item: " + targetItem.getWebTagNumber());
-        logger.info("📊 Current status: " + targetItem.getStatus());
-        logger.info("🛍️ Shopify ID: " + targetItem.getShopifyItemId());
-        
-        // Step 2: Force update this single item
-        List<FeedItem> singleItemList = Collections.singletonList(targetItem);
-        forceUpdateItemsInBatches(singleItemList, "SPECIFIC-ITEM: " + targetWebTagNumber);
-        
-        // Step 3: Validate the specific item update
-        validateSpecificItemUpdate(targetWebTagNumber);
-        
-        logger.info("🎉 Specific item force update completed successfully!");
     }
     
     /**
