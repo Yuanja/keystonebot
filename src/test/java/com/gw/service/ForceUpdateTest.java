@@ -443,7 +443,7 @@ public class ForceUpdateTest {
             for (FeedItem newItem : changeSet.getNewItems()) {
                 try {
                     // Set appropriate status for new items (not published to Shopify)
-                    newItem.setStatus("FEED_SYNCED");
+                    newItem.setStatus(FeedItem.STATUS_NEW_WAITING_PUBLISH);
                     newItem.setShopifyItemId(null); // Ensure no Shopify ID
                     feedItemService.saveAutonomous(newItem);
                     totalProcessed++;
@@ -475,13 +475,15 @@ public class ForceUpdateTest {
                     
                     // Restore Shopify-related fields (don't overwrite from feed)
                     itemFromDb.setShopifyItemId(originalShopifyId);
-                    if (originalShopifyId != null && !originalShopifyId.trim().isEmpty()) {
-                        // Keep existing status for published items
+                    // Keep existing status for published items
+                    itemFromDb.setStatus(originalStatus);
+                    itemFromDb.setPublishedDate(originalPublishedDate);
+
+                    if (originalShopifyId == null || originalShopifyId.trim().isEmpty()) {
+                        // Update status for unpublished items
                         itemFromDb.setStatus(originalStatus);
                         itemFromDb.setPublishedDate(originalPublishedDate);
-                    } else {
-                        // Update status for unpublished items
-                        itemFromDb.setStatus("FEED_SYNCED");
+                        logger.error("🔄 Item was determined changed but has no Shopify ID: " + itemFromDb.getWebTagNumber() + " is new and waiting to be published");
                     }
                     
                     feedItemService.updateAutonomous(itemFromDb);
