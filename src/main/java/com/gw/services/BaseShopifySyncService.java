@@ -4,6 +4,7 @@ import com.gw.domain.FeedItem;
 import com.gw.domain.FeedItemChange;
 import com.gw.domain.FeedItemChangeSet;
 import com.gw.domain.PredefinedCollection;
+import com.gw.domain.EbayMetafieldDefinition;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.*;
 import org.apache.commons.lang3.StringUtils;
@@ -16,6 +17,7 @@ import org.springframework.cache.annotation.CacheEvict;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.function.Function;
 
 /**
  * Base Shopify Sync Service with GraphQL API integration
@@ -116,37 +118,135 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
     /**
      * Ensures collections are configured and caches the result
      * Uses Spring best practices for caching expensive operations
+     * Only performs actions when collections are missing or cache needs refresh
      */
     private void ensureCollections() throws Exception {
         if (!collectionsInitialized || cachedCollectionByEnum == null) {
-            logger.info("Initializing and caching collection mappings...");
-            cachedCollectionByEnum = shopifyGraphQLService.ensureConfiguredCollections(getPredefinedCollections());
-            collectionsInitialized = true;
-            logger.info("Cached {} collection mappings", cachedCollectionByEnum.size());
+            logger.info("🔍 Checking collection configuration status...");
+            
+            try {
+                // First, check if we actually need to create collections
+                List<CustomCollection> allCollectionsFromShopify = shopifyGraphQLService.getAllCustomCollections();
+                Map<String, CustomCollection> collectionByTitleFromShopify = 
+                    allCollectionsFromShopify.stream().collect(Collectors.toMap(CustomCollection::getTitle, Function.identity()));
+                
+                // Check if all required collections already exist
+                PredefinedCollection[] requiredCollections = getPredefinedCollections();
+                int existingCount = 0;
+                for (PredefinedCollection collectionEnum : requiredCollections) {
+                    if (collectionByTitleFromShopify.containsKey(collectionEnum.getTitle())) {
+                        existingCount++;
+                    }
+                }
+                
+                boolean allCollectionsExist = (existingCount == requiredCollections.length);
+                
+                if (allCollectionsExist) {
+                    logger.info("✅ All " + requiredCollections.length + " required collections already exist - using existing ones");
+                    
+                    // Build the mapping using existing collections
+                    cachedCollectionByEnum = new HashMap<>();
+                    for (PredefinedCollection collectionEnum : requiredCollections) {
+                        CustomCollection existingCollection = collectionByTitleFromShopify.get(collectionEnum.getTitle());
+                        cachedCollectionByEnum.put(collectionEnum, existingCollection);
+                    }
+                } else {
+                    logger.info("🔧 Missing collections detected (" + existingCount + "/" + requiredCollections.length + ") - ensuring configuration...");
+                    // Only call ensure if collections are missing - this will create missing ones and use existing ones
+                    cachedCollectionByEnum = shopifyGraphQLService.ensureConfiguredCollections(requiredCollections);
+                    logger.info("✅ Successfully ensured " + cachedCollectionByEnum.size() + " collection mappings");
+                }
+                
+                collectionsInitialized = true;
+                logger.info("📊 Cached " + cachedCollectionByEnum.size() + " collection mappings");
+                
+            } catch (Exception e) {
+                logger.error("❌ Error ensuring collections: " + e.getMessage(), e);
+                throw e;
+            }
         } else {
-            logger.debug("Using cached collection mappings ({} collections)", cachedCollectionByEnum.size());
+            logger.debug("✅ Using cached collection mappings ({} collections) - no check needed", cachedCollectionByEnum.size());
         }
     }
     
     /**
      * Ensures eBay metafield definitions are configured
      * Uses caching to avoid repeated expensive API calls
+     * Only performs actions when metafield definitions are missing or invalid
      */
     private void ensureMetafieldDefinitions() throws Exception {
         if (!metafieldDefinitionsInitialized) {
-            logger.info("Ensuring eBay metafield definitions exist...");
+            logger.info("🔍 Checking eBay metafield definitions status...");
+            
             try {
+                // First, check if eBay metafield definitions already exist
+                List<Map<String, String>> existingEbayMetafields = shopifyGraphQLService.getMetafieldDefinitions("ebay");
+                
+                // Check if all expected eBay metafields exist (using enum count)
+                int expectedCount = EbayMetafieldDefinition.getCount();
+                boolean allMetafieldsExist = (existingEbayMetafields.size() == expectedCount);
+                
+                if (allMetafieldsExist) {
+                    // Validate the structure to ensure they're correct
+                    boolean structureValid = validateMetafieldStructure(existingEbayMetafields);
+                    
+                    if (structureValid) {
+                        logger.info("✅ All " + expectedCount + " eBay metafield definitions already exist with correct structure - no action needed");
+                        metafieldDefinitionsInitialized = true;
+                        return;
+                    } else {
+                        logger.info("🔧 eBay metafield definitions exist but structure is invalid - will recreate");
+                    }
+                } else {
+                    logger.info("🔧 Missing eBay metafield definitions detected (" + existingEbayMetafields.size() + "/" + expectedCount + ") - creating...");
+                }
+                
+                // Create the metafield definitions (this handles creation and pinning)
                 shopifyGraphQLService.createEbayMetafieldDefinitions();
                 metafieldDefinitionsInitialized = true;
-                logger.info("✅ eBay metafield definitions ensured");
+                logger.info("✅ eBay metafield definitions ensured and cached");
+                
             } catch (Exception e) {
-                // Log but don't fail - definitions may already exist
-                logger.info("ℹ️ eBay metafield definitions status: " + e.getMessage());
-                metafieldDefinitionsInitialized = true; // Mark as initialized even if they already exist
+                // Log but don't fail - definitions may already exist or there may be temporary issues
+                logger.info("ℹ️ eBay metafield definitions status check completed: " + e.getMessage());
+                metafieldDefinitionsInitialized = true; // Mark as initialized to avoid repeated attempts
             }
         } else {
-            logger.debug("eBay metafield definitions already initialized");
+            logger.debug("✅ eBay metafield definitions already initialized - no check needed");
         }
+    }
+    
+    /**
+     * Validate the structure and content of eBay metafield definitions
+     * Ensures all expected metafield keys are present using the EbayMetafieldDefinition enum
+     */
+    private boolean validateMetafieldStructure(List<Map<String, String>> metafields) {
+        int expectedCount = EbayMetafieldDefinition.getCount();
+        if (metafields.size() != expectedCount) {
+            logger.warn("⚠️ Expected " + expectedCount + " eBay metafields, found " + metafields.size());
+            return false;
+        }
+        
+        // Get expected keys from enum (already sorted)
+        List<String> expectedKeys = EbayMetafieldDefinition.getAllKeys();
+        
+        // Get current keys from existing metafields (sorted)
+        List<String> currentKeys = metafields.stream()
+            .map(m -> m.get("key"))
+            .sorted()
+            .collect(Collectors.toList());
+        
+        boolean structureValid = currentKeys.equals(expectedKeys);
+        
+        if (!structureValid) {
+            logger.warn("⚠️ Metafield structure validation failed");
+            logger.warn("  Expected keys: " + expectedKeys);
+            logger.warn("  Current keys: " + currentKeys);
+        } else {
+            logger.info("✅ Metafield structure validation passed - all " + expectedCount + " expected keys found");
+        }
+        
+        return structureValid;
     }
     
     /**

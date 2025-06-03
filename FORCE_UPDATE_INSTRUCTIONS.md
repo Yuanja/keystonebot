@@ -157,7 +157,7 @@ mvn test -P fix-ebay-metafields-prod
 **Option B: Specific Item Fix**
 If you need to fix a specific item:
 ```bash
-mvn test -P force-update-item-prod -Dforce.update.web_tag_number=YOUR_ITEM_ID
+mvn test -P force-update-item-prod -Dforce.update.web_tag_number=200376
 ```
 
 **Option C: Full Force Update (High Risk)**
@@ -189,7 +189,11 @@ Watch the logs carefully for:
 
 ## eBay Metafield Details
 
-The system manages 13 eBay metafield definitions:
+The system manages 13 eBay metafield definitions using the `EbayMetafieldDefinition` enum as the single source of truth:
+
+### Metafield Definitions
+
+All metafield definitions are centrally managed in `src/main/java/com/gw/domain/EbayMetafieldDefinition.java`:
 
 1. **brand** - Watch brand/manufacturer
 2. **case_material** - Case material (gold, steel, etc.)
@@ -204,6 +208,32 @@ The system manages 13 eBay metafield definitions:
 11. **strap** - Strap/bracelet type
 12. **style** - Watch style category
 13. **year** - Year of manufacture
+
+### Enum Benefits
+
+**Single Source of Truth:**
+- All metafield definitions are centralized in the enum
+- Easy to add, remove, or modify metafield definitions
+- Compile-time validation of metafield structure
+- Consistent validation across all services
+
+**Easy Maintenance:**
+- Adding a new metafield: Just add it to the enum
+- Removing a metafield: Remove it from the enum and recompile
+- Changing metafield properties: Update the enum constructor call
+- Automatic count validation using `EbayMetafieldDefinition.getCount()`
+
+**Usage in Code:**
+```java
+// Get all metafield keys for validation
+List<String> allKeys = EbayMetafieldDefinition.getAllKeys();
+
+// Check if a key exists
+boolean exists = EbayMetafieldDefinition.hasKey("brand");
+
+// Get total count for validation
+int expectedCount = EbayMetafieldDefinition.getCount(); // Returns 13
+```
 
 **Why Pinning Matters:**
 - Pinned metafields appear prominently in Shopify admin

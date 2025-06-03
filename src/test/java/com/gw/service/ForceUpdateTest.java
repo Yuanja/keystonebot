@@ -2,6 +2,7 @@ package com.gw.service;
 
 import com.gw.domain.FeedItem;
 import com.gw.domain.FeedItemChangeSet;
+import com.gw.domain.EbayMetafieldDefinition;
 import com.gw.services.FeedItemService;
 import com.gw.services.keystone.KeyStoneFeedService;
 import com.gw.services.keystone.KeystoneShopifySyncService;
@@ -37,6 +38,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * IMPORTANT: This test does NOT extend BaseGraphqlTest to avoid the destructive
  * setUp() method that would delete all products and data!
  * 
+ * SAFETY FEATURES:
+ * - Temporarily disables cron schedule during execution to prevent conflicts
+ * - Does not clear existing data (unlike BaseGraphqlTest)
+ * - Only performs actions when actually needed (smart validation)
+ * - Processes items in controlled batches with detailed logging
+ * 
  * Usage:
  * 
  * 1. Force update all items (refreshes feed):
@@ -63,7 +70,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringJUnitConfig
 @SpringBootTest
 @TestPropertySource(properties = {
-    "shopify.force.update=true"
+    "shopify.force.update=true",
+    "cron.schedule=0 0 0 31 2 ?"  // Disable cron during force updates (Feb 31st never exists)
 })
 public class ForceUpdateTest {
     
@@ -231,13 +239,13 @@ public class ForceUpdateTest {
     }
     
     /**
-     * Validate eBay metafield definitions and recreate them if incorrect
+     * Validate eBay metafield definitions and recreate them if incorrect (only when needed)
      * This ensures all eBay metafields are properly configured and pinned
      */
     @Test
     public void validateAndFixEbayMetafields() throws Exception {
         logger.info("=== eBay Metafield Validation and Fix ===");
-        logger.info("🔍 This will validate eBay metafield definitions and fix any issues");
+        logger.info("🔍 This will validate eBay metafield definitions and fix any issues only when needed");
         
         if (DRY_RUN) {
             logger.warn("🧪 DRY RUN MODE - No actual changes will be made");
@@ -247,25 +255,40 @@ public class ForceUpdateTest {
             // Step 1: Analyze current metafield state
             MetafieldValidationResult validationResult = analyzeEbayMetafieldState();
             
-            // Step 2: Determine if recreation is needed
-            boolean needsRecreation = shouldRecreateMetafields(validationResult);
+            // Step 2: Check if everything is already perfect
+            boolean isPerfect = validationResult.hasAllExpected && 
+                               validationResult.allPinned && 
+                               validationResult.structureValid && 
+                               !validationResult.hasError;
             
-            if (!needsRecreation && validationResult.allPinned) {
-                logger.info("✅ All eBay metafields are correctly configured and pinned");
-                logger.info("🎉 No action needed - metafields are in perfect state!");
+            if (isPerfect) {
+                logger.info("🎉 All eBay metafields are already perfectly configured!");
+                logger.info("✅ Count: " + validationResult.currentCount + "/13");
+                logger.info("✅ All pinned: " + validationResult.allPinned);
+                logger.info("✅ Structure valid: " + validationResult.structureValid);
+                logger.info("🎯 No action needed - metafields are in perfect state!");
                 return;
             }
             
-            // Step 3: Recreate metafields if needed
+            logger.info("🔧 Issues found - determining minimal fixes needed...");
+            
+            // Step 3: Determine if recreation is needed
+            boolean needsRecreation = shouldRecreateMetafields(validationResult);
+            
             if (needsRecreation) {
+                logger.info("🔄 Metafields need recreation due to structural issues");
                 recreateEbayMetafields();
             } else if (!validationResult.allPinned) {
-                // Only fix pinning if metafields exist but aren't pinned
+                logger.info("📌 Metafields exist but some need pinning");
                 fixMetafieldPinning();
+            } else {
+                logger.info("✅ No fixes needed");
             }
             
-            // Step 4: Final validation
-            validateMetafieldFixResults();
+            // Step 4: Final validation only if we made changes
+            if (needsRecreation || !validationResult.allPinned) {
+                validateMetafieldFixResults();
+            }
             
             logger.info("🎉 eBay metafield validation and fix completed successfully!");
             
@@ -316,24 +339,62 @@ public class ForceUpdateTest {
     }
     
     /**
-     * Process feed items in controlled batches with force update
+     * Process feed items in controlled batches with force update (only update what needs updating)
      */
     private void forceUpdateItemsInBatches(List<FeedItem> sortedFeedItems, String operation) throws Exception {
-        logger.info("🔄 Step 3: Force updating items in batches of " + BATCH_SIZE + " (" + operation + ")...");
+        logger.info("🔄 Step 3: Analyzing items for force update in batches of " + BATCH_SIZE + " (" + operation + ")...");
         
-        int totalBatches = (int) Math.ceil((double) sortedFeedItems.size() / BATCH_SIZE);
+        // First, check which items actually need updating
+        logger.info("🔍 Pre-checking which items need force updates...");
+        FeedItemChangeSet changeSet = feedItemService.compareFeedItemWithDB(true, sortedFeedItems);
+        
+        int totalChangedItems = changeSet.getChangedItems() != null ? changeSet.getChangedItems().size() : 0;
+        int totalNewItems = changeSet.getNewItems() != null ? changeSet.getNewItems().size() : 0;
+        int totalItemsNeedingUpdate = totalChangedItems + totalNewItems;
+        
+        if (totalItemsNeedingUpdate == 0) {
+            logger.info("✅ All items are already up to date - no force updates needed!");
+            logger.info("📊 Total items checked: " + sortedFeedItems.size());
+            logger.info("🎯 No action needed - everything is current!");
+            return;
+        }
+        
+        logger.info("📊 Force Update Analysis:");
+        logger.info("  - Total items: " + sortedFeedItems.size());
+        logger.info("  - Items needing updates: " + totalItemsNeedingUpdate);
+        logger.info("  - Changed items: " + totalChangedItems);
+        logger.info("  - New items: " + totalNewItems);
+        logger.info("  - Update percentage: " + String.format("%.2f%%", 
+                    (double) totalItemsNeedingUpdate / sortedFeedItems.size() * 100));
+        
+        // Only process items that actually need updates
+        List<FeedItem> itemsToUpdate = new ArrayList<>();
+        if (changeSet.getChangedItems() != null) {
+            changeSet.getChangedItems().forEach(change -> itemsToUpdate.add(change.getFromFeed()));
+        }
+        if (changeSet.getNewItems() != null) {
+            itemsToUpdate.addAll(changeSet.getNewItems());
+        }
+        
+        // Sort the items to update by web_tag_number (maintain order)
+        itemsToUpdate.sort(Comparator.comparing(FeedItem::getWebTagNumber, 
+            Comparator.nullsLast(Comparator.naturalOrder())));
+        
+        logger.info("🔧 Processing " + itemsToUpdate.size() + " items that actually need updates...");
+        
+        int totalBatches = (int) Math.ceil((double) itemsToUpdate.size() / BATCH_SIZE);
         int totalProcessed = 0;
         int totalUpdated = 0;
         int totalErrors = 0;
         
         for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
             int startIndex = batchIndex * BATCH_SIZE;
-            int endIndex = Math.min(startIndex + BATCH_SIZE, sortedFeedItems.size());
+            int endIndex = Math.min(startIndex + BATCH_SIZE, itemsToUpdate.size());
             
-            List<FeedItem> batch = sortedFeedItems.subList(startIndex, endIndex);
+            List<FeedItem> batch = itemsToUpdate.subList(startIndex, endIndex);
             
             logger.info("📦 Processing batch " + (batchIndex + 1) + "/" + totalBatches + 
-                       " (items " + startIndex + "-" + (endIndex - 1) + ")");
+                       " (items " + startIndex + "-" + (endIndex - 1) + " of " + itemsToUpdate.size() + " that need updates)");
             
             // Log the web_tag_numbers in this batch
             String batchWebTags = batch.stream()
@@ -358,9 +419,11 @@ public class ForceUpdateTest {
         }
         
         logger.info("📊 Overall Results (" + operation + "):");
+        logger.info("  - Total items that needed updates: " + itemsToUpdate.size());
         logger.info("  - Total items processed: " + totalProcessed);
         logger.info("  - Total items updated: " + totalUpdated);
         logger.info("  - Total errors: " + totalErrors);
+        logger.info("  - Items skipped (already current): " + (sortedFeedItems.size() - itemsToUpdate.size()));
         logger.info("  - Success rate: " + String.format("%.2f%%", 
                     (double) (totalProcessed - totalErrors) / totalProcessed * 100));
     }
@@ -489,7 +552,7 @@ public class ForceUpdateTest {
             List<Map<String, String>> ebayMetafields = shopifyApiService.getMetafieldDefinitions("ebay");
             
             result.currentCount = ebayMetafields.size();
-            result.expectedCount = 13; // Expected number of eBay metafields
+            result.expectedCount = EbayMetafieldDefinition.getCount(); // Use enum count
             
             logger.info("📊 Current eBay Metafield State:");
             logger.info("  - Found metafields: " + result.currentCount);
@@ -541,34 +604,29 @@ public class ForceUpdateTest {
      * Validate the structure and content of metafield definitions
      */
     private boolean validateMetafieldStructure(List<Map<String, String>> metafields) {
-        if (metafields.size() != 13) {
-            logger.warn("⚠️ Expected 13 eBay metafields, found " + metafields.size());
+        int expectedCount = EbayMetafieldDefinition.getCount();
+        if (metafields.size() != expectedCount) {
+            logger.warn("⚠️ Expected " + expectedCount + " eBay metafields, found " + metafields.size());
             return false;
         }
         
-        // Expected eBay metafield keys
-        String[] expectedKeys = {
-            "year", "strap", "box_papers", "reference_number", "condition",
-            "diameter", "model", "style", "category", "brand", "movement",
-            "case_material", "dial"
-        };
+        // Get expected keys from enum (already sorted)
+        List<String> expectedKeys = EbayMetafieldDefinition.getAllKeys();
         
+        // Get current keys from existing metafields (sorted)
         List<String> currentKeys = metafields.stream()
             .map(m -> m.get("key"))
             .sorted()
             .collect(Collectors.toList());
         
-        List<String> expectedKeysList = new ArrayList<>(List.of(expectedKeys));
-        Collections.sort(expectedKeysList);
-        
-        boolean structureValid = currentKeys.equals(expectedKeysList);
+        boolean structureValid = currentKeys.equals(expectedKeys);
         
         if (!structureValid) {
             logger.warn("⚠️ Metafield structure validation failed");
-            logger.warn("  Expected keys: " + expectedKeysList);
+            logger.warn("  Expected keys: " + expectedKeys);
             logger.warn("  Current keys: " + currentKeys);
         } else {
-            logger.info("✅ Metafield structure validation passed - all 13 expected keys found");
+            logger.info("✅ Metafield structure validation passed - all " + expectedCount + " expected keys found");
         }
         
         return structureValid;
@@ -599,10 +657,10 @@ public class ForceUpdateTest {
     }
     
     /**
-     * Recreate all eBay metafields from scratch
+     * Recreate all eBay metafields from scratch (only if needed)
      */
     private void recreateEbayMetafields() throws Exception {
-        logger.info("🔄 Step 2: Recreating eBay metafields...");
+        logger.info("🔄 Step 2: Checking if eBay metafields need recreation...");
         
         if (DRY_RUN) {
             logger.info("🧪 DRY RUN: Would recreate eBay metafields");
@@ -610,11 +668,20 @@ public class ForceUpdateTest {
         }
         
         try {
-            // Step 1: Remove existing eBay metafield definitions
-            logger.info("🗑️ Removing existing eBay metafield definitions...");
+            // First check if we actually need to recreate
             List<Map<String, String>> existingMetafields = shopifyApiService.getMetafieldDefinitions("ebay");
             
+            // Check if structure is already correct
+            if (existingMetafields.size() == 13 && validateMetafieldStructure(existingMetafields)) {
+                logger.info("✅ eBay metafields already have correct structure - skipping recreation");
+                return;
+            }
+            
+            logger.info("🔄 eBay metafields need recreation (count: " + existingMetafields.size() + "/13, structure valid: " + validateMetafieldStructure(existingMetafields) + ")");
+            
+            // Step 1: Remove existing eBay metafield definitions
             if (!existingMetafields.isEmpty()) {
+                logger.info("🗑️ Removing " + existingMetafields.size() + " existing eBay metafield definitions...");
                 for (Map<String, String> metafield : existingMetafields) {
                     String id = metafield.get("id");
                     String key = metafield.get("key");
@@ -644,10 +711,10 @@ public class ForceUpdateTest {
     }
     
     /**
-     * Fix metafield pinning without recreating
+     * Fix metafield pinning without recreating (only pin what needs pinning)
      */
     private void fixMetafieldPinning() throws Exception {
-        logger.info("📌 Step 2: Fixing eBay metafield pinning...");
+        logger.info("📌 Step 2: Checking which eBay metafields need pinning...");
         
         if (DRY_RUN) {
             logger.info("🧪 DRY RUN: Would fix metafield pinning");
@@ -657,6 +724,21 @@ public class ForceUpdateTest {
         try {
             // Get current metafields
             List<Map<String, String>> metafields = shopifyApiService.getMetafieldDefinitions("ebay");
+            
+            // First check if all are already pinned
+            long alreadyPinnedCount = metafields.stream()
+                .filter(metafield -> {
+                    String pinnedPosition = metafield.get("pinnedPosition");
+                    return pinnedPosition != null && !pinnedPosition.trim().isEmpty() && !pinnedPosition.equals("null");
+                })
+                .count();
+            
+            if (alreadyPinnedCount == metafields.size() && metafields.size() > 0) {
+                logger.info("✅ All " + metafields.size() + " eBay metafields are already pinned - no action needed");
+                return;
+            }
+            
+            logger.info("📌 Found " + alreadyPinnedCount + "/" + metafields.size() + " metafields already pinned - fixing the rest...");
             
             // Pin each metafield that isn't already pinned
             int pinnedCount = 0;
@@ -678,10 +760,16 @@ public class ForceUpdateTest {
                     
                     // Small delay between pinning operations
                     Thread.sleep(200);
+                } else if (!needsPinning) {
+                    logger.info("✅ Metafield already pinned: ebay." + key + " (position: " + currentPinnedPos + ")");
                 }
             }
             
-            logger.info("📌 Fixed pinning for " + pinnedCount + " metafields");
+            if (pinnedCount > 0) {
+                logger.info("📌 Fixed pinning for " + pinnedCount + " metafields");
+            } else {
+                logger.info("✅ No metafields needed pinning");
+            }
             
         } catch (Exception e) {
             logger.error("❌ Error fixing metafield pinning: " + e.getMessage(), e);
@@ -729,7 +817,7 @@ public class ForceUpdateTest {
      */
     private static class MetafieldValidationResult {
         int currentCount = 0;
-        int expectedCount = 13;
+        int expectedCount = EbayMetafieldDefinition.getCount(); // Use enum count
         int pinnedCount = 0;
         boolean hasAllExpected = false;
         boolean allPinned = false;

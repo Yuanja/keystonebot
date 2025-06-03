@@ -37,6 +37,7 @@ import com.gw.services.shopifyapi.objects.Metafield;
 import com.gw.services.shopifyapi.objects.Option;
 import com.gw.services.shopifyapi.objects.InventoryLevels;
 import com.gw.domain.FeedItem;
+import com.gw.domain.EbayMetafieldDefinition;
 
 /**
  * Shopify GraphQL API Service
@@ -2512,7 +2513,8 @@ public class ShopifyGraphQLService {
     }
     
     /**
-     * Create all eBay metafield definitions to make them visible in Shopify admin
+     * Create eBay metafield definitions for product metadata
+     * Uses EbayMetafieldDefinition enum as the single source of truth
      */
     public void createEbayMetafieldDefinitions() throws Exception {
         logger.info("🏷️ Creating eBay metafield definitions for admin visibility...");
@@ -2521,133 +2523,23 @@ public class ShopifyGraphQLService {
         // Metafields will be created without category restrictions
         logger.info("ℹ️ Creating metafield definitions without category constraints (not supported in GraphQL)");
         
-        // Define all eBay metafields with proper display names and descriptions
-        Map<String, Map<String, String>> ebayDefinitions = new HashMap<>();
-        
-        // Brand
-        Map<String, String> brand = new HashMap<>();
-        brand.put("name", "Brand");
-        brand.put("description", "Watch brand/manufacturer for eBay listings");
-        brand.put("type", "single_line_text_field");
-        ebayDefinitions.put("brand", brand);
-        
-        // Model
-        Map<String, String> model = new HashMap<>();
-        model.put("name", "Model");
-        model.put("description", "Watch model for eBay listings");
-        model.put("type", "single_line_text_field");
-        ebayDefinitions.put("model", model);
-        
-        // Reference Number
-        Map<String, String> referenceNumber = new HashMap<>();
-        referenceNumber.put("name", "Reference Number");
-        referenceNumber.put("description", "Manufacturer reference number for eBay listings");
-        referenceNumber.put("type", "single_line_text_field");
-        ebayDefinitions.put("reference_number", referenceNumber);
-        
-        // Serial Number - REMOVED per user request
-        
-        // Year
-        Map<String, String> year = new HashMap<>();
-        year.put("name", "Year");
-        year.put("description", "Year of manufacture for eBay listings");
-        year.put("type", "single_line_text_field");
-        ebayDefinitions.put("year", year);
-        
-        // Case Material
-        Map<String, String> caseMaterial = new HashMap<>();
-        caseMaterial.put("name", "Case Material");
-        caseMaterial.put("description", "Case material for eBay listings");
-        caseMaterial.put("type", "single_line_text_field");
-        ebayDefinitions.put("case_material", caseMaterial);
-        
-        // Movement
-        Map<String, String> movement = new HashMap<>();
-        movement.put("name", "Movement");
-        movement.put("description", "Movement type for eBay listings");
-        movement.put("type", "single_line_text_field");
-        ebayDefinitions.put("movement", movement);
-        
-        // Case Information - REMOVED per user request
-        
-        // Dial
-        Map<String, String> dial = new HashMap<>();
-        dial.put("name", "Dial");
-        dial.put("description", "Dial information for eBay listings");
-        dial.put("type", "multi_line_text_field");
-        ebayDefinitions.put("dial", dial);
-        
-        // General Dial - REMOVED per user request
-        
-        // Dial Markers - REMOVED per user request
-        
-        // Strap
-        Map<String, String> strap = new HashMap<>();
-        strap.put("name", "Strap/Bracelet");
-        strap.put("description", "Strap or bracelet information for eBay listings");
-        strap.put("type", "multi_line_text_field");
-        ebayDefinitions.put("strap", strap);
-        
-        // Band Material - REMOVED per user request
-        
-        // Band Type - REMOVED per user request
-        
-        // Condition
-        Map<String, String> condition = new HashMap<>();
-        condition.put("name", "Condition");
-        condition.put("description", "Watch condition for eBay listings");
-        condition.put("type", "single_line_text_field");
-        ebayDefinitions.put("condition", condition);
-        
-        // Diameter
-        Map<String, String> diameter = new HashMap<>();
-        diameter.put("name", "Case Diameter");
-        diameter.put("description", "Case diameter for eBay listings");
-        diameter.put("type", "single_line_text_field");
-        ebayDefinitions.put("diameter", diameter);
-        
-        // Bezel Type - REMOVED per user request
-        
-        // Case Crown - REMOVED per user request
-        
-        // Box and Papers
-        Map<String, String> boxPapers = new HashMap<>();
-        boxPapers.put("name", "Box & Papers");
-        boxPapers.put("description", "Box and papers information for eBay listings");
-        boxPapers.put("type", "single_line_text_field");
-        ebayDefinitions.put("box_papers", boxPapers);
-        
-        // Category
-        Map<String, String> category = new HashMap<>();
-        category.put("name", "Category");
-        category.put("description", "Watch category for eBay listings");
-        category.put("type", "single_line_text_field");
-        ebayDefinitions.put("category", category);
-        
-        // Style
-        Map<String, String> style = new HashMap<>();
-        style.put("name", "Style");
-        style.put("description", "Watch style for eBay listings");
-        style.put("type", "single_line_text_field");
-        ebayDefinitions.put("style", style);
-        
-        // eBay Price - REMOVED per user request
-        
-        // Auction Flag - REMOVED per user request
-        
-        // Additional Notes - REMOVED per user request
+        // Get all eBay metafield definitions from enum
+        EbayMetafieldDefinition[] definitions = EbayMetafieldDefinition.values();
         
         // Create all definitions and collect their IDs for pinning
         int created = 0;
         int existing = 0;
         List<String> definitionIds = new ArrayList<>();
         
-        for (Map.Entry<String, Map<String, String>> entry : ebayDefinitions.entrySet()) {
-            String key = entry.getKey();
-            Map<String, String> def = entry.getValue();
-            
+        for (EbayMetafieldDefinition definition : definitions) {
             try {
-                String definitionId = createMetafieldDefinitionWithId("ebay", key, def.get("name"), def.get("description"), def.get("type"), "PRODUCT");
+                String definitionId = createMetafieldDefinitionWithId("ebay", 
+                    definition.getKey(), 
+                    definition.getName(), 
+                    definition.getDescription(), 
+                    definition.getType(), 
+                    "PRODUCT");
+                    
                 if (definitionId != null) {
                     definitionIds.add(definitionId);
                     created++;
@@ -2658,7 +2550,7 @@ public class ShopifyGraphQLService {
                 if (e.getMessage().contains("already exists")) {
                     existing++;
                 } else {
-                    logger.error("Failed to create definition for ebay." + key + ": " + e.getMessage());
+                    logger.error("Failed to create definition for ebay." + definition.getKey() + ": " + e.getMessage());
                 }
             }
         }
@@ -2666,7 +2558,7 @@ public class ShopifyGraphQLService {
         logger.info("🎉 eBay metafield definitions setup complete:");
         logger.info("  ✅ Created: " + created + " new definitions");
         logger.info("  ℹ️ Already existed: " + existing + " definitions");
-        logger.info("  📊 Total eBay definitions: " + ebayDefinitions.size());
+        logger.info("  📊 Total eBay definitions: " + definitions.length);
         
         // Pin all newly created metafield definitions for better admin UX
         if (!definitionIds.isEmpty()) {
