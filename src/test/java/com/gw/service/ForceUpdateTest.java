@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -49,7 +50,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Sorts by web_tag_number for predictable processing order
  * - Validates and recreates eBay metafields when needed
  */
-@TestPropertySource(properties = {"shopify.force.update=true"})
+@TestPropertySource(properties = {
+    "shopify.force.update=true"
+})
+@ActiveProfiles("${spring.profiles.active:keystone-dev}")
 public class ForceUpdateTest extends BaseGraphqlTest {
     
     private static final Logger logger = LogManager.getLogger(ForceUpdateTest.class);
