@@ -4,6 +4,7 @@ import com.gw.domain.EbayMetafieldDefinition;
 import com.gw.domain.PredefinedCollection;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.CustomCollection;
+import com.gw.domain.keystone.KeyStoneCollections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -100,9 +101,9 @@ public class SyncConfigurationService {
      * Simplified version for internal use when we don't have the collections array
      */
     private void ensureCollections() throws Exception {
-        // This would need to be implemented based on how collections are accessed
-        // For now, throwing an exception to indicate it needs proper initialization
-        throw new RuntimeException("Collections must be initialized with required collections array");
+        // Get the predefined collections from the sync service
+        PredefinedCollection[] requiredCollections = KeyStoneCollections.values();
+        ensureCollections(requiredCollections);
     }
     
     /**
