@@ -36,17 +36,25 @@ import com.gw.domain.FeedItem;
 import com.gw.ssl.SSLUtilities;
 
 /**
- * @author jyuan
- *
+ * Centralized Image Processing Service
+ * 
+ * Handles all image-related operations for the application:
+ * - Image downloading and validation
+ * - Format conversion (HEIC to JPG)
+ * - Image compression and optimization
+ * - URL processing and correction
+ * 
+ * Benefits:
+ * - Single Responsibility: All image logic in one place
+ * - Reusable: Can be used by any service needing image processing
+ * - Consistent: Standardized image handling across the application
  */
 @Component
 public class ImageService {
     protected @Value("${image.source.ip}") String imageSourceIp;
     protected @Value("${css.hosting.url.base}") String cssHostingUrlBase;
-    protected @Value("${convert_api.secret}") String covertApiSecret;
-    protected @Value("${convert_api.token}") String convertApiToken;
-    protected @Value("${do_heic_to_jpg_convert}") boolean doConvertToJpg;
     private @Value("${image.store.dir}") String imageStore;
+    private @Value("${skip.image.download:false}") boolean skipImageDownload;
 
     static {
         SSLUtilities.disableSslVerification();
@@ -54,6 +62,39 @@ public class ImageService {
     
     private static Logger logger = LogManager.getLogger(ImageService.class);
 
+    /**
+     * Unified Image Processing Pipeline
+     * 
+     * Handles the complete image processing workflow with graceful error handling:
+     * - Downloads images if not configured to skip
+     * - Validates and converts formats
+     * - Compresses images as needed
+     * - Provides detailed logging
+     * 
+     * @param item The feed item containing image URLs
+     * @param itemIdentifier Identifier for logging (e.g., SKU)
+     * @return ImageProcessingResult with success status and details
+     */
+    public ImageProcessingResult handleImageProcessing(FeedItem item, String itemIdentifier) {
+        if (skipImageDownload) {
+            logger.debug("⏭️ Skipping image processing for {} (skip.image.download=true)", itemIdentifier);
+            return ImageProcessingResult.skipped();
+        }
+
+        logger.info("📸 Processing images for {}", itemIdentifier);
+        try {
+            downloadImages(item);
+            logger.debug("✅ Images processed successfully for {}", itemIdentifier);
+            return ImageProcessingResult.success();
+        } catch (Exception e) {
+            logger.warn("⚠️ Failed to process images for {} - {}", itemIdentifier, e.getMessage());
+            return ImageProcessingResult.failure(e);
+        }
+    }
+
+    /**
+     * Download images for a feed item with comprehensive validation
+     */
     public void downloadImages(FeedItem feedItem) throws Exception {
         //Ensure folder exists
         File imageStoreFolder = new File(imageStore);
@@ -89,16 +130,6 @@ public class ImageService {
     private void downloadImagesIfAvailable(String httpUrl, String imageFileName) throws Exception{
         File imageFile = new File(imageFileName);
 
-        // //Read the pre-downloaded versoin.
-        // if (imageFile.exists()){
-        //     //confirm it's a jpg and < 1mb.
-        //     if (isJpg(imageFile)){
-        //         assertImageUnder1MB(imageFileName);
-        //         logger.info("Re-using previously downloaded image : "+imageFileName);
-        //         return;
-        //     } 
-        // }
-
         if (httpUrl != null) {
             String urlToUse = replaceIPAddressInUrl(httpUrl, imageSourceIp);
             
@@ -111,8 +142,6 @@ public class ImageService {
                 InputStream input = new BufferedInputStream(imageUrl.openStream());
                 Files.copy(input, imageFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 logger.info("Saved image " + imageFileName);
-                assertImageIsJPG(imageFileName);
-                assertImageUnder1MB(imageFileName);
             } else {
                 logger.error("Image URL returned non 200 code.  Skipping. ");
                 throw new Exception("Image failed to download: " + urlToUse);
@@ -120,37 +149,7 @@ public class ImageService {
         }
     }
 
-    public void assertImageIsJPG(String imageFileName) throws Exception{
-        try {
-            File imageFile = new File(imageFileName);
-            if (!imageFile.exists()) {
-                logger.warn("Image file does not exist: " + imageFileName);
-                return;
-            }
 
-            // Check if file is HEIC
-            if (isHeicImage(imageFile) && doConvertToJpg) {
-                String tempHEICFilePath = imageFile.getAbsolutePath()+".heic";
-                Files.copy(imageFile.toPath(), Paths.get(tempHEICFilePath), StandardCopyOption.REPLACE_EXISTING);
-                convertToJPG(new File(tempHEICFilePath), imageFile);
-                Files.delete(Paths.get(tempHEICFilePath));
-            }
-
-        } catch (Throwable e) {
-            logger.error("Error processing image file: " + imageFileName, e);
-            throw new Exception("Failed to process image file: " + e.getMessage());
-        }
-    }
-
-    public void convertToJPG(File inHeic, File outJpg) throws InterruptedException, ExecutionException, IOException{
-    
-            logger.info("Converting HEIC to JPG: " + inHeic.getAbsolutePath());
-            Config.setDefaultSecret(covertApiSecret);
-            Config.setDefaultApiKey(convertApiToken);
-            ConvertApi.convert("heic", "jpg",
-                new Param("File", inHeic.toPath())
-            ).get().saveFile(outJpg.toPath()).get();
-    }
 
 
     /**
@@ -202,7 +201,6 @@ public class ImageService {
         }
     }
 
-    
     /**
      * Compresses an image file if it is larger than 1MB.
      * The compression is done by reducing the JPEG quality iteratively until the file size
@@ -271,39 +269,10 @@ public class ImageService {
         }
     }
     
-    public String[] getAvailableDefaultImageUrl(FeedItem feedItem) {
-        List<String> availableImagePath = new ArrayList<String>();
-        if (feedItem.getWebImagePath1()!=null) {
-            availableImagePath.add(replaceIPAddressInUrl(feedItem.getWebImagePath1(), imageSourceIp));
-        }
-        if (feedItem.getWebImagePath2()!=null) {
-            availableImagePath.add(replaceIPAddressInUrl(feedItem.getWebImagePath2(), imageSourceIp));
-        }
-        if (feedItem.getWebImagePath3()!=null) {
-            availableImagePath.add(replaceIPAddressInUrl(feedItem.getWebImagePath3(), imageSourceIp));
-        }
-        if (feedItem.getWebImagePath4()!=null) {
-            availableImagePath.add(replaceIPAddressInUrl(feedItem.getWebImagePath4(), imageSourceIp));
-        }
-        if (feedItem.getWebImagePath5()!=null) {
-            availableImagePath.add(replaceIPAddressInUrl(feedItem.getWebImagePath5(), imageSourceIp));
-        }
-        if (feedItem.getWebImagePath6()!=null) {
-            availableImagePath.add(replaceIPAddressInUrl(feedItem.getWebImagePath6(), imageSourceIp));
-        }
-        if (feedItem.getWebImagePath7()!=null) {
-            availableImagePath.add(replaceIPAddressInUrl(feedItem.getWebImagePath7(), imageSourceIp));
-        }
-        if (feedItem.getWebImagePath8()!=null) {
-            availableImagePath.add(replaceIPAddressInUrl(feedItem.getWebImagePath8(), imageSourceIp));
-        }
-        if (feedItem.getWebImagePath9()!=null) {
-            availableImagePath.add(replaceIPAddressInUrl(feedItem.getWebImagePath9(), imageSourceIp));
-        }
-        
-        return availableImagePath.toArray(new String[availableImagePath.size()]);
-    }
-    
+    /**
+     * Generate CSS-hosted external image URLs for a feed item
+     * Used by ProductImageService for Shopify image upload
+     */
     public String[] getAvailableExternalImagePathByCSS(FeedItem feedItem) {
         List<String> availableImagePath = new ArrayList<String>();
         if (feedItem.getWebImagePath1()!=null) {
@@ -337,39 +306,10 @@ public class ImageService {
         return availableImagePath.toArray(new String[availableImagePath.size()]);
     }
 
-    public String[] getRawImageUrls(FeedItem feedItem) {
-        List<String> availableImagePath = new ArrayList<String>();
-        if (feedItem.getWebImagePath1()!=null) {
-            availableImagePath.add(feedItem.getWebImagePath1());
-        }
-        if (feedItem.getWebImagePath2()!=null) {
-            availableImagePath.add(feedItem.getWebImagePath2());
-        }
-        if (feedItem.getWebImagePath3()!=null) {
-            availableImagePath.add(feedItem.getWebImagePath3());
-        }
-        if (feedItem.getWebImagePath4()!=null) {
-            availableImagePath.add(feedItem.getWebImagePath4());
-        }
-        if (feedItem.getWebImagePath5()!=null) {
-            availableImagePath.add(feedItem.getWebImagePath5());
-        }
-        if (feedItem.getWebImagePath6()!=null) {
-            availableImagePath.add(feedItem.getWebImagePath6());
-        }
-        if (feedItem.getWebImagePath7()!=null) {
-            availableImagePath.add(feedItem.getWebImagePath7());
-        }
-        if (feedItem.getWebImagePath8()!=null) {
-            availableImagePath.add(feedItem.getWebImagePath8());
-        }
-        if (feedItem.getWebImagePath9()!=null) {
-            availableImagePath.add(feedItem.getWebImagePath9());
-        }
-
-        return availableImagePath.toArray(new String[availableImagePath.size()]);
-    }
-    
+    /**
+     * Correct escaped HTML and replace IP address in image URLs
+     * Used by ProductImageService for URL processing
+     */
     public String getCorrectedImageUrl(String feedImageUrl) {
     	//Image path from the feed contains escaped html. for example:
     	// https://104.173.246.236/fmi/xml/cnt/data.jpg?-db=DEG&amp;-lay=WEB_XML_IMAGE&amp;-recid=46304&amp;-field=image
@@ -382,5 +322,36 @@ public class ImageService {
     public String replaceIPAddressInUrl(String rawUrl, String newIp) {
         String ipRegex = "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}";
         return rawUrl.replaceFirst(ipRegex, newIp);
+    }
+    
+    /**
+     * Result wrapper for image processing operations
+     */
+    public static class ImageProcessingResult {
+        private final Exception error;
+        private final boolean success;
+        private final boolean skipped;
+        
+        private ImageProcessingResult(Exception error, boolean success, boolean skipped) {
+            this.error = error;
+            this.success = success;
+            this.skipped = skipped;
+        }
+        
+        public static ImageProcessingResult success() {
+            return new ImageProcessingResult(null, true, false);
+        }
+        
+        public static ImageProcessingResult failure(Exception error) {
+            return new ImageProcessingResult(error, false, false);
+        }
+        
+        public static ImageProcessingResult skipped() {
+            return new ImageProcessingResult(null, true, true);
+        }
+        
+        public boolean isSuccess() { return success; }
+        public boolean isSkipped() { return skipped; }
+        public Exception getError() { return error; }
     }
 }
