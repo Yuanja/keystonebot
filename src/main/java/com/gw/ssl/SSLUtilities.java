@@ -217,7 +217,7 @@ public final class SSLUtilities {
          */
 		@Override
 		public boolean verify(String hostname, SSLSession session) {
-			// TODO Auto-generated method stub
+			
 			return true;
 		}
     } // _FakeHostnameVerifier
@@ -275,7 +275,7 @@ public final class SSLUtilities {
 
 		@Override
 		public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-			// TODO Auto-generated method stub
+			
 			
 		}
     } // _FakeX509TrustManager

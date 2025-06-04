@@ -102,11 +102,6 @@ public class SyncTest extends BaseGraphqlTest {
             
             logger.info("✅ PASS: Sync created all required eBay metafield definitions: " + String.join(", ", expectedKeys));
             
-            // TODO: Add assertion for metafield definition category constraints
-            // When category constraints are implemented, verify that eBay metafield definitions 
-            // are constrained to "Watches" category for proper Shopify Admin UX
-            // Example: Assertions.assertTrue(hasWatchesCategoryConstraint(ebayDefinitions), 
-            //          "eBay metafield definitions should be constrained to Watches category");
             
             // =================== ASSERT: Sync Populated eBay Metafields ===================
             logger.info("🏷️ Asserting that sync process populated eBay metafields on products...");

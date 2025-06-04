@@ -1,6 +1,7 @@
 package com.gw.service;
 
 import com.gw.domain.FeedItem;
+import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -284,7 +285,7 @@ public class MetafieldCreationVerificationTest extends BaseGraphqlTest {
                             "Category ID should be a valid Shopify taxonomy GID");
         
         // Test that it matches our expected static ID
-        String expectedWatchesId = shopifyApiService.getWatchesCategoryId();
+        String expectedWatchesId = ShopifyGraphQLService.getWatchesCategoryId();
         logger.info("  Expected category ID: " + expectedWatchesId);
         
         Assertions.assertEquals(expectedWatchesId, watchesCategoryId, 

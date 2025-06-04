@@ -18,9 +18,10 @@ public class HeaderRequestInterceptor implements ClientHttpRequestInterceptor {
         this.headerValue = headerValue;
     }
 
-    @Override
-    public ClientHttpResponse intercept(HttpRequest request, byte[] body, 
-            ClientHttpRequestExecution execution) throws IOException {
+    @SuppressWarnings("null")
+	@Override
+    public ClientHttpResponse intercept(@SuppressWarnings("null") HttpRequest request, @SuppressWarnings("null") byte[] body, 
+            @SuppressWarnings("null") ClientHttpRequestExecution execution) throws IOException {
         request.getHeaders().set(headerName, headerValue);
         return execution.execute(request, body);
     }

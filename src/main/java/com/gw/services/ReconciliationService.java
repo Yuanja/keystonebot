@@ -1,7 +1,6 @@
 package com.gw.services;
 
 import com.gw.domain.FeedItem;
-import com.gw.domain.FeedItemChange;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.Product;
 import com.gw.services.shopifyapi.objects.Variant;
@@ -530,33 +529,5 @@ public class ReconciliationService {
                 feedItemService.deleteAutonomous(itemFromDb);
             }
         }
-    }
-    
-    private List<FeedItemChange> getShopifyItemsToUpdateDueToImageCountMismatch(
-            Map<String, Product> allProductBySku,
-            Map<String, FeedItem> allItemsInDBBySku) {
-        List<FeedItemChange> feedItemsToUpdate = new ArrayList<>();
-        logger.info("Checking for image count mismatches...");
-        
-        for (Product currentProduct : allProductBySku.values()) {
-            List<Variant> variants = currentProduct.getVariants();
-            if (variants == null || variants.isEmpty()) {
-                continue;
-            }
-            
-            String currentProductSku = variants.get(0).getSku();
-            FeedItem feedItemFromDb = allItemsInDBBySku.get(currentProductSku);
-            
-            if (feedItemFromDb != null) {
-                int currentImageCount = currentProduct.getImages() == null ? 0 : currentProduct.getImages().size();
-                if (feedItemFromDb.getImageCount() != currentImageCount) {
-                    logger.info("Image count mismatch for SKU {}: Shopify has {}, DB expects {} - marking for update",
-                        currentProductSku, currentImageCount, feedItemFromDb.getImageCount());
-                    feedItemsToUpdate.add(new FeedItemChange(feedItemFromDb, feedItemFromDb));
-                }
-            }
-        }
-        
-        return feedItemsToUpdate;
     }
 } 

@@ -124,7 +124,8 @@ public class BaseFeedService implements IFeedService {
     /**
      * Downloads fresh feed data using the original logic
      */
-    private List<FeedItem> downloadFreshFeed() throws IOException, ParserConfigurationException, SAXException {
+    @SuppressWarnings("deprecation")
+	private List<FeedItem> downloadFreshFeed() throws IOException, ParserConfigurationException, SAXException {
         List<FeedItem> rawLoad = new ArrayList<>();
         int skipCounter = 0;
         int batchSize = 2000;
