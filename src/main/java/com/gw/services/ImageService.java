@@ -26,6 +26,7 @@ import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tika.Tika;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -34,6 +35,8 @@ import com.convertapi.client.ConvertApi;
 import com.convertapi.client.Param;
 import com.gw.domain.FeedItem;
 import com.gw.ssl.SSLUtilities;
+import com.gw.services.shopifyapi.ShopifyGraphQLService;
+import com.gw.services.shopifyapi.objects.Product;
 
 /**
  * Centralized Image Processing Service
@@ -43,9 +46,11 @@ import com.gw.ssl.SSLUtilities;
  * - Format conversion (HEIC to JPG)
  * - Image compression and optimization
  * - URL processing and correction
+ * - Shopify image upload and update operations
  * 
  * Benefits:
  * - Single Responsibility: All image logic in one place
+ * - No Indirection: Direct access to all image operations
  * - Reusable: Can be used by any service needing image processing
  * - Consistent: Standardized image handling across the application
  */
@@ -55,6 +60,9 @@ public class ImageService {
     protected @Value("${css.hosting.url.base}") String cssHostingUrlBase;
     private @Value("${image.store.dir}") String imageStore;
     private @Value("${skip.image.download:false}") boolean skipImageDownload;
+
+    @Autowired
+    private ShopifyGraphQLService shopifyGraphQLService;
 
     static {
         SSLUtilities.disableSslVerification();
@@ -148,9 +156,6 @@ public class ImageService {
             }
         }
     }
-
-
-
 
     /**
      * Uses Apache Tika to check if a given file is a HEIC image by analyzing its MIME type.
@@ -322,6 +327,81 @@ public class ImageService {
     public String replaceIPAddressInUrl(String rawUrl, String newIp) {
         String ipRegex = "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}";
         return rawUrl.replaceFirst(ipRegex, newIp);
+    }
+    
+    /**
+     * Handle image uploads to Shopify product
+     * Used by publish pipeline for new products
+     * 
+     * @param product The product to add images to
+     */
+    public void handleImageUpload(Product product) {
+        logger.debug("🖼️ Handling image upload for product: {}", product.getId());
+        
+        if (product.getImages() != null && !product.getImages().isEmpty()) {
+            logger.info("Uploading {} images to product", product.getImages().size());
+            
+            try {
+                shopifyGraphQLService.addImagesToProduct(product.getId(), product.getImages());
+                logger.debug("✅ Images uploaded successfully");
+            } catch (Exception e) {
+                logger.error("❌ Failed to upload images to product ID: {} - {}", product.getId(), e.getMessage());
+                // Continue - image failure shouldn't stop the process
+            }
+        } else {
+            logger.debug("⏭️ Skipping image upload - no images available");
+        }
+    }
+    
+    /**
+     * Handle image updates for existing product
+     * Used by update pipeline for existing products
+     * 
+     * @param existingProduct The existing product
+     * @param updatedProduct The updated product
+     */
+    public void handleImageUpdate(Product existingProduct, Product updatedProduct) {
+        logger.debug("🖼️ Handling image updates for product: {}", updatedProduct.getId());
+        
+        // For now, simplified image update logic
+        // Could be enhanced to:
+        // - Compare existing vs new images
+        // - Only update changed images
+        // - Handle image reordering
+        // - Remove unused images
+        
+        try {
+            if (updatedProduct.getImages() != null && !updatedProduct.getImages().isEmpty()) {
+                logger.debug("Updating {} images for existing product", updatedProduct.getImages().size());
+                shopifyGraphQLService.addImagesToProduct(updatedProduct.getId(), updatedProduct.getImages());
+                logger.debug("✅ Images updated successfully");
+            } else {
+                logger.debug("⏭️ No image updates needed");
+            }
+        } catch (Exception e) {
+            logger.warn("⚠️ Failed to update images for product ID: {} - {}", updatedProduct.getId(), e.getMessage());
+            // Continue - image updates are not critical
+        }
+    }
+    
+    /**
+     * Validate that images are ready for upload
+     * 
+     * @param product The product to validate images for
+     * @return true if images are ready, false otherwise
+     */
+    public boolean validateImagesReady(Product product) {
+        if (product.getImages() == null || product.getImages().isEmpty()) {
+            logger.debug("No images to validate for product: {}", product.getId());
+            return false;
+        }
+        
+        // Could add more validation:
+        // - Check image URLs are accessible
+        // - Validate image formats
+        // - Check image sizes
+        
+        return true;
     }
     
     /**

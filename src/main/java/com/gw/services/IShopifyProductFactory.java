@@ -13,8 +13,6 @@ public interface IShopifyProductFactory {
 
 	void mergeExistingDescription(String exstingDescriptionHtml, String toBeUpdatedDescriptionHtml);
 
-	void mergeProduct(Product existing, Product toBeUpdatedProduct);
-
 	Product createProduct(FeedItem feedItem) throws Exception;
 
 	/**

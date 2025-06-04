@@ -7,6 +7,7 @@ import com.gw.domain.PredefinedCollection;
 import com.gw.domain.EbayMetafieldDefinition;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.*;
+import com.gw.services.product.ProductMergeService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -88,6 +89,9 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
     
     @Autowired
     private IShopifyProductFactory shopifyProductFactoryService;
+    
+    @Autowired
+    private ProductMergeService productMergeService;
     
     /**
      * Cached collection mappings to avoid repeated API calls
@@ -488,7 +492,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
         logger.info("Existing ShopifyItemID: " + item.getShopifyItemId());
         
         // Merge existing product data with updated data
-        shopifyProductFactoryService.mergeProduct(existingProduct, updatedProduct);
+        productMergeService.mergeProducts(existingProduct, updatedProduct);
         logProductDetails("UPDATING", updatedProduct, item.getWebTagNumber());
         
         return updatedProduct;

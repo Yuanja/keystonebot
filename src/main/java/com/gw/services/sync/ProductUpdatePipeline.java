@@ -6,6 +6,7 @@ import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.InventoryLevel;
 import com.gw.services.shopifyapi.objects.Product;
 import com.gw.services.ImageService;
+import com.gw.services.product.ProductMergeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +41,7 @@ public class ProductUpdatePipeline {
     private ShopifyGraphQLService shopifyGraphQLService;
     
     @Autowired
-    private ImagePipelineService imagePipelineService;
+    private ImageService imageService;
     
     @Autowired
     private IShopifyProductFactory shopifyProductFactoryService;
@@ -50,6 +51,9 @@ public class ProductUpdatePipeline {
     
     @Autowired
     private InventoryManagementService inventoryManagementService;
+    
+    @Autowired
+    private ProductMergeService productMergeService;
     
     /**
      * Execute the complete product update pipeline
@@ -77,7 +81,7 @@ public class ProductUpdatePipeline {
             updateProductOnShopify(updatedProduct, item);
             
             // Step 6: Handle image updates
-            imagePipelineService.handleImageUpdate(existingProduct, updatedProduct);
+            imageService.handleImageUpdate(existingProduct, updatedProduct);
             
             // Step 7: Update inventory
             updateInventory(item, updatedProduct);
@@ -124,7 +128,7 @@ public class ProductUpdatePipeline {
      * Step 3: Handle image processing using centralized service
      */
     private void handleImageProcessing(FeedItem item) {
-        ImageService.ImageProcessingResult result = imagePipelineService.handleImageProcessing(item);
+        ImageService.ImageProcessingResult result = imageService.handleImageProcessing(item, item.getWebTagNumber());
         
         if (result.isSkipped()) {
             logger.debug("⏭️ Image processing skipped for SKU: {}", item.getWebTagNumber());
@@ -148,7 +152,7 @@ public class ProductUpdatePipeline {
         updatedProduct.setId(item.getShopifyItemId());
         
         // Merge existing product data with updated data
-        shopifyProductFactoryService.mergeProduct(existingProduct, updatedProduct);
+        productMergeService.mergeProducts(existingProduct, updatedProduct);
         
         logger.debug("✅ Product created and merged for ID: {}", updatedProduct.getId());
         return updatedProduct;

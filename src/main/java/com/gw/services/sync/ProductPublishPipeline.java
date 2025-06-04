@@ -75,9 +75,6 @@ public class ProductPublishPipeline {
     @Autowired
     private SyncConfigurationService syncConfigurationService;
     
-    @Autowired
-    private ImagePipelineService imagePipelineService;
-    
     /**
      * Execute the complete product publish pipeline
      * 
@@ -95,7 +92,7 @@ public class ProductPublishPipeline {
             Product newlyAddedProduct = createProductOnShopify(item);
             
             // Step 3: Add images to product
-            imagePipelineService.handleImageUpload(newlyAddedProduct);
+            imageService.handleImageUpload(newlyAddedProduct);
             
             // Step 4: Setup inventory levels
             setupInventoryLevels(newlyAddedProduct);
@@ -123,7 +120,7 @@ public class ProductPublishPipeline {
      * Step 1: Handle image processing using centralized service
      */
     private void handleImageProcessing(FeedItem item) {
-        ImageService.ImageProcessingResult result = imagePipelineService.handleImageProcessing(item);
+        ImageService.ImageProcessingResult result = imageService.handleImageProcessing(item, item.getWebTagNumber());
         
         if (result.isSkipped()) {
             logger.debug("⏭️ Image processing skipped for SKU: {}", item.getWebTagNumber());

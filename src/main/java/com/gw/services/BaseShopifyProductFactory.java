@@ -10,7 +10,6 @@ import com.gw.services.inventory.InventoryLevelService;
 import com.gw.services.product.MetadataService;
 import com.gw.services.product.ProductCreationPipeline;
 import com.gw.services.product.ProductImageService;
-import com.gw.services.product.ProductMergeService;
 import com.gw.services.product.VariantService;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.InventoryLevels;
@@ -48,9 +47,6 @@ public class BaseShopifyProductFactory implements IShopifyProductFactory {
     
     @Autowired
     private ProductCreationPipeline creationPipeline;
-    
-    @Autowired
-    private ProductMergeService mergeService;
     
     @Autowired 
     private VariantService variantService;
@@ -128,20 +124,6 @@ public class BaseShopifyProductFactory implements IShopifyProductFactory {
                 feedItem.getWebTagNumber(), result.getError().getMessage());
             throw new RuntimeException("Product creation failed", result.getError());
         }
-    }
-    
-    @Override
-    public void mergeProduct(Product existing, Product updated) {
-        logger.debug("🔄 Merging product ID: {}", existing.getId());
-        
-        // Use the clean merge service
-        ProductMergeService.ProductMergeResult result = mergeService.mergeProducts(existing, updated);
-        
-        // Log merge summary
-        result.logSummary();
-        
-        logger.debug("✅ Product merge completed for ID: {} - {} changes", 
-            existing.getId(), result.getTotalChanges());
     }
     
     @Override
