@@ -32,9 +32,9 @@ import org.slf4j.LoggerFactory;
  * - Extensible for different product types via inheritance
  */
 @Component
-public class ProductCreationPipeline {
+public class ProductCreationService {
     
-    private static final Logger logger = LoggerFactory.getLogger(ProductCreationPipeline.class);
+    private static final Logger logger = LoggerFactory.getLogger(ProductCreationService.class);
     
     @Autowired
     private FreeMakerService freeMakerService;

@@ -5,7 +5,7 @@ import com.gw.domain.PredefinedCollection;
 import com.gw.services.CollectionUtility;
 import com.gw.services.EmailService;
 import com.gw.services.FeedItemService;
-import com.gw.services.product.ProductCreationPipeline;
+import com.gw.services.product.ProductCreationService;
 import com.gw.services.ImageService;
 import com.gw.services.LogService;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
@@ -64,7 +64,7 @@ public class ProductPublishPipeline {
     
     @Autowired
     @Qualifier("keyStoneShopifyProductFactoryService")
-    private ProductCreationPipeline shopifyProductFactoryService;
+    private ProductCreationService shopifyProductFactoryService;
     
     @Autowired
     private FeedItemService feedItemService;

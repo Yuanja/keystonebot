@@ -8,7 +8,7 @@ import com.gw.domain.EbayMetafieldDefinition;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.*;
 import com.gw.services.product.ProductMergeService;
-import com.gw.services.product.ProductCreationPipeline;
+import com.gw.services.product.ProductCreationService;
 import com.gw.services.inventory.InventoryLevelService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -92,7 +92,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
     
     @Autowired
     @Qualifier("keyStoneShopifyProductFactoryService")
-    private ProductCreationPipeline shopifyProductFactoryService;
+    private ProductCreationService shopifyProductFactoryService;
     
     @Autowired
     private ProductMergeService productMergeService;

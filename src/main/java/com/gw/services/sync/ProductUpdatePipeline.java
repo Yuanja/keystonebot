@@ -1,7 +1,7 @@
 package com.gw.services.sync;
 
 import com.gw.domain.FeedItem;
-import com.gw.services.product.ProductCreationPipeline;
+import com.gw.services.product.ProductCreationService;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.InventoryLevel;
 import com.gw.services.shopifyapi.objects.Product;
@@ -46,7 +46,7 @@ public class ProductUpdatePipeline {
     
     @Autowired
     @Qualifier("keyStoneShopifyProductFactoryService")
-    private ProductCreationPipeline shopifyProductFactoryService;
+    private ProductCreationService shopifyProductFactoryService;
     
     @Autowired
     private CollectionManagementService collectionManagementService;

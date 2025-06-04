@@ -2,7 +2,7 @@ package com.gw.services.keystone;
 
 import com.gw.domain.FeedItem;
 import com.gw.domain.EbayMetafieldDefinition;
-import com.gw.services.product.ProductCreationPipeline;
+import com.gw.services.product.ProductCreationService;
 import com.gw.services.shopifyapi.objects.Metafield;
 import com.gw.services.shopifyapi.objects.Product;
 import org.springframework.context.annotation.Profile;
@@ -15,7 +15,7 @@ import java.util.Map;
 
 @Component
 @Profile({"keystone-prod", "keystone-dev"})
-public class KeyStoneShopifyProductFactoryService extends ProductCreationPipeline {
+public class KeyStoneShopifyProductFactoryService extends ProductCreationService {
 
     @Override
     public Product createProduct(FeedItem feedItem) throws Exception {
