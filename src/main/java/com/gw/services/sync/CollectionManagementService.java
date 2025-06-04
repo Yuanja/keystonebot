@@ -60,4 +60,28 @@ public class CollectionManagementService {
             throw e;
         }
     }
+    
+    /**
+     * Update product collection associations with explicit product ID
+     * This is useful during publish pipeline when FeedItem doesn't have Shopify ID set yet
+     */
+    public void updateProductCollections(String productId, FeedItem item) throws Exception {
+        try {
+            Map<PredefinedCollection, CustomCollection> collectionMappings = 
+                syncConfigurationService.getCollectionMappings();
+            
+            List<Collect> collectsToAdd = CollectionUtility.getCollectionForProduct(
+                productId, item, collectionMappings);
+            
+            if (!collectsToAdd.isEmpty()) {
+                shopifyGraphQLService.addProductAndCollectionsAssociations(collectsToAdd);
+                logger.debug("✅ Added product {} to {} collections", productId, collectsToAdd.size());
+            } else {
+                logger.debug("⚠️ No collections found for product SKU: {}", item.getWebTagNumber());
+            }
+        } catch (Exception e) {
+            logger.error("❌ Failed to update collections for SKU: {} with product ID: {}", item.getWebTagNumber(), productId, e);
+            throw e;
+        }
+    }
 } 

@@ -215,8 +215,8 @@ public class ProductPublishPipeline {
     private void setupCollectionAssociations(FeedItem item, Product newlyAddedProduct) throws Exception {
         logger.debug("🏷️ Setting up collection associations for product: {}", newlyAddedProduct.getId());
         
-        // Delegate to specialized collection service
-        collectionManagementService.updateProductCollections(item);
+        // Use the overloaded method that takes productId directly
+        collectionManagementService.updateProductCollections(newlyAddedProduct.getId(), item);
         logger.debug("✅ Collection associations setup successfully");
     }
 
