@@ -1,7 +1,5 @@
 package com.gw.services.product;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -9,25 +7,24 @@ import com.gw.domain.FeedItem;
 import com.gw.services.FreeMakerService;
 import com.gw.services.constants.ShopifyConstants;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
-import com.gw.services.shopifyapi.objects.Image;
 import com.gw.services.shopifyapi.objects.Product;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Unified Product Creation Pipeline
+ * Unified Product Creation Service
  * 
  * Consolidated functionality from former IShopifyProductFactory, BaseShopifyProductFactory, and ProductCreationPipeline.
- * Handles complete product creation workflow:
- * 1. Product template building with metafields, variants, and images
- * 2. Complex 3-step creation process (basic product → options → images)
- * 3. Reusable across different product types
+ * Handles product structure creation workflow:
+ * 1. Product template building with metafields and variants
+ * 2. Clean 2-step creation process (basic product → options)
+ * 3. Images handled separately by ImageService to avoid duplication
  * 
  * Benefits:
- * - Single responsibility for all product creation
+ * - Single responsibility for product structure creation
  * - Eliminates unnecessary factory interface/implementation indirection
- * - Clean separation of concerns with specialized services
+ * - Clean separation: ProductCreationService handles structure, ImageService handles images
  * - Testable individual steps with consistent error handling
  * - Extensible for different product types via inheritance
  */
@@ -81,28 +78,29 @@ public class ProductCreationService {
     }
     
     /**
-     * Creates product using clean 3-step pipeline approach
-     * This is the main method for creating products with options and images
+     * Creates product using clean 2-step pipeline approach
+     * This is the main method for creating product structure with options
+     * Images are handled separately by ImageService to avoid duplication
      * 
      * @param feedItem The feed item with source data
-     * @return The fully created product with ID, options, and images
+     * @return The fully created product with ID and options (images added separately)
      * @throws Exception if product creation fails
      */
     public Product createProductWithOptions(FeedItem feedItem) throws Exception {
-        logger.info("🚀 Creating product with options for SKU: {}", feedItem.getWebTagNumber());
+        logger.info("🚀 Creating product structure with options for SKU: {}", feedItem.getWebTagNumber());
         
         // Step 1: Build product template (calls createProduct which can be overridden)
         Product productTemplate = this.createProduct(feedItem);
         
-        // Step 2: Execute the clean creation pipeline
+        // Step 2: Execute the clean creation pipeline (structure only)
         ProductCreationResult result = executeCreation(productTemplate, feedItem);
         
         // Step 3: Handle result
         if (result.isSuccess()) {
-            logger.info("✅ Product creation completed successfully for SKU: {}", feedItem.getWebTagNumber());
+            logger.info("✅ Product structure creation completed successfully for SKU: {}", feedItem.getWebTagNumber());
             return result.getProduct();
         } else {
-            logger.error("❌ Product creation failed for SKU: {} - {}", 
+            logger.error("❌ Product structure creation failed for SKU: {} - {}", 
                 feedItem.getWebTagNumber(), result.getError().getMessage());
             throw new RuntimeException("Product creation failed", result.getError());
         }
@@ -139,8 +137,8 @@ public class ProductCreationService {
      * Execute the complete product creation pipeline
      * 
      * @param productTemplate The prepared product template
-     * @param feedItem The source feed item for options/images
-     * @return The fully created product with ID, options, and images
+     * @param feedItem The source feed item for options
+     * @return The fully created product with ID and options (images handled separately)
      */
     public ProductCreationResult executeCreation(Product productTemplate, FeedItem feedItem) {
         String sku = feedItem.getWebTagNumber();
@@ -153,10 +151,10 @@ public class ProductCreationService {
             // Step 2: Add variant options
             addVariantOptions(basicProduct.getId(), feedItem);
             
-            // Step 3: Add images
-            addProductImages(basicProduct.getId(), productTemplate.getImages());
+            // Note: Images are handled separately by ImageService in the publish pipeline
+            // This eliminates duplicate image uploads
             
-            // Fetch final product with all components
+            // Fetch final product with all components (except images)
             Product finalProduct = fetchCompleteProduct(basicProduct.getId());
             
             logger.info("✅ Product creation pipeline completed successfully for SKU: {}", sku);
@@ -200,27 +198,7 @@ public class ProductCreationService {
     }
     
     /**
-     * Step 3: Add images to the created product
-     */
-    private void addProductImages(String productId, List<Image> images) {
-        if (images == null || images.isEmpty()) {
-            logger.info("ℹ️ Step 3: No images to add for product ID: {}", productId);
-            return;
-        }
-        
-        logger.info("🖼️ Step 3: Adding {} images to product ID: {}", images.size(), productId);
-        
-        try {
-            shopifyGraphQLService.addImagesToProduct(productId, images);
-            logger.info("✅ Step 3: {} images added successfully", images.size());
-        } catch (Exception e) {
-            logger.warn("⚠️ Step 3: Failed to add images - {}", e.getMessage());
-            // Don't fail the entire creation for image issues
-        }
-    }
-    
-    /**
-     * Fetch the complete product with all components
+     * Fetch the complete product structure (images handled separately)
      */
     private Product fetchCompleteProduct(String productId) throws Exception {
         logger.debug("🔄 Fetching complete product structure for ID: {}", productId);

@@ -54,6 +54,7 @@ public class SyncNewItemsOnlyTest extends BaseGraphqlTest {
         
         // Store details of first batch products for later comparison
         Map<String, String> firstBatchProductDetails = new HashMap<>();
+        Map<String, Integer> firstBatchImageCounts = new HashMap<>();
         for (FeedItem originalItem : firstBatch) {
             Optional<Product> foundProduct = productsAfterFirstBatch.stream()
                     .filter(p -> p.getVariants() != null && !p.getVariants().isEmpty())
@@ -69,12 +70,17 @@ public class SyncNewItemsOnlyTest extends BaseGraphqlTest {
             firstBatchProductDetails.put(originalItem.getWebTagNumber(), 
                 product.getId() + "|" + product.getTitle() + "|" + product.getUpdatedAt());
             
+            // CRITICAL: Store image count to verify no duplication during second sync
+            int imageCount = product.getImages() != null ? product.getImages().size() : 0;
+            firstBatchImageCounts.put(originalItem.getWebTagNumber(), imageCount);
+            
             // Verify collection associations
             List<Collect> collects = shopifyApiService.getCollectsForProductId(product.getId());
             Assertions.assertTrue(collects.size() > 0, "Product should be associated with collections");
             
             logger.info("✅ Verified first batch item: " + originalItem.getWebTagNumber() + 
-                       " (Shopify ID: " + product.getId() + ", Collections: " + collects.size() + ")");
+                       " (Shopify ID: " + product.getId() + ", Collections: " + collects.size() + 
+                       ", Images: " + imageCount + ")");
         }
         
         logger.info("First batch products stored for change detection");
@@ -141,8 +147,16 @@ public class SyncNewItemsOnlyTest extends BaseGraphqlTest {
             // Verify the updatedAt timestamp hasn't changed (indicates no modification)
             Assertions.assertEquals(storedUpdatedAt, product.getUpdatedAt(), "First batch product updatedAt should be unchanged (no modification): " + firstBatchItem.getWebTagNumber());
             
+            // CRITICAL: Verify image count hasn't doubled (no duplicate images)
+            int currentImageCount = product.getImages() != null ? product.getImages().size() : 0;
+            int originalImageCount = firstBatchImageCounts.get(firstBatchItem.getWebTagNumber());
+            Assertions.assertEquals(originalImageCount, currentImageCount, 
+                "First batch product image count should be unchanged (no duplicate images): " + firstBatchItem.getWebTagNumber() + 
+                " - Original: " + originalImageCount + ", Current: " + currentImageCount);
+            
             logger.info("✅ Verified first batch item UNCHANGED: " + firstBatchItem.getWebTagNumber() + 
-                       " (ID: " + product.getId() + ", UpdatedAt: " + product.getUpdatedAt() + ")");
+                       " (ID: " + product.getId() + ", UpdatedAt: " + product.getUpdatedAt() + 
+                       ", Images: " + currentImageCount + "/" + originalImageCount + ")");
         }
         
         // Final summary

@@ -18,10 +18,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gw.domain.PredefinedCollection;
@@ -1445,24 +1443,6 @@ public class ShopifyGraphQLService {
                     variantInput.put("price", variant.getPrice());
                 }
                 
-                // CRITICAL DIFFERENCE: Include option values during UPDATE but not during CREATE
-                if (false) {  // DISABLED: Never include option values - they are handled separately
-                    // During UPDATE: Include option values to match the recreated options
-                    if (variant.getOption1() != null) {
-                        variantInput.put("option1", variant.getOption1());
-                    }
-                    if (variant.getOption2() != null) {
-                        variantInput.put("option2", variant.getOption2());
-                    }
-                    if (variant.getOption3() != null) {
-                        variantInput.put("option3", variant.getOption3());
-                    }
-                } else {
-                    // OPTIONS ARE ALWAYS HANDLED SEPARATELY via updateProductOptions (remove & recreate)
-                    // Do NOT include option1, option2, option3 in ProductInput - this causes GraphQL errors
-                    // Options must be created separately using productOptionsCreate mutation
-                }
-                
                 // Include inventory management settings for proper inventory tracking
                 if (variant.getInventoryManagement() != null) {
                     variantInput.put("inventoryManagement", variant.getInventoryManagement().toUpperCase());
@@ -2088,35 +2068,6 @@ public class ShopifyGraphQLService {
             logger.info("ℹ️ Left product {} in {} non-managed collections (will not be removed)", 
                 productId, untouchedCount);
         }
-    }
-    
-    /**
-     * Get collection title by ID using GraphQL (helper method for logging)
-     */
-    private String getCollectionTitleById(String collectionId) {
-        String query = """
-            query getCollectionTitle($id: ID!) {
-                collection(id: $id) {
-                    title
-                }
-            }
-            """;
-        
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("id", "gid://shopify/Collection/" + collectionId);
-        
-        try {
-            JsonNode data = executeGraphQLQuery(query, variables);
-            JsonNode collectionNode = data.get("collection");
-            
-            if (collectionNode != null && !collectionNode.isNull()) {
-                return collectionNode.get("title").asText();
-            }
-        } catch (Exception e) {
-            logger.debug("Could not retrieve collection title for ID: " + collectionId);
-        }
-        
-        return "Unknown Collection";
     }
     
     /**
@@ -3472,30 +3423,6 @@ public class ShopifyGraphQLService {
             logger.error("Failed to remove product options for product ID: " + productId, e);
             return false;
         }
-    }
-    
-    /**
-     * Delete a single product option using GraphQL productOptionDelete mutation
-     * NOTE: This method is deprecated - option deletion is not supported
-     */
-    private boolean deleteProductOption(String productId, String optionId) {
-        logger.warn("deleteProductOption is deprecated - option deletion is not supported by Shopify GraphQL API");
-        logger.warn("Use updateProductOptions instead to modify existing option values");
-        return false;
-    }
-    
-    /**
-     * Get the new value for an option based on the option name and feed item
-     */
-    private String getNewValueForOption(String optionName, FeedItem feedItem) {
-        if ("Color".equalsIgnoreCase(optionName)) {
-            return feedItem.getWebWatchDial();
-        } else if ("Size".equalsIgnoreCase(optionName)) {
-            return feedItem.getWebWatchDiameter();
-        } else if ("Material".equalsIgnoreCase(optionName)) {
-            return feedItem.getWebMetalType();
-        }
-        return null;
     }
     
     /**

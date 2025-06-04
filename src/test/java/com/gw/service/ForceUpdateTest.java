@@ -20,7 +20,6 @@ import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Comparator;
-import java.util.Collections;
 import java.util.Map;
 import java.util.ArrayList;
 
@@ -688,7 +687,7 @@ public class ForceUpdateTest {
             logger.error("❌ Error processing force update batch " + batchNumber + ": " + e.getMessage(), e);
             result.processed = batch.size();
             result.errors = batch.size();
-            result.error = e.getMessage();
+            e.getMessage();
         }
         
         return result;
@@ -828,7 +827,7 @@ public class ForceUpdateTest {
         } catch (Exception e) {
             logger.error("❌ Error analyzing metafield state: " + e.getMessage());
             result.hasError = true;
-            result.errorMessage = e.getMessage();
+            e.getMessage();
         }
         
         return result;
@@ -1106,7 +1105,6 @@ public class ForceUpdateTest {
         boolean allPinned = false;
         boolean structureValid = false;
         boolean hasError = false;
-        String errorMessage = null;
     }
     
     /**
@@ -1116,6 +1114,5 @@ public class ForceUpdateTest {
         int processed = 0;
         int updated = 0;
         int errors = 0;
-        String error = null;
     }
 } 

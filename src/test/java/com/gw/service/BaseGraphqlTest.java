@@ -1,9 +1,6 @@
 package com.gw.service;
 
-import com.gw.Config;
 import com.gw.domain.FeedItem;
-import com.gw.domain.PredefinedCollection;
-import com.gw.domain.keystone.KeyStoneCollections;
 import com.gw.services.FeedItemService;
 import com.gw.services.keystone.KeyStoneFeedService;
 import com.gw.services.keystone.KeystoneShopifySyncService;
@@ -21,14 +18,7 @@ import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;

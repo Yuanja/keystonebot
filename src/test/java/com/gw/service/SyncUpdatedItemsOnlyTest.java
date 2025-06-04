@@ -198,8 +198,6 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
         logger.info("✅ Verifying product titles were updated...");
         for (int i = 0; i < shopifyProducts.size(); i++) {
             Product product = shopifyProducts.get(i);
-            FeedItem modifiedItem = modifiedItems.get(i);
-            
             logger.info("Product {}: Title - Expected contains: '[MODIFIED FOR TEST]', Actual: '{}'", 
                 (i + 1), product.getTitle());
             Assertions.assertTrue(product.getTitle().contains("[MODIFIED FOR TEST]"), 
@@ -209,24 +207,5 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
         logger.info("✅ All tests passed! Both variant options and metafields were successfully updated");
         logger.info("✅ Remove-and-recreate approach for variant options is working correctly");
         logger.info("=== End sync test for updated items ===");
-    }
-    
-    /**
-     * Helper method to verify metafield values
-     */
-    private void verifyMetafieldValue(List<Metafield> metafields, String key, String expectedValue, String message) {
-        if (expectedValue != null) {
-            Optional<Metafield> metafield = metafields.stream()
-                .filter(mf -> key.equals(mf.getKey()))
-                .findFirst();
-            
-            Assertions.assertTrue(metafield.isPresent(), "Metafield with key '" + key + "' should exist");
-            
-            String actualValue = metafield.get().getValue();
-            logger.info("  Expected {} metafield: '{}'", key, expectedValue);
-            logger.info("  Actual {} metafield: '{}'", key, actualValue);
-            
-            Assertions.assertEquals(expectedValue, actualValue, message);
-        }
     }
 } 

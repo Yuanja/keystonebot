@@ -1,20 +1,18 @@
 package com.gw.services.sync;
 
 import com.gw.domain.FeedItem;
-import com.gw.domain.PredefinedCollection;
-import com.gw.services.CollectionUtility;
 import com.gw.services.EmailService;
 import com.gw.services.FeedItemService;
 import com.gw.services.product.ProductCreationService;
 import com.gw.services.ImageService;
 import com.gw.services.LogService;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
-import com.gw.services.shopifyapi.objects.Collect;
-import com.gw.services.shopifyapi.objects.CustomCollection;
 import com.gw.services.shopifyapi.objects.InventoryLevel;
 import com.gw.services.shopifyapi.objects.InventoryLevels;
 import com.gw.services.shopifyapi.objects.Product;
+import com.gw.services.shopifyapi.objects.Image;
 import com.gw.services.inventory.InventoryLevelService;
+import com.gw.services.sync.CollectionManagementService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +22,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
+import java.util.ArrayList;
 
 /**
  * Reusable Product Publish Pipeline
@@ -76,10 +74,10 @@ public class ProductPublishPipeline {
     private LogService logService;
     
     @Autowired
-    private SyncConfigurationService syncConfigurationService;
+    private InventoryLevelService inventoryLevelService;
     
     @Autowired
-    private InventoryLevelService inventoryLevelService;
+    private CollectionManagementService collectionManagementService;
     
     /**
      * Execute the complete product publish pipeline
@@ -97,14 +95,14 @@ public class ProductPublishPipeline {
             // Step 2: Create product on Shopify
             Product newlyAddedProduct = createProductOnShopify(item);
             
-            // Step 3: Add images to product
-            imageService.handleImageUpload(newlyAddedProduct);
+            // Step 3: Add images to product using FeedItem image URLs
+            handleImageUpload(item, newlyAddedProduct.getId());
             
             // Step 4: Setup inventory levels
             setupInventoryLevels(newlyAddedProduct);
             
-            // Step 5: Add collection associations
-            addCollectionAssociations(item, newlyAddedProduct);
+            // Step 5: Setup collection associations
+            setupCollectionAssociations(item, newlyAddedProduct);
             
             // Step 6: Publish product to all channels
             publishToAllChannels(newlyAddedProduct);
@@ -210,32 +208,18 @@ public class ProductPublishPipeline {
         }
         return true;
     }
-    
+
     /**
-     * Step 5: Add collection associations
+     * Step 5: Setup collection associations for the new product
      */
-    private void addCollectionAssociations(FeedItem item, Product newlyAddedProduct) {
-        logger.debug("🏷️ Adding collection associations for product: {}", newlyAddedProduct.getId());
+    private void setupCollectionAssociations(FeedItem item, Product newlyAddedProduct) throws Exception {
+        logger.debug("🏷️ Setting up collection associations for product: {}", newlyAddedProduct.getId());
         
-        try {
-            Map<PredefinedCollection, CustomCollection> collectionMappings = 
-                syncConfigurationService.getCollectionMappings();
-            
-            List<Collect> collectsToAdd = CollectionUtility.getCollectionForProduct(
-                newlyAddedProduct.getId(), item, collectionMappings);
-            
-            if (!collectsToAdd.isEmpty()) {
-                shopifyGraphQLService.addProductAndCollectionsAssociations(collectsToAdd);
-                logger.debug("✅ Added product to {} collections", collectsToAdd.size());
-            } else {
-                logger.warn("⚠️ No collections found for product SKU: {}", item.getWebTagNumber());
-            }
-        } catch (Exception e) {
-            logger.error("Failed to add product to collections for SKU: {}", item.getWebTagNumber(), e);
-            // Continue - collection association failure shouldn't stop the publish process
-        }
+        // Delegate to specialized collection service
+        collectionManagementService.updateProductCollections(item);
+        logger.debug("✅ Collection associations setup successfully");
     }
-    
+
     /**
      * Step 6: Publish product to all sales channels
      */
@@ -302,6 +286,86 @@ public class ProductPublishPipeline {
         if (emailPublishEnabled) {
             emailService.sendMessage(emailPublishSendTo, title, body);
         }
+    }
+    
+    /**
+     * Handle image uploads to Shopify product using FeedItem image URLs
+     * Used by publish pipeline for new products
+     * 
+     * @param feedItem The feed item containing image URLs
+     * @param productId The Shopify product ID to add images to
+     */
+    private void handleImageUpload(FeedItem feedItem, String productId) {
+        logger.debug("🖼️ Handling image upload for product: {}", productId);
+        
+        try {
+            // Get external image URLs from feed item
+            String[] externalImageUrls = imageService.getAvailableExternalImagePathByCSS(feedItem);
+            if (externalImageUrls == null || externalImageUrls.length == 0) {
+                logger.debug("⏭️ Skipping image upload - no images available for SKU: {}", feedItem.getWebTagNumber());
+                return;
+            }
+            
+            // Create Image objects from URLs
+            List<Image> images = createImagesFromUrls(externalImageUrls, feedItem);
+            
+            if (!images.isEmpty()) {
+                logger.info("Uploading {} images to product {}", images.size(), productId);
+                shopifyGraphQLService.addImagesToProduct(productId, images);
+                logger.debug("✅ Images uploaded successfully");
+            } else {
+                logger.debug("⏭️ Skipping image upload - no valid images for SKU: {}", feedItem.getWebTagNumber());
+            }
+        } catch (Exception e) {
+            logger.error("❌ Failed to upload images to product ID: {} for SKU: {} - {}", 
+                productId, feedItem.getWebTagNumber(), e.getMessage());
+            // Continue - image failure shouldn't stop the process
+        }
+    }
+    
+    /**
+     * Creates Image objects from external image URLs
+     * 
+     * @param imageUrls Array of external image URLs
+     * @param feedItem Feed item for context
+     * @return List of Image objects
+     */
+    private List<Image> createImagesFromUrls(String[] imageUrls, FeedItem feedItem) {
+        List<Image> images = new ArrayList<>();
+        
+        for (int i = 0; i < imageUrls.length; i++) {
+            String imageUrl = imageUrls[i];
+            if (isValidImageUrl(imageUrl)) {
+                Image image = new Image();
+                image.setSrc(imageService.getCorrectedImageUrl(imageUrl));
+                image.addAltTag(feedItem.getWebDescriptionShort()); // Use description as alt text
+                image.setPosition(String.valueOf(i + 1));
+                images.add(image);
+                
+                logger.debug("Created image {} for SKU: {} - URL: {}", 
+                    i + 1, feedItem.getWebTagNumber(), imageUrl);
+            } else {
+                logger.warn("Skipping invalid image URL for SKU: {} - URL: {}", 
+                    feedItem.getWebTagNumber(), imageUrl);
+            }
+        }
+        
+        return images;
+    }
+    
+    /**
+     * Validates that an image URL is properly formatted and accessible
+     * 
+     * @param imageUrl The URL to validate
+     * @return true if valid, false otherwise
+     */
+    private boolean isValidImageUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.trim().isEmpty()) {
+            return false;
+        }
+        
+        String trimmedUrl = imageUrl.trim();
+        return trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://");
     }
     
     /**

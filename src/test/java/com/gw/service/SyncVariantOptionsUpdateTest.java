@@ -5,9 +5,6 @@ import com.gw.services.shopifyapi.objects.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.Optional;
-
 /**
  * Test class specifically for testing variant options update scenarios
  * Tests that when feed item attributes change (webWatchDial, webWatchDiameter, webMetalType),

@@ -1,6 +1,5 @@
 package com.gw.service;
 
-import com.gw.services.ImageService;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.Image;
 import com.gw.services.shopifyapi.objects.Product;

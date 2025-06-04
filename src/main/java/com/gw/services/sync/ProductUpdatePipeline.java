@@ -3,8 +3,8 @@ package com.gw.services.sync;
 import com.gw.domain.FeedItem;
 import com.gw.services.product.ProductCreationService;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
-import com.gw.services.shopifyapi.objects.InventoryLevel;
 import com.gw.services.shopifyapi.objects.Product;
+import com.gw.services.shopifyapi.objects.Image;
 import com.gw.services.ImageService;
 import com.gw.services.product.ProductMergeService;
 import org.slf4j.Logger;
@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Reusable Product Update Pipeline
@@ -83,7 +84,7 @@ public class ProductUpdatePipeline {
             updateProductOnShopify(updatedProduct, item);
             
             // Step 6: Handle image updates
-            imageService.handleImageUpdate(existingProduct, updatedProduct);
+            handleImageUpdates(item, existingProduct);
             
             // Step 7: Update inventory
             updateInventory(item, updatedProduct);
@@ -212,13 +213,11 @@ public class ProductUpdatePipeline {
      * Handle variant options updates by comparing existing options with new options
      */
     private boolean handleVariantOptionsUpdate(Product product, FeedItem item) {
-        // Delegate to specialized variant handling logic
-        // This would need to be implemented based on the existing complex logic
-        // For now, simplified version
+        // Use the remove-and-recreate approach for updating variant options
         try {
             if (hasVariantOptions(item)) {
                 logger.debug("🎛️ Updating variant options for product: {}", product.getId());
-                return shopifyGraphQLService.createProductOptions(product.getId(), item);
+                return shopifyGraphQLService.updateProductOptions(product.getId(), item);
             }
             return false;
         } catch (Exception e) {
@@ -238,6 +237,94 @@ public class ProductUpdatePipeline {
         return (newColor != null && !newColor.trim().isEmpty()) ||
                (newSize != null && !newSize.trim().isEmpty()) ||
                (newMaterial != null && !newMaterial.trim().isEmpty());
+    }
+    
+    /**
+     * Step 6: Handle image updates using direct FeedItem approach
+     * This properly replaces images instead of duplicating them
+     */
+    private void handleImageUpdates(FeedItem item, Product existingProduct) {
+        logger.debug("🖼️ Handling image updates for SKU: {}", item.getWebTagNumber());
+        
+        try {
+            // Get external image URLs from feed item
+            String[] externalImageUrls = imageService.getAvailableExternalImagePathByCSS(item);
+            if (externalImageUrls == null || externalImageUrls.length == 0) {
+                logger.debug("⏭️ No images to update for SKU: {}", item.getWebTagNumber());
+                return;
+            }
+            
+            // Log existing image count for comparison
+            int existingImageCount = existingProduct.getImages() != null ? existingProduct.getImages().size() : 0;
+            logger.debug("Replacing {} existing images with {} new images for SKU: {}", 
+                existingImageCount, externalImageUrls.length, item.getWebTagNumber());
+            
+            // Remove all existing images first
+            if (existingImageCount > 0) {
+                logger.debug("🗑️ Removing {} existing images", existingImageCount);
+                shopifyGraphQLService.deleteAllImageByProductId(item.getShopifyItemId());
+            }
+            
+            // Add new images using the direct approach
+            // Create Image objects from URLs and upload to Shopify
+            List<Image> images = createImagesFromUrls(externalImageUrls, item);
+            if (!images.isEmpty()) {
+                logger.info("Uploading {} images to product {}", images.size(), item.getShopifyItemId());
+                shopifyGraphQLService.addImagesToProduct(item.getShopifyItemId(), images);
+            }
+            
+            logger.debug("✅ Images updated successfully - {} images replaced", externalImageUrls.length);
+        } catch (Exception e) {
+            logger.warn("⚠️ Failed to update images for SKU: {} - {}", item.getWebTagNumber(), e.getMessage());
+            // Continue - image updates are not critical
+        }
+    }
+    
+    /**
+     * Creates Image objects from external image URLs
+     * Private helper method for image updates
+     * 
+     * @param imageUrls Array of external image URLs
+     * @param feedItem Feed item for context
+     * @return List of Image objects
+     */
+    private List<Image> createImagesFromUrls(String[] imageUrls, FeedItem feedItem) {
+        List<Image> images = new ArrayList<>();
+        
+        for (int i = 0; i < imageUrls.length; i++) {
+            String imageUrl = imageUrls[i];
+            if (isValidImageUrl(imageUrl)) {
+                Image image = new Image();
+                image.setSrc(imageService.getCorrectedImageUrl(imageUrl));
+                image.addAltTag(feedItem.getWebDescriptionShort()); // Use description as alt text
+                image.setPosition(String.valueOf(i + 1));
+                images.add(image);
+                
+                logger.debug("Created image {} for SKU: {} - URL: {}", 
+                    i + 1, feedItem.getWebTagNumber(), imageUrl);
+            } else {
+                logger.warn("Skipping invalid image URL for SKU: {} - URL: {}", 
+                    feedItem.getWebTagNumber(), imageUrl);
+            }
+        }
+        
+        return images;
+    }
+    
+    /**
+     * Validates that an image URL is properly formatted and accessible
+     * Private helper method for image validation
+     * 
+     * @param imageUrl The URL to validate
+     * @return true if valid, false otherwise
+     */
+    private boolean isValidImageUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.trim().isEmpty()) {
+            return false;
+        }
+        
+        String trimmedUrl = imageUrl.trim();
+        return trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://");
     }
     
     /**

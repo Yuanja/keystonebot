@@ -2,7 +2,6 @@ package com.gw.services.product;
 
 import com.gw.domain.FeedItem;
 import com.gw.services.ImageService;
-import com.gw.services.product.MetadataService;
 import com.gw.services.shopifyapi.objects.Image;
 import com.gw.services.shopifyapi.objects.Product;
 import org.slf4j.Logger;

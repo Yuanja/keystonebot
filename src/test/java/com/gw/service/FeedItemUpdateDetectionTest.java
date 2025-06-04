@@ -2,8 +2,6 @@ package com.gw.service;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
@@ -14,8 +12,6 @@ import com.gw.domain.FeedItemChange;
 import com.gw.domain.FeedItemChangeSet;
 import com.gw.services.FeedItemService;
 import com.gw.services.shopifyapi.objects.Product;
-import com.gw.services.shopifyapi.objects.Variant;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 /**

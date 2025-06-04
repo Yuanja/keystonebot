@@ -63,7 +63,6 @@ public final class SSLUtilities {
      *
      * @deprecated see {@link #_hostnameVerifier}.
      */
-    @SuppressWarnings("restriction")
     private static HostnameVerifier __hostnameVerifier;
     /**
      * Thrust managers for the Sun's deprecated API.
