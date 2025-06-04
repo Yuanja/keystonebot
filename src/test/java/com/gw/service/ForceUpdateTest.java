@@ -9,6 +9,7 @@ import com.gw.services.keystone.KeyStoneFeedService;
 import com.gw.services.keystone.KeystoneShopifySyncService;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.*;
+import com.gw.services.sync.ProductUpdatePipeline;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
@@ -94,6 +95,9 @@ public class ForceUpdateTest {
     @Autowired
     protected KeyStoneFeedService keyStoneFeedService;
     
+    @Autowired
+    protected ProductUpdatePipeline productUpdatePipeline;
+    
     /**
      * Force update all items in production
      * Refreshes the live feed and processes all items from smallest web_tag_number first
@@ -140,7 +144,7 @@ public class ForceUpdateTest {
     
     /**
      * Force update a specific item by web_tag_number using database data
-     * Uses updateItemOnShopify directly for more efficient single-item updates
+     * Uses ProductUpdatePipeline for more efficient single-item updates
      */
     @Test
     public void forceUpdateSpecificItem() throws Exception {
@@ -156,7 +160,7 @@ public class ForceUpdateTest {
         logger.info("=== Starting Production Force Update (Specific Item) ===");
         logger.info("🎯 Target web_tag_number: " + targetWebTagNumber);
         logger.info("🗄️ Using existing database data (not refreshing feed)");
-        logger.info("⚡ Using direct updateItemOnShopify for efficient single-item update");
+        logger.info("⚡ Using ProductUpdatePipeline for efficient single-item update");
         
         if (DRY_RUN) {
             logger.warn("🧪 DRY RUN MODE - No actual changes will be made");
@@ -181,8 +185,8 @@ public class ForceUpdateTest {
                 throw new IllegalArgumentException("❌ Item " + targetWebTagNumber + " has no Shopify ID - cannot update");
             }
             
-            // Step 2: Update the specific item directly using updateItemOnShopify
-            logger.info("🔄 Step 2: Updating item on Shopify using updateItemOnShopify...");
+            // Step 2: Update the specific item directly using ProductUpdatePipeline
+            logger.info("🔄 Step 2: Updating item on Shopify using ProductUpdatePipeline...");
             logger.info("📝 Item details:");
             logger.info("  - SKU: " + targetItem.getWebTagNumber());
             logger.info("  - Title: " + (targetItem.getWebDescriptionShort() != null ? 
@@ -193,10 +197,26 @@ public class ForceUpdateTest {
             String originalStatus = targetItem.getStatus();
             targetItem.setStatus("FORCE_UPDATE");
             
-            // Call updateItemOnShopify directly (more efficient than batch processing)
-            syncService.updateItemOnShopify(targetItem);
+            // Call ProductUpdatePipeline executeUpdate method
+            ProductUpdatePipeline.ProductUpdateResult result = productUpdatePipeline.executeUpdate(targetItem);
             
-            logger.info("✅ Successfully updated item using updateItemOnShopify");
+            if (result.isSuccess()) {
+                logger.info("✅ Successfully updated item using ProductUpdatePipeline");
+                logger.info("📊 Updated product details:");
+                if (result.getProduct() != null) {
+                    logger.info("  - Product ID: " + result.getProduct().getId());
+                    logger.info("  - Product Title: " + result.getProduct().getTitle());
+                }
+            } else {
+                String errorMessage = "ProductUpdatePipeline failed for item: " + targetWebTagNumber;
+                if (result.getError() != null) {
+                    errorMessage += " - " + result.getError().getMessage();
+                    logger.error("❌ " + errorMessage, result.getError());
+                } else {
+                    logger.error("❌ " + errorMessage);
+                }
+                throw new RuntimeException(errorMessage, result.getError());
+            }
             
             // Step 3: Validate the specific item update
             validateSpecificItemUpdate(targetWebTagNumber);
@@ -204,9 +224,10 @@ public class ForceUpdateTest {
             logger.info("🎉 Specific item force update completed successfully!");
             logger.info("📋 Summary:");
             logger.info("  - Item: " + targetWebTagNumber);
-            logger.info("  - Method: Direct updateItemOnShopify");
+            logger.info("  - Method: ProductUpdatePipeline.executeUpdate");
             logger.info("  - Original status: " + originalStatus);
             logger.info("  - Final status: " + targetItem.getStatus());
+            logger.info("  - Pipeline result: " + (result.isSuccess() ? "SUCCESS" : "FAILED"));
             
         } catch (Exception e) {
             logger.error("❌ Force update failed for item: " + targetWebTagNumber, e);
