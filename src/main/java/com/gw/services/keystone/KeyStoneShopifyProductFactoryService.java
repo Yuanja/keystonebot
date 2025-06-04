@@ -2,7 +2,7 @@ package com.gw.services.keystone;
 
 import com.gw.domain.FeedItem;
 import com.gw.domain.EbayMetafieldDefinition;
-import com.gw.services.BaseShopifyProductFactory;
+import com.gw.services.product.ProductCreationPipeline;
 import com.gw.services.shopifyapi.objects.Metafield;
 import com.gw.services.shopifyapi.objects.Product;
 import org.springframework.context.annotation.Profile;
@@ -15,7 +15,7 @@ import java.util.Map;
 
 @Component
 @Profile({"keystone-prod", "keystone-dev"})
-public class KeyStoneShopifyProductFactoryService extends BaseShopifyProductFactory {
+public class KeyStoneShopifyProductFactoryService extends ProductCreationPipeline {
 
     @Override
     public Product createProduct(FeedItem feedItem) throws Exception {
@@ -157,26 +157,7 @@ public class KeyStoneShopifyProductFactoryService extends BaseShopifyProductFact
         metafield.setDescription(definition.getDescription());
         return metafield;
     }
-    
-    /**
-     * Create an eBay metafield with the specified parameters (legacy method - deprecated)
-     * @deprecated Use createEbayMetafieldFromEnum instead for type consistency
-     */
-    @Deprecated
-    private Metafield createEbayMetafield(String key, String value, String type, String description) {
-        Metafield metafield = new Metafield();
-        metafield.setNamespace("ebay");
-        metafield.setKey(key);
-        metafield.setValue(value);
-        metafield.setType(type);
-        metafield.setDescription(description);
-        return metafield;
-    }
-    
-    @Override
-    public void mergeExistingDescription(String exstingDescriptionHtml, String toBeUpdatedDescriptionHtml) {
-        
-    }
+  
     
     private Map<String, String> getMaterialMap(){
         Map<String, String> materialMap = new HashMap<String, String>();

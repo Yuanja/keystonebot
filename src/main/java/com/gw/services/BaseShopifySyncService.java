@@ -8,6 +8,8 @@ import com.gw.domain.EbayMetafieldDefinition;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.*;
 import com.gw.services.product.ProductMergeService;
+import com.gw.services.product.ProductCreationPipeline;
+import com.gw.services.inventory.InventoryLevelService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -88,10 +91,14 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
     private FeedItemService feedItemService;
     
     @Autowired
-    private IShopifyProductFactory shopifyProductFactoryService;
+    @Qualifier("keyStoneShopifyProductFactoryService")
+    private ProductCreationPipeline shopifyProductFactoryService;
     
     @Autowired
     private ProductMergeService productMergeService;
+    
+    @Autowired
+    private InventoryLevelService inventoryLevelService;
     
     /**
      * Cached collection mappings to avoid repeated API calls
@@ -845,7 +852,7 @@ public abstract class BaseShopifySyncService implements IShopifySyncService {
             
             //Get the count from the product, that's created by the factory from the feed item.
             //Set the inventoryItemId for update.
-            shopifyProductFactoryService.mergeInventoryLevels(levels, newlyAddedProduct.getVariants().get(0).getInventoryLevels());
+            inventoryLevelService.mergeInventoryLevels(levels, newlyAddedProduct.getVariants().get(0).getInventoryLevels());
             
             // GraphQL API expects List<InventoryLevel>
             List<InventoryLevel> inventoryLevelsToUpdate = newlyAddedProduct.getVariants().get(0).getInventoryLevels().get();

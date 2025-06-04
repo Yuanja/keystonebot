@@ -1,7 +1,7 @@
 package com.gw.services.sync;
 
 import com.gw.domain.FeedItem;
-import com.gw.services.IShopifyProductFactory;
+import com.gw.services.product.ProductCreationPipeline;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.InventoryLevel;
 import com.gw.services.shopifyapi.objects.Product;
@@ -10,6 +10,7 @@ import com.gw.services.product.ProductMergeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -44,7 +45,8 @@ public class ProductUpdatePipeline {
     private ImageService imageService;
     
     @Autowired
-    private IShopifyProductFactory shopifyProductFactoryService;
+    @Qualifier("keyStoneShopifyProductFactoryService")
+    private ProductCreationPipeline shopifyProductFactoryService;
     
     @Autowired
     private CollectionManagementService collectionManagementService;

@@ -1,11 +1,11 @@
 package com.gw.services.sync;
 
 import com.gw.domain.FeedItem;
-import com.gw.services.IShopifyProductFactory;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.InventoryLevel;
 import com.gw.services.shopifyapi.objects.InventoryLevels;
 import com.gw.services.shopifyapi.objects.Product;
+import com.gw.services.inventory.InventoryLevelService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +35,7 @@ public class InventoryManagementService {
     private ShopifyGraphQLService shopifyGraphQLService;
     
     @Autowired
-    private IShopifyProductFactory shopifyProductFactoryService;
+    private InventoryLevelService inventoryLevelService;
     
     /**
      * Update inventory after product update
@@ -83,7 +83,7 @@ public class InventoryManagementService {
         
         // Merge with updated product inventory data
         if (updatedProduct.getVariants() != null && !updatedProduct.getVariants().isEmpty()) {
-            shopifyProductFactoryService.mergeInventoryLevels(levels, 
+            inventoryLevelService.mergeInventoryLevels(levels, 
                 updatedProduct.getVariants().get(0).getInventoryLevels());
             
             // Update inventory levels on Shopify

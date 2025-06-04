@@ -5,7 +5,7 @@ import com.gw.domain.PredefinedCollection;
 import com.gw.services.CollectionUtility;
 import com.gw.services.EmailService;
 import com.gw.services.FeedItemService;
-import com.gw.services.IShopifyProductFactory;
+import com.gw.services.product.ProductCreationPipeline;
 import com.gw.services.ImageService;
 import com.gw.services.LogService;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
@@ -14,9 +14,11 @@ import com.gw.services.shopifyapi.objects.CustomCollection;
 import com.gw.services.shopifyapi.objects.InventoryLevel;
 import com.gw.services.shopifyapi.objects.InventoryLevels;
 import com.gw.services.shopifyapi.objects.Product;
+import com.gw.services.inventory.InventoryLevelService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -61,7 +63,8 @@ public class ProductPublishPipeline {
     private ImageService imageService;
     
     @Autowired
-    private IShopifyProductFactory shopifyProductFactoryService;
+    @Qualifier("keyStoneShopifyProductFactoryService")
+    private ProductCreationPipeline shopifyProductFactoryService;
     
     @Autowired
     private FeedItemService feedItemService;
@@ -74,6 +77,9 @@ public class ProductPublishPipeline {
     
     @Autowired
     private SyncConfigurationService syncConfigurationService;
+    
+    @Autowired
+    private InventoryLevelService inventoryLevelService;
     
     /**
      * Execute the complete product publish pipeline
@@ -175,7 +181,7 @@ public class ProductPublishPipeline {
         }
         
         // Merge with product inventory data
-        shopifyProductFactoryService.mergeInventoryLevels(levels, newlyAddedProduct.getVariants().get(0).getInventoryLevels());
+        inventoryLevelService.mergeInventoryLevels(levels, newlyAddedProduct.getVariants().get(0).getInventoryLevels());
         
         // Update inventory levels
         List<InventoryLevel> inventoryLevelsToUpdate = newlyAddedProduct.getVariants().get(0).getInventoryLevels().get();

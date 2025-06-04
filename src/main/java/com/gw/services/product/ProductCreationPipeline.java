@@ -1,30 +1,35 @@
 package com.gw.services.product;
 
-import com.gw.domain.FeedItem;
-import com.gw.services.shopifyapi.ShopifyGraphQLService;
-import com.gw.services.shopifyapi.objects.Image;
-import com.gw.services.shopifyapi.objects.Product;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
+import com.gw.domain.FeedItem;
+import com.gw.services.FreeMakerService;
+import com.gw.services.constants.ShopifyConstants;
+import com.gw.services.shopifyapi.ShopifyGraphQLService;
+import com.gw.services.shopifyapi.objects.Image;
+import com.gw.services.shopifyapi.objects.Product;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Reusable Product Creation Pipeline
+ * Unified Product Creation Pipeline
  * 
- * Handles the complex 3-step product creation process:
- * 1. Create basic product structure
- * 2. Add variant options 
- * 3. Add images
+ * Consolidated functionality from former IShopifyProductFactory, BaseShopifyProductFactory, and ProductCreationPipeline.
+ * Handles complete product creation workflow:
+ * 1. Product template building with metafields, variants, and images
+ * 2. Complex 3-step creation process (basic product → options → images)
+ * 3. Reusable across different product types
  * 
  * Benefits:
- * - Clean separation of concerns
- * - Reusable across different product types
- * - Testable individual steps
- * - Consistent error handling
- * - Clear logging and progress tracking
+ * - Single responsibility for all product creation
+ * - Eliminates unnecessary factory interface/implementation indirection
+ * - Clean separation of concerns with specialized services
+ * - Testable individual steps with consistent error handling
+ * - Extensible for different product types via inheritance
  */
 @Component
 public class ProductCreationPipeline {
@@ -32,7 +37,103 @@ public class ProductCreationPipeline {
     private static final Logger logger = LoggerFactory.getLogger(ProductCreationPipeline.class);
     
     @Autowired
-    private ShopifyGraphQLService shopifyService;
+    private FreeMakerService freeMakerService;
+    
+    @Autowired 
+    private VariantService variantService;
+    
+    @Autowired
+    private MetadataService metadataService;
+    
+    @Autowired
+    private ProductImageService productImageService;
+    
+    @Autowired
+    private ShopifyGraphQLService shopifyGraphQLService;
+    
+    /**
+     * Create a product template with all metadata, variants, and images
+     * This is the base method that can be overridden by subclasses for specific product types
+     * 
+     * @param feedItem The feed item with source data
+     * @return Product template ready for creation
+     * @throws Exception if template building fails
+     */
+    public Product createProduct(FeedItem feedItem) throws Exception {
+        logger.debug("🏗️ Building product template for SKU: {}", feedItem.getWebTagNumber());
+        
+        Product product = new Product();
+        
+        // Set basic product information
+        setBasicProductInfo(product, feedItem);
+        
+        // Use specialized services to build the product
+        productImageService.setProductImages(product, feedItem);
+        variantService.createDefaultVariant(product, feedItem, shopifyGraphQLService.getAllLocations());
+        metadataService.setProductMetadata(product, feedItem);
+        
+        logger.debug("✅ Product template built for SKU: {} - {} variants, {} metafields", 
+            feedItem.getWebTagNumber(), 
+            product.getVariants() != null ? product.getVariants().size() : 0,
+            product.getMetafields() != null ? product.getMetafields().size() : 0);
+        
+        return product;
+    }
+    
+    /**
+     * Creates product using clean 3-step pipeline approach
+     * This is the main method for creating products with options and images
+     * 
+     * @param feedItem The feed item with source data
+     * @return The fully created product with ID, options, and images
+     * @throws Exception if product creation fails
+     */
+    public Product createProductWithOptions(FeedItem feedItem) throws Exception {
+        logger.info("🚀 Creating product with options for SKU: {}", feedItem.getWebTagNumber());
+        
+        // Step 1: Build product template (calls createProduct which can be overridden)
+        Product productTemplate = this.createProduct(feedItem);
+        
+        // Step 2: Execute the clean creation pipeline
+        ProductCreationResult result = executeCreation(productTemplate, feedItem);
+        
+        // Step 3: Handle result
+        if (result.isSuccess()) {
+            logger.info("✅ Product creation completed successfully for SKU: {}", feedItem.getWebTagNumber());
+            return result.getProduct();
+        } else {
+            logger.error("❌ Product creation failed for SKU: {} - {}", 
+                feedItem.getWebTagNumber(), result.getError().getMessage());
+            throw new RuntimeException("Product creation failed", result.getError());
+        }
+    }
+    
+    /**
+     * Sets basic product information from feed item
+     * Clean, focused method with proper error handling
+     */
+    private void setBasicProductInfo(Product product, FeedItem feedItem) {
+        // Generate description using template service
+        try {
+            String bodyHtml = freeMakerService.generateFromTemplate(feedItem);
+            product.setBodyHtml(bodyHtml);
+        } catch (Exception e) {
+            logger.warn("⚠️ Failed to generate template for SKU: {} - using empty description", 
+                feedItem.getWebTagNumber());
+            product.setBodyHtml(""); // Graceful fallback
+        }
+        
+        // Set basic product fields
+        product.setTitle(feedItem.getWebDescriptionShort());
+        product.setVendor(feedItem.getWebDesigner());
+        product.setProductType(feedItem.getWebCategory());
+        product.setPublishedScope(ShopifyConstants.PUBLISHED_SCOPE_GLOBAL);
+        
+        logger.debug("📋 Basic product info set for SKU: {} - Title: '{}', Vendor: '{}'", 
+            feedItem.getWebTagNumber(), 
+            feedItem.getWebDescriptionShort(), 
+            feedItem.getWebDesigner());
+    }
     
     /**
      * Execute the complete product creation pipeline
@@ -76,7 +177,7 @@ public class ProductCreationPipeline {
         // Clean template for basic creation
         Product cleanTemplate = createCleanTemplate(template);
         
-        Product created = shopifyService.addProduct(cleanTemplate);
+        Product created = shopifyGraphQLService.addProduct(cleanTemplate);
         validateProductCreation(created, sku);
         
         logger.info("✅ Step 1: Basic product created - ID: {}", created.getId());
@@ -89,7 +190,7 @@ public class ProductCreationPipeline {
     private void addVariantOptions(String productId, FeedItem feedItem) {
         logger.info("🎛️ Step 2: Adding variant options to product ID: {}", productId);
         
-        boolean optionsAdded = shopifyService.createProductOptions(productId, feedItem);
+        boolean optionsAdded = shopifyGraphQLService.createProductOptions(productId, feedItem);
         
         if (optionsAdded) {
             logger.info("✅ Step 2: Variant options added successfully");
@@ -110,7 +211,7 @@ public class ProductCreationPipeline {
         logger.info("🖼️ Step 3: Adding {} images to product ID: {}", images.size(), productId);
         
         try {
-            shopifyService.addImagesToProduct(productId, images);
+            shopifyGraphQLService.addImagesToProduct(productId, images);
             logger.info("✅ Step 3: {} images added successfully", images.size());
         } catch (Exception e) {
             logger.warn("⚠️ Step 3: Failed to add images - {}", e.getMessage());
@@ -124,7 +225,7 @@ public class ProductCreationPipeline {
     private Product fetchCompleteProduct(String productId) throws Exception {
         logger.debug("🔄 Fetching complete product structure for ID: {}", productId);
         
-        Product complete = shopifyService.getProductByProductId(productId);
+        Product complete = shopifyGraphQLService.getProductByProductId(productId);
         if (complete == null) {
             throw new RuntimeException("Failed to fetch complete product after creation");
         }
