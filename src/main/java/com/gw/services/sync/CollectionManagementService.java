@@ -47,68 +47,51 @@ public class CollectionManagementService {
             Map<PredefinedCollection, CustomCollection> collectionMappings = 
                 syncConfigurationService.getCollectionMappings();
             
-            // Step 1: Remove product from ALL managed collections first (clean state)
-            removeProductFromManagedCollections(item.getShopifyItemId(), item.getWebTagNumber(), collectionMappings);
+            // Step 1: Get current managed collections for this product
+            List<Collect> currentManagedCollections = getCurrentManagedCollections(item.getShopifyItemId(), collectionMappings);
             
             // Step 2: Determine which collections the product should be in
             List<Collect> collectsToAdd = CollectionUtility.getCollectionForProduct(
                 item.getShopifyItemId(), item, collectionMappings);
             
+            // Step 3: Compare current vs desired collections
+            if (collectionsMatch(currentManagedCollections, collectsToAdd, collectionMappings)) {
+                logger.debug("✅ Product {} (SKU: {}) collections already match desired state - no changes needed", 
+                    item.getShopifyItemId(), item.getWebTagNumber());
+                logCurrentCollections(currentManagedCollections, collectionMappings, "Current collections");
+                return; // No changes needed
+            }
+            
+            // Step 4: Collections don't match - perform remove and re-add
+            logger.debug("🔄 Product {} (SKU: {}) collections differ from desired state - updating", 
+                item.getShopifyItemId(), item.getWebTagNumber());
+            logCurrentCollections(currentManagedCollections, collectionMappings, "Current collections");
+            logDesiredCollections(collectsToAdd, collectionMappings, "Desired collections");
+            
+            // Remove from ALL managed collections first (clean state)
+            removeProductFromManagedCollections(item.getShopifyItemId(), item.getWebTagNumber(), collectionMappings);
+            
+            // Add to desired collections using bulk API
             if (!collectsToAdd.isEmpty()) {
-                // Enhanced logging: Show which collections we're trying to add
-                logger.debug("🏷️ Step 2: Adding product {} (SKU: {}) to {} collections", 
+                logger.debug("🏷️ Adding product {} (SKU: {}) to {} collections using bulk API", 
                     item.getShopifyItemId(), item.getWebTagNumber(), collectsToAdd.size());
                 
-                // Process each collection individually for better error handling
-                int successCount = 0;
-                int failCount = 0;
-                StringBuilder failedCollections = new StringBuilder();
-                
-                for (Collect collect : collectsToAdd) {
-                    String collectionId = collect.getCollectionId();
-                    String collectionName = findCollectionNameById(collectionId, collectionMappings);
+                try {
+                    // Use bulk API for better performance
+                    shopifyGraphQLService.addProductAndCollectionsAssociations(collectsToAdd);
+                    logger.debug("✅ Successfully added product to {} collections using bulk API", collectsToAdd.size());
                     
-                    try {
-                        logger.debug("  🔗 Adding to collection: '{}' (ID: {})", collectionName, collectionId);
-                        
-                        // Perform individual ShopifyQL operation for this collection
-                        shopifyGraphQLService.addProductToCollection(collect.getProductId(), collectionId);
-                        
-                        logger.debug("  ✅ Successfully added to collection: '{}'", collectionName);
-                        successCount++;
-                        
-                    } catch (Exception e) {
-                        logger.warn("  ❌ Failed to add to collection: '{}' (ID: {}) - {}", 
-                            collectionName, collectionId, e.getMessage());
-                        failCount++;
-                        
-                        if (failedCollections.length() > 0) {
-                            failedCollections.append(", ");
-                        }
-                        failedCollections.append("'").append(collectionName).append("'");
-                        
-                        // Continue with other collections instead of failing completely
-                    }
-                }
-                
-                // Summary logging
-                if (successCount > 0) {
-                    logger.debug("✅ Successfully added product to {}/{} collections", successCount, collectsToAdd.size());
-                }
-                
-                if (failCount > 0) {
-                    logger.warn("⚠️ Failed to add product to {}/{} collections: {}", 
-                        failCount, collectsToAdd.size(), failedCollections.toString());
+                } catch (Exception e) {
+                    logger.error("❌ Bulk collection addition failed, falling back to individual operations", e);
                     
-                    // Only throw exception if ALL collections failed
-                    if (successCount == 0) {
-                        throw new Exception("Failed to add product to any collections. Failed collections: " + failedCollections.toString());
-                    }
+                    // Fallback to individual operations if bulk fails
+                    addCollectionsIndividually(collectsToAdd, collectionMappings);
                 }
                 
             } else {
                 logger.debug("⚠️ No collections found for product SKU: {} (product will remain in no managed collections)", item.getWebTagNumber());
             }
+            
         } catch (Exception e) {
             logger.error("❌ Failed to update collections for SKU: {}", item.getWebTagNumber(), e);
             throw e;
@@ -124,68 +107,51 @@ public class CollectionManagementService {
             Map<PredefinedCollection, CustomCollection> collectionMappings = 
                 syncConfigurationService.getCollectionMappings();
             
-            // Step 1: Remove product from ALL managed collections first (clean state)
-            removeProductFromManagedCollections(productId, item.getWebTagNumber(), collectionMappings);
+            // Step 1: Get current managed collections for this product
+            List<Collect> currentManagedCollections = getCurrentManagedCollections(productId, collectionMappings);
             
             // Step 2: Determine which collections the product should be in
             List<Collect> collectsToAdd = CollectionUtility.getCollectionForProduct(
                 productId, item, collectionMappings);
             
+            // Step 3: Compare current vs desired collections
+            if (collectionsMatch(currentManagedCollections, collectsToAdd, collectionMappings)) {
+                logger.debug("✅ Product {} (SKU: {}) collections already match desired state - no changes needed", 
+                    productId, item.getWebTagNumber());
+                logCurrentCollections(currentManagedCollections, collectionMappings, "Current collections");
+                return; // No changes needed
+            }
+            
+            // Step 4: Collections don't match - perform remove and re-add
+            logger.debug("🔄 Product {} (SKU: {}) collections differ from desired state - updating", 
+                productId, item.getWebTagNumber());
+            logCurrentCollections(currentManagedCollections, collectionMappings, "Current collections");
+            logDesiredCollections(collectsToAdd, collectionMappings, "Desired collections");
+            
+            // Remove from ALL managed collections first (clean state)
+            removeProductFromManagedCollections(productId, item.getWebTagNumber(), collectionMappings);
+            
+            // Add to desired collections using bulk API
             if (!collectsToAdd.isEmpty()) {
-                // Enhanced logging: Show which collections we're trying to add
-                logger.debug("🏷️ Step 2: Adding product {} (SKU: {}) to {} collections", 
+                logger.debug("🏷️ Adding product {} (SKU: {}) to {} collections using bulk API", 
                     productId, item.getWebTagNumber(), collectsToAdd.size());
                 
-                // Process each collection individually for better error handling
-                int successCount = 0;
-                int failCount = 0;
-                StringBuilder failedCollections = new StringBuilder();
-                
-                for (Collect collect : collectsToAdd) {
-                    String collectionId = collect.getCollectionId();
-                    String collectionName = findCollectionNameById(collectionId, collectionMappings);
+                try {
+                    // Use bulk API for better performance
+                    shopifyGraphQLService.addProductAndCollectionsAssociations(collectsToAdd);
+                    logger.debug("✅ Successfully added product {} to {} collections using bulk API", productId, collectsToAdd.size());
                     
-                    try {
-                        logger.debug("  🔗 Adding to collection: '{}' (ID: {})", collectionName, collectionId);
-                        
-                        // Perform individual ShopifyQL operation for this collection
-                        shopifyGraphQLService.addProductToCollection(productId, collectionId);
-                        
-                        logger.debug("  ✅ Successfully added to collection: '{}'", collectionName);
-                        successCount++;
-                        
-                    } catch (Exception e) {
-                        logger.warn("  ❌ Failed to add to collection: '{}' (ID: {}) - {}", 
-                            collectionName, collectionId, e.getMessage());
-                        failCount++;
-                        
-                        if (failedCollections.length() > 0) {
-                            failedCollections.append(", ");
-                        }
-                        failedCollections.append("'").append(collectionName).append("'");
-                        
-                        // Continue with other collections instead of failing completely
-                    }
-                }
-                
-                // Summary logging
-                if (successCount > 0) {
-                    logger.debug("✅ Successfully added product {} to {}/{} collections", productId, successCount, collectsToAdd.size());
-                }
-                
-                if (failCount > 0) {
-                    logger.warn("⚠️ Failed to add product {} to {}/{} collections: {}", 
-                        productId, failCount, collectsToAdd.size(), failedCollections.toString());
+                } catch (Exception e) {
+                    logger.error("❌ Bulk collection addition failed for product {}, falling back to individual operations", productId, e);
                     
-                    // Only throw exception if ALL collections failed
-                    if (successCount == 0) {
-                        throw new Exception("Failed to add product to any collections. Failed collections: " + failedCollections.toString());
-                    }
+                    // Fallback to individual operations if bulk fails
+                    addCollectionsIndividually(collectsToAdd, collectionMappings);
                 }
                 
             } else {
                 logger.debug("⚠️ No collections found for product SKU: {} (product will remain in no managed collections)", item.getWebTagNumber());
             }
+            
         } catch (Exception e) {
             logger.error("❌ Failed to update collections for SKU: {} with product ID: {}", item.getWebTagNumber(), productId, e);
             throw e;
@@ -283,6 +249,131 @@ public class CollectionManagementService {
         
         if (untouchedCount > 0) {
             logger.debug("ℹ️ Left product in {} non-managed collections (not removed)", untouchedCount);
+        }
+    }
+    
+    /**
+     * Get current managed collections for a product
+     * Returns only collections that are defined in our collection mappings
+     */
+    private List<Collect> getCurrentManagedCollections(String productId, 
+                                                     Map<PredefinedCollection, CustomCollection> collectionMappings) {
+        List<Collect> allCurrentCollections = shopifyGraphQLService.getCollectsForProductId(productId);
+        Set<String> managedCollectionIds = collectionMappings.values().stream()
+            .map(CustomCollection::getId)
+            .collect(java.util.stream.Collectors.toSet());
+        
+        return allCurrentCollections.stream()
+            .filter(collect -> managedCollectionIds.contains(collect.getCollectionId()))
+            .collect(java.util.stream.Collectors.toList());
+    }
+    
+    /**
+     * Compare current collections with desired collections
+     * Returns true if they match (same collections), false if they differ
+     */
+    private boolean collectionsMatch(List<Collect> currentCollections, List<Collect> desiredCollections, 
+                                   Map<PredefinedCollection, CustomCollection> collectionMappings) {
+        // Convert to sets of collection IDs for easy comparison
+        Set<String> currentCollectionIds = currentCollections.stream()
+            .map(Collect::getCollectionId)
+            .collect(java.util.stream.Collectors.toSet());
+        
+        Set<String> desiredCollectionIds = desiredCollections.stream()
+            .map(Collect::getCollectionId)
+            .collect(java.util.stream.Collectors.toSet());
+        
+        return currentCollectionIds.equals(desiredCollectionIds);
+    }
+    
+    /**
+     * Log current collections for debugging
+     */
+    private void logCurrentCollections(List<Collect> collections, 
+                                     Map<PredefinedCollection, CustomCollection> collectionMappings, 
+                                     String label) {
+        if (collections.isEmpty()) {
+            logger.debug("📋 {}: None", label);
+            return;
+        }
+        
+        logger.debug("📋 {}: {} collections", label, collections.size());
+        for (Collect collect : collections) {
+            String collectionName = findCollectionNameById(collect.getCollectionId(), collectionMappings);
+            logger.debug("  - '{}' (ID: {})", collectionName, collect.getCollectionId());
+        }
+    }
+    
+    /**
+     * Log desired collections for debugging
+     */
+    private void logDesiredCollections(List<Collect> collections, 
+                                     Map<PredefinedCollection, CustomCollection> collectionMappings, 
+                                     String label) {
+        if (collections.isEmpty()) {
+            logger.debug("📋 {}: None", label);
+            return;
+        }
+        
+        logger.debug("📋 {}: {} collections", label, collections.size());
+        for (Collect collect : collections) {
+            String collectionName = findCollectionNameById(collect.getCollectionId(), collectionMappings);
+            logger.debug("  - '{}' (ID: {})", collectionName, collect.getCollectionId());
+        }
+    }
+    
+    /**
+     * Add collections individually with detailed error handling
+     * Used as fallback when bulk API fails
+     */
+    private void addCollectionsIndividually(List<Collect> collectsToAdd, 
+                                          Map<PredefinedCollection, CustomCollection> collectionMappings) throws Exception {
+        logger.debug("🔄 Adding {} collections individually", collectsToAdd.size());
+        
+        int successCount = 0;
+        int failCount = 0;
+        StringBuilder failedCollections = new StringBuilder();
+        
+        for (Collect collect : collectsToAdd) {
+            String collectionId = collect.getCollectionId();
+            String collectionName = findCollectionNameById(collectionId, collectionMappings);
+            
+            try {
+                logger.debug("  🔗 Adding to collection: '{}' (ID: {})", collectionName, collectionId);
+                
+                // Perform individual ShopifyQL operation for this collection
+                shopifyGraphQLService.addProductToCollection(collect.getProductId(), collectionId);
+                
+                logger.debug("  ✅ Successfully added to collection: '{}'", collectionName);
+                successCount++;
+                
+            } catch (Exception e) {
+                logger.warn("  ❌ Failed to add to collection: '{}' (ID: {}) - {}", 
+                    collectionName, collectionId, e.getMessage());
+                failCount++;
+                
+                if (failedCollections.length() > 0) {
+                    failedCollections.append(", ");
+                }
+                failedCollections.append("'").append(collectionName).append("'");
+                
+                // Continue with other collections instead of failing completely
+            }
+        }
+        
+        // Summary logging
+        if (successCount > 0) {
+            logger.debug("✅ Successfully added product to {}/{} collections", successCount, collectsToAdd.size());
+        }
+        
+        if (failCount > 0) {
+            logger.warn("⚠️ Failed to add product to {}/{} collections: {}", 
+                failCount, collectsToAdd.size(), failedCollections.toString());
+            
+            // Only throw exception if ALL collections failed
+            if (successCount == 0) {
+                throw new Exception("Failed to add product to any collections. Failed collections: " + failedCollections.toString());
+            }
         }
     }
 } 
