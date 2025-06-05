@@ -330,6 +330,142 @@ public class ForceUpdateTest {
     }
     
     /**
+     * Retry all items with STATUS_UPDATE_FAILED using ProductUpdatePipeline
+     * Simple approach: no batching, just for loop through failed items one by one
+     */
+    @Test
+    public void retryUpdateFailedItems() throws Exception {
+        logger.info("=== Retry Items with STATUS_UPDATE_FAILED ===");
+        logger.info("🔍 Finding all items with STATUS_UPDATE_FAILED in database");
+        logger.info("🗄️ Using existing database data (not refreshing feed)");
+        logger.info("⚡ Using ProductUpdatePipeline for individual item updates");
+        logger.info("🔄 Simple for loop approach - no batching");
+        
+        if (DRY_RUN) {
+            logger.warn("🧪 DRY RUN MODE - No actual changes will be made");
+        }
+        
+        try {
+            // Find all items with STATUS_UPDATE_FAILED
+            logger.info("🔍 Searching for items with STATUS_UPDATE_FAILED...");
+            List<FeedItem> updateFailedItems = feedItemService.findByStatus(FeedItem.STATUS_UPDATE_FAILED);
+            
+            if (updateFailedItems.isEmpty()) {
+                logger.info("✅ No items found with STATUS_UPDATE_FAILED - all items are in good status!");
+                logger.info("🎯 No action needed - no failed items to retry");
+                return;
+            }
+            
+            logger.info("📊 Update Failed Items Analysis:");
+            logger.info("  - Items with STATUS_UPDATE_FAILED: " + updateFailedItems.size());
+            
+            // Filter items that have Shopify ID (can be updated)
+            List<FeedItem> retryableItems = updateFailedItems.stream()
+                .filter(item -> item.getShopifyItemId() != null && !item.getShopifyItemId().trim().isEmpty())
+                .sorted(Comparator.comparing(FeedItem::getWebTagNumber, 
+                    Comparator.nullsLast(Comparator.naturalOrder())))
+                .collect(Collectors.toList());
+            
+            logger.info("  - Items with Shopify ID (retryable): " + retryableItems.size());
+            logger.info("  - Items without Shopify ID (skipped): " + (updateFailedItems.size() - retryableItems.size()));
+            
+            if (retryableItems.isEmpty()) {
+                logger.warn("⚠️ No retryable items found - all failed items lack Shopify ID");
+                return;
+            }
+            
+            // Show sample of items to retry
+            logger.info("📋 Sample of items to retry:");
+            retryableItems.stream()
+                         .limit(10)
+                         .forEach(item -> {
+                             logger.info("  📝 " + item.getWebTagNumber() + 
+                                        " (Shopify ID: " + item.getShopifyItemId() + ")");
+                         });
+            
+            if (DRY_RUN) {
+                logger.info("🧪 DRY RUN: Would retry " + retryableItems.size() + " failed items");
+                return;
+            }
+            
+            // Simple for loop to retry each failed item
+            int totalProcessed = 0;
+            int totalSucceeded = 0;
+            int totalStillFailed = 0;
+            
+            logger.info("🔄 Starting simple retry process...");
+            
+            for (FeedItem item : retryableItems) {
+                try {
+                    logger.info("🔄 Retrying item " + (totalProcessed + 1) + "/" + retryableItems.size() + 
+                               ": " + item.getWebTagNumber());
+                    
+                    // Set status to indicate retry attempt
+                    String originalStatus = item.getStatus();
+                    item.setStatus("RETRY_UPDATE_FAILED");
+                    
+                    // Call ProductUpdatePipeline executeUpdate method
+                    ProductUpdatePipeline.ProductUpdateResult result = productUpdatePipeline.executeUpdate(item);
+                    
+                    if (result.isSuccess()) {
+                        logger.info("✅ Successfully retried item: " + item.getWebTagNumber());
+                        totalSucceeded++;
+                        
+                        if (result.getProduct() != null) {
+                            logger.info("📊 Updated product: " + result.getProduct().getId());
+                        }
+                    } else {
+                        // Check if this is a collection-related error that we can treat as non-critical
+                        boolean isCollectionError = false;
+                        if (result.getError() != null) {
+                            String errorMessage = result.getError().getMessage();
+                            if (errorMessage != null && 
+                                (errorMessage.contains("Failed to add product to collection") ||
+                                 errorMessage.contains("collection") ||
+                                 errorMessage.contains("Collection"))) {
+                                isCollectionError = true;
+                            }
+                        }
+                        
+                        if (isCollectionError) {
+                            logger.warn("⚠️ Collection association issues for item: " + item.getWebTagNumber());
+                            logger.warn("⚠️ Collection error (treating as success): " + result.getError().getMessage());
+                            logger.info("✅ Item retry succeeded despite collection issues");
+                            totalSucceeded++;
+                        } else {
+                            logger.error("❌ Retry failed for item: " + item.getWebTagNumber());
+                            if (result.getError() != null) {
+                                logger.error("❌ Error: " + result.getError().getMessage());
+                            }
+                            totalStillFailed++;
+                        }
+                    }
+                    
+                    totalProcessed++;
+                    
+                } catch (Exception e) {
+                    logger.error("❌ Exception during retry for item: " + item.getWebTagNumber() + " - " + e.getMessage(), e);
+                    totalProcessed++;
+                    totalStillFailed++;
+                }
+            }
+            
+            logger.info("📊 Retry Results:");
+            logger.info("  - Total items processed: " + totalProcessed);
+            logger.info("  - Total items succeeded: " + totalSucceeded);
+            logger.info("  - Total items still failed: " + totalStillFailed);
+            logger.info("  - Success rate: " + String.format("%.2f%%", 
+                        totalProcessed > 0 ? (double) totalSucceeded / totalProcessed * 100 : 0.0));
+            
+            logger.info("🎉 Retry of UPDATE_FAILED items completed!");
+            
+        } catch (Exception e) {
+            logger.error("❌ Retry process failed", e);
+            throw e;
+        }
+    }
+    
+    /**
      * Validate eBay metafield definitions and recreate them if incorrect (only when needed)
      * This ensures all eBay metafields are properly configured and pinned
      */
