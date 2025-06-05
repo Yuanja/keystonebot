@@ -43,7 +43,7 @@ ZZ    </Appenders>
             <AppenderRef ref="Console-Appender"/>
         </Logger>
     -->
-        <Logger name="com.gw" level="debug" additivity="false">
+        <Logger name="com.gw" level="info" additivity="false">
             <AppenderRef ref="App-File-Appender"/>
             <AppenderRef ref="Console-Appender"/>
         </Logger>
