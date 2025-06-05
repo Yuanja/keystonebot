@@ -7,6 +7,21 @@
 - ✅ **SAFE** to run in production environments
 - ✅ **PRESERVES** existing Shopify products and database records
 
+## 🚨 **MAJOR BUG FIX - API CORRECTION** 🚨
+
+**CRITICAL FIX APPLIED**: The inventory fix tool now uses the correct Shopify API!
+
+### **Problem Solved:**
+- **BEFORE**: Tool used `inventoryAdjustQuantities` (delta/increment API)
+- **ISSUE**: Inventory of 4 would become 5 when trying to set it to 1 (4 + 1 = 5) 
+- **AFTER**: Tool uses `inventorySetQuantities` (absolute value API)
+- **RESULT**: Inventory of 4 becomes 1 when set to 1 (correct absolute setting)
+
+### **API Details:**
+- **New API**: `inventorySetQuantities` - Sets exact inventory quantities
+- **Reference**: https://shopify.dev/docs/api/admin-graphql/latest/mutations/inventorySetQuantities
+- **Benefits**: Absolute value setting, no more increment issues
+
 ## 🔧 Production Profile Configuration
 
 ⚠️ **CRITICAL FOR PRODUCTION USE** ⚠️

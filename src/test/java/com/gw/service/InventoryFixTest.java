@@ -55,6 +55,19 @@ import java.util.HashMap;
  * ✅ **Location Overview**: Complete inventory distribution analysis
  * ✅ **Enhanced Tables**: Formatted location displays with detailed breakdowns
  * ✅ **Smart Detection**: Automatic identification of concentration risks
+ * ✅ **🔧 CRITICAL API FIX**: Now uses inventorySetQuantities for absolute value setting
+ * 
+ * 🚨 **MAJOR BUG FIX**: The tool now uses the correct Shopify API! 🚨
+ * ================================================================
+ * 
+ * **PROBLEM SOLVED**: The tool was previously using `inventoryAdjustQuantities` (delta adjustment)
+ * instead of `inventorySetQuantities` (absolute value setting). This caused inventory to increment
+ * instead of being set to the correct value.
+ * 
+ * **BEFORE**: Inventory of 4 would become 5 when trying to set it to 1 (4 + 1 = 5)
+ * **AFTER**: Inventory of 4 becomes 1 when set to 1 (absolute setting)
+ * 
+ * **API REFERENCE**: https://shopify.dev/docs/api/admin-graphql/latest/mutations/inventorySetQuantities
  * 
  * 🔧 PRODUCTION USAGE GUIDE 🔧
  * ============================
@@ -729,9 +742,10 @@ public class InventoryFixTest {
                     i + 1, level.getLocationId(), level.getInventoryItemId(), level.getAvailable());
             }
             
-            // Apply all inventory level updates via Shopify API
+            // Apply all inventory level updates via Shopify API using ABSOLUTE value setting
             logger.info("📡 Executing API call...");
-            shopifyApiService.updateInventoryLevels(inventoryLevels);
+            logger.info("🎯 Using inventorySetQuantities for ABSOLUTE value setting (not delta adjustment)");
+            shopifyApiService.setInventoryLevelsAbsolute(inventoryLevels);
             logger.info("✅ API call completed successfully");
             
             // Verify the update by fetching fresh data

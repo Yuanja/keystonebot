@@ -813,8 +813,11 @@ public class ShopifyGraphQLService {
     }
     
     /**
-     * Update inventory levels using GraphQL
+     * Update inventory levels using GraphQL (delta-based adjustment)
+     * 
+     * @deprecated Use setInventoryLevelsAbsolute() for absolute value setting
      */
+    @Deprecated
     public void updateInventoryLevels(List<InventoryLevel> inventoryLevels) throws Exception {
         for (InventoryLevel level : inventoryLevels) {
             updateInventoryLevel(level);
@@ -822,8 +825,102 @@ public class ShopifyGraphQLService {
     }
     
     /**
-     * Update single inventory level using GraphQL
+     * Set inventory levels to absolute values using inventorySetQuantities mutation
+     * 
+     * This is the recommended method for setting exact inventory quantities.
+     * Based on: https://shopify.dev/docs/api/admin-graphql/latest/mutations/inventorySetQuantities
      */
+    public void setInventoryLevelsAbsolute(List<InventoryLevel> inventoryLevels) throws Exception {
+        if (inventoryLevels == null || inventoryLevels.isEmpty()) {
+            logger.warn("No inventory levels provided for absolute setting");
+            return;
+        }
+        
+        // Prepare quantities for the mutation
+        List<Map<String, Object>> quantities = new ArrayList<>();
+        
+        for (InventoryLevel level : inventoryLevels) {
+            Map<String, Object> quantity = new HashMap<>();
+            quantity.put("inventoryItemId", "gid://shopify/InventoryItem/" + level.getInventoryItemId());
+            quantity.put("locationId", "gid://shopify/Location/" + level.getLocationId());
+            quantity.put("quantity", Integer.valueOf(level.getAvailable()));
+            // Note: Not setting compareQuantity to bypass compare-and-set validation
+            // This allows absolute setting regardless of current value
+            quantities.add(quantity);
+            
+            logger.debug("Preparing absolute inventory set: Item={}, Location={}, Quantity={}", 
+                level.getInventoryItemId(), level.getLocationId(), level.getAvailable());
+        }
+        
+        String mutation = """
+            mutation inventorySetQuantities($input: InventorySetQuantitiesInput!) {
+                inventorySetQuantities(input: $input) {
+                    inventoryAdjustmentGroup {
+                        createdAt
+                        reason
+                        referenceDocumentUri
+                        changes {
+                            name
+                            delta
+                            quantityAfterChange
+                        }
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+            """;
+        
+        Map<String, Object> input = new HashMap<>();
+        input.put("name", "available");
+        input.put("reason", "correction");
+        input.put("referenceDocumentUri", "inventory-fix-tool://keystonebot");
+        input.put("quantities", quantities);
+        // Set ignoreCompareQuantity to true to bypass compare-and-set validation
+        input.put("ignoreCompareQuantity", true);
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("input", input);
+        
+        try {
+            logger.info("🚀 Executing inventorySetQuantities mutation for {} inventory levels", quantities.size());
+            JsonNode data = executeGraphQLQuery(mutation, variables);
+            JsonNode inventorySet = data.get("inventorySetQuantities");
+            
+            // Check for user errors
+            JsonNode userErrors = inventorySet.get("userErrors");
+            if (userErrors != null && userErrors.size() > 0) {
+                logger.error("❌ Inventory absolute setting failed with user errors: {}", userErrors.toString());
+                throw new RuntimeException("Inventory absolute setting failed: " + userErrors.toString());
+            }
+            
+            // Log successful changes
+            JsonNode adjustmentGroup = inventorySet.get("inventoryAdjustmentGroup");
+            if (adjustmentGroup != null && adjustmentGroup.has("changes")) {
+                JsonNode changes = adjustmentGroup.get("changes");
+                logger.info("✅ Inventory absolute setting successful - {} changes applied:", changes.size());
+                for (JsonNode change : changes) {
+                    logger.info("  - Name: {}, Delta: {}, Final Quantity: {}", 
+                        change.get("name").asText(),
+                        change.get("delta").asInt(),
+                        change.has("quantityAfterChange") ? change.get("quantityAfterChange").asInt() : "N/A");
+                }
+            }
+            
+        } catch (Exception e) {
+            logger.error("❌ Error setting absolute inventory levels", e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Update single inventory level using GraphQL (delta-based adjustment)
+     * 
+     * @deprecated Use setInventoryLevelsAbsolute() for absolute value setting
+     */
+    @Deprecated
     private void updateInventoryLevel(InventoryLevel level) throws Exception {
         String mutation = """
             mutation inventoryAdjustQuantities($input: InventoryAdjustQuantitiesInput!) {
