@@ -70,6 +70,42 @@ public class VariantService {
     }
     
     /**
+     * Creates a variant for UPDATES without inventory data
+     * Inventory is managed separately by InventoryManagementService based on status changes
+     * This prevents inventory inflation during option/structure updates
+     * 
+     * @param product The product to add the variant to
+     * @param feedItem The feed item data
+     */
+    public void createVariantWithoutInventory(Product product, FeedItem feedItem) {
+        logger.debug("Creating variant WITHOUT inventory for update of SKU: {}", feedItem.getWebTagNumber());
+        
+        Variant variant = new Variant();
+        variant.setTitle(ShopifyConstants.DEFAULT_VARIANT_TITLE);
+        variant.setSku(feedItem.getWebTagNumber());
+        variant.setPrice(pricingStrategy.getPrice(feedItem));
+        variant.setTaxable(ShopifyConstants.TAXABLE_TRUE);
+        variant.setInventoryManagement(ShopifyConstants.INVENTORY_MANAGEMENT_SHOPIFY);
+        variant.setInventoryPolicy(ShopifyConstants.INVENTORY_POLICY_DENY);
+        
+        // CRITICAL: No inventory creation for updates - handled separately
+        // This prevents inventory inflation when only options/structure change
+        variant.setInventoryLevels(null);
+        
+        // Set variant options based on feed item data
+        setVariantOptions(product, variant, feedItem);
+        
+        product.addVariant(variant);
+        
+        logger.info("Created variant WITHOUT inventory for SKU: {} with {} options [Color: {}, Size: {}, Material: {}]", 
+            feedItem.getWebTagNumber(), 
+            product.getOptions() != null ? product.getOptions().size() : 0,
+            feedItem.getWebWatchDial(),
+            feedItem.getWebWatchDiameter(),
+            feedItem.getWebMetalType());
+    }
+    
+    /**
      * Sets variant options based on feed item properties
      * Creates up to 3 options: Color, Size, Material using specific feedItem attributes
      * 

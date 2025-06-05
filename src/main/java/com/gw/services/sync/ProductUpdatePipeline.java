@@ -86,8 +86,8 @@ public class ProductUpdatePipeline {
             // Handle image updates
             handleImageUpdates(item, existingProduct);
             
-            // Update inventory
-            updateInventory(item, updatedProduct);
+            // Handle inventory status changes separately (SOLD vs Available)
+            handleInventoryStatusChanges(item, existingProduct);
             
             // Update collection associations
             updateCollectionAssociations(item);
@@ -148,8 +148,9 @@ public class ProductUpdatePipeline {
     private Product createAndMergeUpdatedProduct(FeedItem item, Product existingProduct) throws Exception {
         logger.debug("🔧 Creating and merging updated product for SKU: {}", item.getWebTagNumber());
         
-        // Build product structure with all metafields and options but don't send to Shopify
-        Product updatedProduct = shopifyProductFactoryService.createProduct(item);
+        // Build product structure with all metafields and options but WITHOUT inventory creation
+        // Inventory is handled separately to prevent inflation during option updates
+        Product updatedProduct = shopifyProductFactoryService.createProductForUpdate(item);
         
         // Set the existing product ID to ensure we update the correct product
         updatedProduct.setId(item.getShopifyItemId());
@@ -157,7 +158,7 @@ public class ProductUpdatePipeline {
         // Merge existing product data with updated data
         productMergeService.mergeProducts(existingProduct, updatedProduct);
         
-        logger.debug("✅ Product created and merged for ID: {}", updatedProduct.getId());
+        logger.debug("✅ Product created and merged for ID: {} (inventory handled separately)", updatedProduct.getId());
         return updatedProduct;
     }
     
@@ -328,14 +329,31 @@ public class ProductUpdatePipeline {
     }
     
     /**
-     * Update inventory after product update
+     * Update inventory
      */
     private void updateInventory(FeedItem item, Product updatedProduct) throws Exception {
-        logger.debug("📦 Updating inventory for product: {}", updatedProduct.getId());
-        
-        // Delegate to specialized inventory service
-        inventoryManagementService.updateInventoryAfterProductUpdate(item, updatedProduct);
-        logger.debug("✅ Inventory updated successfully");
+        try {
+            inventoryManagementService.updateInventoryAfterProductUpdate(item, updatedProduct);
+        } catch (Exception e) {
+            logger.warn("Failed to update inventory for SKU: {}", item.getWebTagNumber(), e);
+            // Don't fail the entire update for inventory issues
+        }
+    }
+    
+    /**
+     * Handle inventory status changes (SOLD vs Available) separately from variant updates
+     * This prevents inventory inflation during option/structure updates
+     */
+    private void handleInventoryStatusChanges(FeedItem item, Product existingProduct) throws Exception {
+        try {
+            logger.debug("📦 Handling inventory status changes for SKU: {}", item.getWebTagNumber());
+            inventoryManagementService.handleInventoryStatusChange(item, existingProduct);
+        } catch (Exception e) {
+            logger.warn("⚠️ Failed to handle inventory status changes for SKU: {} - {}", 
+                item.getWebTagNumber(), e.getMessage());
+            // Don't fail the entire update for inventory issues
+            // The main product/option updates have already succeeded
+        }
     }
     
     /**

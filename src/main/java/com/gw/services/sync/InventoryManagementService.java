@@ -5,6 +5,7 @@ import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.InventoryLevel;
 import com.gw.services.shopifyapi.objects.InventoryLevels;
 import com.gw.services.shopifyapi.objects.Product;
+import com.gw.services.shopifyapi.objects.Variant;
 import com.gw.services.inventory.InventoryLevelService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Reusable Inventory Management Service
@@ -120,5 +122,147 @@ public class InventoryManagementService {
         }
         
         return allValid;
+    }
+
+    /**
+     * Handle inventory updates based on status changes (SOLD vs Available)
+     * This is the main entry point for inventory management during updates
+     * 
+     * @param item The feed item with potentially changed status
+     * @param existingProduct The current product in Shopify
+     * @throws Exception if inventory update fails
+     */
+    public void handleInventoryStatusChange(FeedItem item, Product existingProduct) throws Exception {
+        logger.debug("🔍 Checking inventory status change for SKU: {}", item.getWebTagNumber());
+        
+        try {
+            if (!hasInventoryStatusChanged(item, existingProduct)) {
+                logger.debug("No inventory status change detected for SKU: {}", item.getWebTagNumber());
+                return;
+            }
+            
+            logger.info("📦 Inventory status change detected for SKU: {} -> {}", 
+                item.getWebTagNumber(), item.getWebStatus());
+            
+            // Update inventory based on new status
+            updateInventoryForStatusChange(item, existingProduct);
+            
+        } catch (Exception e) {
+            logger.error("❌ Failed to handle inventory status change for SKU: {}", item.getWebTagNumber(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * Determine if the feed item's status represents a change in inventory levels
+     * 
+     * @param item The feed item with current status
+     * @param existingProduct The existing product to compare against
+     * @return true if inventory should be updated based on status change
+     */
+    private boolean hasInventoryStatusChanged(FeedItem item, Product existingProduct) {
+        if (existingProduct.getVariants() == null || existingProduct.getVariants().isEmpty()) {
+            logger.warn("No variants found in existing product for status comparison");
+            return false;
+        }
+        
+        // Get current inventory level
+        String currentInventory = getCurrentInventoryLevel(existingProduct.getVariants().get(0));
+        
+        // Determine what inventory should be based on feed status
+        String expectedInventory = determineInventoryFromStatus(item.getWebStatus());
+        
+        boolean hasChanged = !expectedInventory.equals(currentInventory);
+        
+        if (hasChanged) {
+            logger.info("📊 Status change detected: Current inventory={}, Expected inventory={} for status='{}'", 
+                currentInventory, expectedInventory, item.getWebStatus());
+        }
+        
+        return hasChanged;
+    }
+
+    /**
+     * Get the current inventory level from a variant
+     */
+    private String getCurrentInventoryLevel(Variant variant) {
+        if (variant.getInventoryLevels() == null || variant.getInventoryLevels().get() == null) {
+            logger.debug("No inventory levels found, assuming 0");
+            return "0";
+        }
+        
+        // Sum all inventory across locations
+        int totalInventory = 0;
+        for (InventoryLevel level : variant.getInventoryLevels().get()) {
+            if (level.getAvailable() != null) {
+                try {
+                    totalInventory += Integer.parseInt(level.getAvailable());
+                } catch (NumberFormatException e) {
+                    logger.warn("Could not parse inventory level: {}", level.getAvailable());
+                }
+            }
+        }
+        
+        return String.valueOf(totalInventory);
+    }
+
+    /**
+     * Determine what inventory level should be based on feed status
+     */
+    private String determineInventoryFromStatus(String webStatus) {
+        if (webStatus == null) {
+            logger.debug("Null status, defaulting to available inventory");
+            return "1";
+        }
+        
+        boolean isSold = webStatus.equalsIgnoreCase("SOLD");
+        String inventory = isSold ? "0" : "1";
+        
+        logger.debug("Status '{}' -> inventory '{}'", webStatus, inventory);
+        return inventory;
+    }
+
+    /**
+     * Update inventory for a status change (e.g., Available -> SOLD)
+     */
+    private void updateInventoryForStatusChange(FeedItem item, Product existingProduct) throws Exception {
+        if (existingProduct.getVariants() == null || existingProduct.getVariants().isEmpty()) {
+            logger.warn("No variants found for inventory status update");
+            return;
+        }
+        
+        Variant variant = existingProduct.getVariants().get(0);
+        String newQuantity = determineInventoryFromStatus(item.getWebStatus());
+        
+        logger.info("🔄 Updating inventory for SKU: {} to quantity: {} (status: {})", 
+            item.getWebTagNumber(), newQuantity, item.getWebStatus());
+        
+        updateVariantInventoryQuantity(variant, newQuantity);
+    }
+
+    /**
+     * Update the inventory quantity for a specific variant
+     */
+    private void updateVariantInventoryQuantity(Variant variant, String newQuantity) throws Exception {
+        if (variant.getInventoryLevels() == null || variant.getInventoryLevels().get() == null) {
+            logger.warn("No inventory levels found for quantity update");
+            return;
+        }
+        
+        // Update all inventory levels to the new quantity
+        List<InventoryLevel> levelsToUpdate = new ArrayList<>();
+        for (InventoryLevel level : variant.getInventoryLevels().get()) {
+            level.setAvailable(newQuantity);
+            levelsToUpdate.add(level);
+        }
+        
+        // Update on Shopify
+        if (validateInventoryLevels(levelsToUpdate)) {
+            shopifyGraphQLService.updateInventoryLevels(levelsToUpdate);
+            logger.info("✅ Updated inventory levels to {} for {} locations", 
+                newQuantity, levelsToUpdate.size());
+        } else {
+            logger.warn("⚠️ Skipping inventory update due to invalid inventory level data");
+        }
     }
 } 

@@ -78,6 +78,35 @@ public class ProductCreationService {
     }
     
     /**
+     * Create a product template for UPDATES without inventory creation
+     * Inventory is handled separately by InventoryManagementService based on status changes
+     * 
+     * @param feedItem The feed item with source data
+     * @return Product template ready for update (no inventory data)
+     * @throws Exception if template building fails
+     */
+    public Product createProductForUpdate(FeedItem feedItem) throws Exception {
+        logger.debug("🔄 Building update product template for SKU: {} (inventory handled separately)", feedItem.getWebTagNumber());
+        
+        Product product = new Product();
+        
+        // Set basic product information
+        setBasicProductInfo(product, feedItem);
+        
+        // Use specialized services but SKIP inventory creation for updates
+        productImageService.setProductImages(product, feedItem);
+        variantService.createVariantWithoutInventory(product, feedItem);  // New method without inventory
+        metadataService.setProductMetadata(product, feedItem);
+        
+        logger.debug("✅ Update product template built for SKU: {} - {} variants, {} metafields (no inventory)", 
+            feedItem.getWebTagNumber(), 
+            product.getVariants() != null ? product.getVariants().size() : 0,
+            product.getMetafields() != null ? product.getMetafields().size() : 0);
+        
+        return product;
+    }
+    
+    /**
      * Creates product using clean 2-step pipeline approach
      * This is the main method for creating product structure with options
      * Images are handled separately by ImageService to avoid duplication

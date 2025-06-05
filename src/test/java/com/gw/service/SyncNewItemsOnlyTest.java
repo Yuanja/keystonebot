@@ -66,6 +66,10 @@ public class SyncNewItemsOnlyTest extends BaseGraphqlTest {
             Product product = foundProduct.get();
             Assertions.assertEquals("ACTIVE", product.getStatus(), "Product should have ACTIVE status");
             
+            // Assert exactly 1 variant per product
+            Assertions.assertNotNull(product.getVariants(), "Product should have variants");
+            Assertions.assertEquals(1, product.getVariants().size(), "Product should have exactly 1 variant: " + originalItem.getWebTagNumber());
+            
             // Store product details for comparison after second batch
             firstBatchProductDetails.put(originalItem.getWebTagNumber(), 
                 product.getId() + "|" + product.getTitle() + "|" + product.getUpdatedAt());
@@ -113,6 +117,10 @@ public class SyncNewItemsOnlyTest extends BaseGraphqlTest {
             Product product = foundProduct.get();
             Assertions.assertEquals("ACTIVE", product.getStatus(), "Second batch product should have ACTIVE status");
             
+            // Assert exactly 1 variant per product
+            Assertions.assertNotNull(product.getVariants(), "Second batch product should have variants");
+            Assertions.assertEquals(1, product.getVariants().size(), "Second batch product should have exactly 1 variant: " + secondBatchItem.getWebTagNumber());
+            
             // Verify collection associations
             List<Collect> collects = shopifyApiService.getCollectsForProductId(product.getId());
             Assertions.assertTrue(collects.size() > 0, "Second batch product should be associated with collections");
@@ -146,6 +154,10 @@ public class SyncNewItemsOnlyTest extends BaseGraphqlTest {
             
             // Verify the updatedAt timestamp hasn't changed (indicates no modification)
             Assertions.assertEquals(storedUpdatedAt, product.getUpdatedAt(), "First batch product updatedAt should be unchanged (no modification): " + firstBatchItem.getWebTagNumber());
+            
+            // Assert exactly 1 variant per product (should remain unchanged)
+            Assertions.assertNotNull(product.getVariants(), "First batch product should still have variants");
+            Assertions.assertEquals(1, product.getVariants().size(), "First batch product should still have exactly 1 variant: " + firstBatchItem.getWebTagNumber());
             
             // CRITICAL: Verify image count hasn't doubled (no duplicate images)
             int currentImageCount = product.getImages() != null ? product.getImages().size() : 0;

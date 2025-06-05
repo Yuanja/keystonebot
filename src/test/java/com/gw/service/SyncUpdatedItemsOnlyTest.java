@@ -54,6 +54,11 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
         for (FeedItem item : topFeedItems) {
             Product product = shopifyApiService.getProductByProductId(item.getShopifyItemId());
             assertNotNull(product, "Product should have been created for item " + item.getWebTagNumber());
+            
+            // Assert exactly 1 variant per product after initial creation
+            Assertions.assertNotNull(product.getVariants(), "Initial product should have variants");
+            Assertions.assertEquals(1, product.getVariants().size(), "Initial product should have exactly 1 variant: " + item.getWebTagNumber());
+            
             initialProducts.add(product);
             logger.info("✅ Initial product created: {} with ID {}", item.getWebTagNumber(), product.getId());
         }
@@ -146,7 +151,20 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
             Assertions.assertNotNull(product.getVariants(), "Product should have variants");
             Assertions.assertFalse(product.getVariants().isEmpty(), "Product should have at least one variant");
             
+            // Assert exactly 1 variant per product after update
+            Assertions.assertEquals(1, product.getVariants().size(), "Updated product should have exactly 1 variant: " + modifiedItem.getWebTagNumber());
+            
             Variant variant = product.getVariants().get(0);
+            
+            // Assert variant quantity is 1 by checking inventory levels
+            Assertions.assertNotNull(variant.getInventoryLevels(), "Updated product variant should have inventory levels: " + modifiedItem.getWebTagNumber());
+            Assertions.assertNotNull(variant.getInventoryLevels().get(), "Updated product variant should have inventory level list: " + modifiedItem.getWebTagNumber());
+            Assertions.assertFalse(variant.getInventoryLevels().get().isEmpty(), "Updated product variant should have at least one inventory level: " + modifiedItem.getWebTagNumber());
+            
+            // Check the first inventory level's available quantity
+            InventoryLevel firstInventoryLevel = variant.getInventoryLevels().get().get(0);
+            Assertions.assertEquals("1", firstInventoryLevel.getAvailable(), "Updated product variant should have quantity of 1: " + modifiedItem.getWebTagNumber());
+            
             logger.info("Product {}: Checking variant options", (i + 1));
             logger.info("  Expected Color (webWatchDial): '{}'", modifiedItem.getWebWatchDial());
             logger.info("  Actual Color (option1): '{}'", variant.getOption1());
@@ -169,6 +187,10 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
         for (int i = 0; i < shopifyProducts.size(); i++) {
             Product product = shopifyProducts.get(i);
             FeedItem modifiedItem = modifiedItems.get(i);
+            
+            // Assert exactly 1 variant per product during metafield verification
+            Assertions.assertNotNull(product.getVariants(), "Product should have variants during metafield verification");
+            Assertions.assertEquals(1, product.getVariants().size(), "Product should still have exactly 1 variant during metafield verification: " + modifiedItem.getWebTagNumber());
             
             Assertions.assertNotNull(product.getMetafields(), "Product should have metafields");
             
