@@ -553,17 +553,21 @@ public class InventoryFixTest {
             
             for (InventoryIssue issue : fixableIssues) {
                 try {
-                    logger.info("🔧 Fixing SKU {}: {} → {}", 
+                    logger.info("🔧 ATTEMPTING FIX for SKU {}: {} → {}", 
                         issue.sku, issue.currentInventory, issue.correctInventory);
+                    logger.info("   Product: {}", issue.product.getTitle());
+                    logger.info("   Status: {} | Needs: {} inventory", 
+                        issue.feedItemStatus, issue.correctInventory);
                     
                     boolean success = applyInventoryFix(issue);
                     
                     if (success) {
                         successfulFixes++;
-                        logger.info("✅ Successfully fixed inventory for SKU: {}", issue.sku);
+                        logger.info("✅ SUCCESS: Fixed inventory for SKU: {}", issue.sku);
                     } else {
                         failedFixes++;
-                        logger.error("❌ Failed to fix inventory for SKU: {}", issue.sku);
+                        logger.error("❌ FAILURE: Could not fix inventory for SKU: {}", issue.sku);
+                        logger.error("   This may require manual investigation!");
                     }
                     
                     // Small delay to avoid rate limiting
@@ -594,33 +598,72 @@ public class InventoryFixTest {
     private boolean applyInventoryFix(InventoryIssue issue) throws Exception {
         Product product = issue.product;
         int targetInventory = issue.correctInventory;
+        String sku = issue.sku;
+        
+        logger.info("🔧 STARTING INVENTORY FIX for SKU: {}", sku);
+        logger.info("  Product ID: {}", product.getId());
+        logger.info("  Product Title: {}", product.getTitle());
+        logger.info("  Current Total Inventory: {}", issue.currentInventory);
+        logger.info("  Target Total Inventory: {}", targetInventory);
+        logger.info("  Feed Item Status: {}", issue.feedItemStatus);
         
         // Get the first variant (assuming single variant products)
         if (product.getVariants() == null || product.getVariants().isEmpty()) {
-            logger.warn("⚠️ No variants found for product {}", product.getId());
+            logger.error("❌ No variants found for product {} (SKU: {})", product.getId(), sku);
             return false;
         }
         
         Variant variant = product.getVariants().get(0);
+        logger.info("  Variant ID: {}", variant.getId());
+        logger.info("  Variant SKU: {}", variant.getSku());
         
         if (variant.getInventoryLevels() == null || variant.getInventoryLevels().get() == null) {
-            logger.warn("⚠️ No inventory levels found for variant {}", variant.getId());
+            logger.error("❌ No inventory levels found for variant {} (SKU: {})", variant.getId(), sku);
             return false;
+        }
+        
+        // Get current inventory levels and calculate actual total
+        List<InventoryLevel> inventoryLevels = variant.getInventoryLevels().get();
+        logger.info("  Found {} inventory locations", inventoryLevels.size());
+        
+        // Calculate and verify current total
+        int actualCurrentTotal = 0;
+        for (InventoryLevel level : inventoryLevels) {
+            try {
+                int qty = Integer.parseInt(level.getAvailable());
+                actualCurrentTotal += qty;
+                logger.debug("    Location {}: {} units", level.getLocationId(), qty);
+            } catch (NumberFormatException e) {
+                logger.warn("⚠️ Invalid quantity '{}' at location {}", level.getAvailable(), level.getLocationId());
+            }
+        }
+        
+        logger.info("  Calculated Current Total: {} (should match issue.currentInventory: {})", 
+            actualCurrentTotal, issue.currentInventory);
+        
+        if (actualCurrentTotal != issue.currentInventory) {
+            logger.warn("⚠️ MISMATCH: Calculated total {} != issue total {}", 
+                actualCurrentTotal, issue.currentInventory);
         }
         
         // Update inventory levels
         boolean success = true;
-        List<InventoryLevel> inventoryLevels = variant.getInventoryLevels().get();
         
         try {
-            logger.info("📍 Updating inventory across {} locations:", inventoryLevels.size());
-            logger.info("    " + "=".repeat(90));
-            logger.info("    {:^10} | {:^25} | {:^15} | {:^15} | {:^10}", 
-                "Location", "Location ID", "Current Qty", "New Qty", "Change");
-            logger.info("    " + "=".repeat(90));
+            logger.info("📍 BEFORE UPDATE - Current inventory distribution:");
+            logger.info("    " + "=".repeat(110));
+            logger.info("    {:^10} | {:^35} | {:^15} | {:^15} | {:^15} | {:^10}", 
+                "Location", "Location ID", "Before Qty", "Target Qty", "Inventory Item", "Change");
+            logger.info("    " + "=".repeat(110));
+            
+            // Create a copy of original values for verification
+            Map<String, String> originalValues = new HashMap<>();
             
             for (int i = 0; i < inventoryLevels.size(); i++) {
                 InventoryLevel level = inventoryLevels.get(i);
+                
+                // Store original value
+                originalValues.put(level.getLocationId(), level.getAvailable());
                 
                 int currentQuantity = 0;
                 try {
@@ -644,32 +687,138 @@ public class InventoryFixTest {
                 
                 // Format location ID for display
                 String locationIdDisplay = level.getLocationId();
-                if (locationIdDisplay != null && locationIdDisplay.length() > 23) {
-                    locationIdDisplay = locationIdDisplay.substring(0, 20) + "...";
+                if (locationIdDisplay != null && locationIdDisplay.length() > 33) {
+                    locationIdDisplay = locationIdDisplay.substring(0, 30) + "...";
                 }
                 
-                logger.info("    {:^10} | {:^25} | {:^15} | {:^15} | {:^10}", 
+                // Format inventory item ID for display
+                String inventoryItemDisplay = level.getInventoryItemId();
+                if (inventoryItemDisplay != null && inventoryItemDisplay.length() > 13) {
+                    inventoryItemDisplay = inventoryItemDisplay.substring(0, 10) + "...";
+                }
+                
+                logger.info("    {:^10} | {:^35} | {:^15} | {:^15} | {:^15} | {:^10}", 
                     (i + 1),
                     locationIdDisplay != null ? locationIdDisplay : "N/A",
                     currentQuantity,
                     newQuantity,
+                    inventoryItemDisplay != null ? inventoryItemDisplay : "N/A",
                     changeDisplay);
                 
-                // Update inventory level
+                // Log the specific update being made
+                logger.debug("      🔄 Setting location {} from '{}' to '{}'", 
+                    level.getLocationId(), level.getAvailable(), newQuantity);
+                
+                // Update inventory level object
                 level.setAvailable(String.valueOf(newQuantity));
+                
+                // Verify the update was applied
+                logger.debug("      ✅ InventoryLevel object updated: getAvailable() = '{}'", level.getAvailable());
             }
-            logger.info("    " + "=".repeat(90));
+            logger.info("    " + "=".repeat(110));
+            
+            // Log the API call details
+            logger.info("🚀 CALLING SHOPIFY API: updateInventoryLevels()");
+            logger.info("  Number of inventory levels to update: {}", inventoryLevels.size());
+            logger.info("  API Method: shopifyApiService.updateInventoryLevels(inventoryLevels)");
+            
+            // Before API call - log all values being sent
+            for (int i = 0; i < inventoryLevels.size(); i++) {
+                InventoryLevel level = inventoryLevels.get(i);
+                logger.info("    API Payload #{}: LocationId={}, InventoryItemId={}, Available={}", 
+                    i + 1, level.getLocationId(), level.getInventoryItemId(), level.getAvailable());
+            }
             
             // Apply all inventory level updates via Shopify API
+            logger.info("📡 Executing API call...");
             shopifyApiService.updateInventoryLevels(inventoryLevels);
-            logger.info("✅ Successfully updated inventory levels for variant: {}", variant.getId());
+            logger.info("✅ API call completed successfully");
+            
+            // Verify the update by fetching fresh data
+            logger.info("🔍 VERIFICATION: Fetching updated product to verify changes...");
+            try {
+                Product updatedProduct = shopifyApiService.getProductByProductId(product.getId());
+                if (updatedProduct != null && updatedProduct.getVariants() != null && !updatedProduct.getVariants().isEmpty()) {
+                    Variant updatedVariant = updatedProduct.getVariants().get(0);
+                    if (updatedVariant.getInventoryLevels() != null && updatedVariant.getInventoryLevels().get() != null) {
+                        
+                        logger.info("📊 AFTER UPDATE - Actual inventory distribution:");
+                        logger.info("    " + "=".repeat(90));
+                        logger.info("    {:^10} | {:^35} | {:^15} | {:^15} | {:^10}", 
+                            "Location", "Location ID", "Actual Qty", "Expected", "Status");
+                        logger.info("    " + "=".repeat(90));
+                        
+                        int newTotal = 0;
+                        List<InventoryLevel> updatedLevels = updatedVariant.getInventoryLevels().get();
+                        
+                        for (int i = 0; i < updatedLevels.size(); i++) {
+                            InventoryLevel updatedLevel = updatedLevels.get(i);
+                            
+                            int actualQty = 0;
+                            try {
+                                actualQty = Integer.parseInt(updatedLevel.getAvailable());
+                                newTotal += actualQty;
+                            } catch (NumberFormatException e) {
+                                logger.warn("⚠️ Invalid updated quantity: {}", updatedLevel.getAvailable());
+                            }
+                            
+                            int expectedQty = (i == 0) ? targetInventory : 0;
+                            String status = (actualQty == expectedQty) ? "✅ CORRECT" : "❌ WRONG";
+                            
+                            String locationIdDisplay = updatedLevel.getLocationId();
+                            if (locationIdDisplay != null && locationIdDisplay.length() > 33) {
+                                locationIdDisplay = locationIdDisplay.substring(0, 30) + "...";
+                            }
+                            
+                            logger.info("    {:^10} | {:^35} | {:^15} | {:^15} | {:^10}", 
+                                (i + 1),
+                                locationIdDisplay != null ? locationIdDisplay : "N/A",
+                                actualQty,
+                                expectedQty,
+                                status);
+                        }
+                        logger.info("    " + "=".repeat(90));
+                        
+                        logger.info("📈 FINAL TOTALS COMPARISON:");
+                        logger.info("  Original Total: {}", issue.currentInventory);
+                        logger.info("  Target Total: {}", targetInventory);
+                        logger.info("  Actual New Total: {}", newTotal);
+                        
+                        if (newTotal == targetInventory) {
+                            logger.info("  ✅ SUCCESS: Fix applied correctly!");
+                        } else {
+                            logger.error("  ❌ FAILURE: Total inventory is {} but should be {}", newTotal, targetInventory);
+                            logger.error("  🚨 CRITICAL: The fix did not work as expected!");
+                            
+                            // Detailed error analysis
+                            if (newTotal > issue.currentInventory) {
+                                logger.error("  📈 PROBLEM: Inventory INCREASED from {} to {} (increment detected!)", 
+                                    issue.currentInventory, newTotal);
+                            } else if (newTotal < targetInventory) {
+                                logger.error("  📉 PROBLEM: Inventory is {} but should be {}", newTotal, targetInventory);
+                            }
+                            
+                            success = false;
+                        }
+                        
+                    } else {
+                        logger.warn("⚠️ Could not verify update - no inventory levels in updated product");
+                    }
+                } else {
+                    logger.warn("⚠️ Could not verify update - failed to fetch updated product");
+                }
+            } catch (Exception verifyException) {
+                logger.warn("⚠️ Could not verify update due to error: {}", verifyException.getMessage());
+            }
             
         } catch (Exception e) {
-            logger.error("❌ Failed to update inventory levels for variant {}: {}", 
-                variant.getId(), e.getMessage());
+            logger.error("❌ Failed to update inventory levels for variant {} (SKU: {}): {}", 
+                variant.getId(), sku, e.getMessage());
+            logger.error("❌ Exception details: ", e);
             success = false;
         }
         
+        logger.info("🏁 INVENTORY FIX COMPLETE for SKU: {} - Success: {}", sku, success);
         return success;
     }
     
