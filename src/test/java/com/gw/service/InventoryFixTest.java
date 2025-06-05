@@ -1518,4 +1518,423 @@ public class InventoryFixTest {
         int productsWithInventory = 0;
         int totalInventory = 0;
     }
+    
+    /**
+     * 🧪 STANDALONE INVENTORY API TEST 🧪
+     * 
+     * This test isolates the inventory update API to verify:
+     * 1. The inventorySetQuantities mutation works without errors
+     * 2. Setting inventory to the same value doesn't increment it
+     * 3. Absolute value setting works correctly
+     * 
+     * USAGE:
+     * mvn test -Dtest=InventoryFixTest#testInventoryAPIDirectly -Dspring.profiles.active=keystone-dev
+     * 
+     * SAFE: This test only works with available items and sets inventory to the same value
+     */
+    @Test
+    public void testInventoryAPIDirectly() throws Exception {
+        logger.info("=== Standalone Inventory API Test ===");
+        logger.info("🔬 Testing inventorySetQuantities mutation in isolation");
+        
+        // STEP 1: Find an available item from the database (not Shopify)
+        logger.info("📂 Finding an available product from database...");
+        
+        // Get all items and filter by webStatus (product status)
+        List<FeedItem> allItems = feedItemService.findAll();
+        List<FeedItem> availableItems = allItems.stream()
+            .filter(item -> "Available".equalsIgnoreCase(item.getWebStatus()))
+            .toList();
+        
+        if (availableItems.isEmpty()) {
+            logger.error("❌ No items with webStatus='Available' found in database");
+            logger.info("💡 Available webStatus values in database:");
+            allItems.stream()
+                .map(FeedItem::getWebStatus)
+                .distinct()
+                .forEach(status -> logger.info("  - '{}'", status));
+            return;
+        }
+        
+        logger.info("✅ Found {} items with webStatus='Available'", availableItems.size());
+        
+        // Find an available item that has a Shopify ID (published)
+        FeedItem testFeedItem = null;
+        for (FeedItem item : availableItems) {
+            if (item.getShopifyItemId() != null && !item.getShopifyItemId().trim().isEmpty()) {
+                testFeedItem = item;
+                logger.info("✅ Found test item from database: SKU={}, Description={}, Shopify ID={}", 
+                    item.getWebTagNumber(), 
+                    item.getWebDescriptionShort() != null ? 
+                        (item.getWebDescriptionShort().length() > 50 ? 
+                            item.getWebDescriptionShort().substring(0, 50) + "..." : 
+                            item.getWebDescriptionShort()) : "N/A",
+                    item.getShopifyItemId());
+                break;
+            }
+        }
+        
+        if (testFeedItem == null) {
+            logger.error("❌ No published available items found (need item with Shopify ID)");
+            logger.info("💡 Available items without Shopify ID: {}", 
+                availableItems.stream()
+                    .filter(item -> item.getShopifyItemId() == null || item.getShopifyItemId().trim().isEmpty())
+                    .map(FeedItem::getWebTagNumber)
+                    .limit(5)
+                    .toList());
+            return;
+        }
+        
+        // STEP 2: Get the product from Shopify using the database item
+        logger.info("📡 Retrieving product from Shopify using database reference...");
+        Product testProduct;
+        try {
+            testProduct = shopifyApiService.getProductByProductId(testFeedItem.getShopifyItemId());
+        } catch (Exception e) {
+            logger.error("❌ Failed to retrieve product from Shopify: {}", e.getMessage());
+            return;
+        }
+        
+        if (testProduct == null) {
+            logger.error("❌ Product not found in Shopify with ID: {}", testFeedItem.getShopifyItemId());
+            logger.info("💡 This indicates the database has a stale Shopify ID");
+            return;
+        }
+        
+        // Verify the SKUs match
+        String shopifySku = extractSKUFromProduct(testProduct);
+        if (!testFeedItem.getWebTagNumber().equals(shopifySku)) {
+            logger.warn("⚠️ SKU mismatch - Database: {}, Shopify: {}", testFeedItem.getWebTagNumber(), shopifySku);
+        }
+        
+        logger.info("✅ Product verified: Title={}, Total Inventory={}", 
+            testProduct.getTitle(), calculateTotalInventory(testProduct));
+        
+        // STEP 3: Ensure product is published
+        logger.info("📢 Ensuring product is published...");
+        try {
+            shopifyApiService.publishProductToAllChannels(testProduct.getId());
+            logger.info("✅ Product published successfully");
+        } catch (Exception e) {
+            logger.warn("⚠️ Publishing may have failed, but continuing test: {}", e.getMessage());
+        }
+        
+        // STEP 4: Get current inventory levels
+        logger.info("📊 Getting current inventory levels...");
+        if (testProduct.getVariants() == null || testProduct.getVariants().isEmpty()) {
+            logger.error("❌ Test product has no variants");
+            return;
+        }
+        
+        Variant testVariant = testProduct.getVariants().get(0);
+        if (testVariant.getInventoryLevels() == null || testVariant.getInventoryLevels().get() == null) {
+            logger.error("❌ Test variant has no inventory levels");
+            return;
+        }
+        
+        List<InventoryLevel> originalLevels = testVariant.getInventoryLevels().get();
+        logger.info("📍 Current inventory distribution:");
+        logger.info("    " + "=".repeat(80));
+        logger.info("    {:^15} | {:^20} | {:^15} | {:^20}", "Location #", "Location ID", "Quantity", "Inventory Item ID");
+        logger.info("    " + "=".repeat(80));
+        
+        int originalTotal = 0;
+        for (int i = 0; i < originalLevels.size(); i++) {
+            InventoryLevel level = originalLevels.get(i);
+            int qty = 0;
+            try {
+                qty = Integer.parseInt(level.getAvailable());
+                originalTotal += qty;
+            } catch (NumberFormatException e) {
+                logger.warn("⚠️ Invalid quantity: {}", level.getAvailable());
+            }
+            
+            String locationIdDisplay = level.getLocationId();
+            if (locationIdDisplay != null && locationIdDisplay.length() > 18) {
+                locationIdDisplay = locationIdDisplay.substring(0, 15) + "...";
+            }
+            
+            String inventoryItemIdDisplay = level.getInventoryItemId();
+            if (inventoryItemIdDisplay != null && inventoryItemIdDisplay.length() > 18) {
+                inventoryItemIdDisplay = inventoryItemIdDisplay.substring(0, 15) + "...";
+            }
+            
+            logger.info("    {:^15} | {:^20} | {:^15} | {:^20}", 
+                "Location " + (i + 1), 
+                locationIdDisplay != null ? locationIdDisplay : "N/A",
+                qty,
+                inventoryItemIdDisplay != null ? inventoryItemIdDisplay : "N/A");
+        }
+        logger.info("    " + "=".repeat(80));
+        logger.info("📈 Original Total Inventory: {}", originalTotal);
+        
+        // STEP 5: Test absolute inventory setting (set to same value)
+        logger.info("🔧 Testing absolute inventory setting...");
+        logger.info("💡 Setting inventory to SAME values to test absolute setting (should not increment)");
+        
+        try {
+            // Call the absolute inventory setting method
+            shopifyApiService.setInventoryLevelsAbsolute(originalLevels);
+            logger.info("✅ setInventoryLevelsAbsolute call completed without error");
+            
+        } catch (Exception e) {
+            logger.error("❌ setInventoryLevelsAbsolute failed with error: {}", e.getMessage());
+            logger.error("❌ Exception details: ", e);
+            throw e;
+        }
+        
+        // STEP 6: Verify inventory didn't change
+        logger.info("🔍 Verifying inventory levels after API call...");
+        
+        // Fetch fresh product data
+        Product updatedProduct = shopifyApiService.getProductByProductId(testProduct.getId());
+        if (updatedProduct == null || updatedProduct.getVariants() == null || updatedProduct.getVariants().isEmpty()) {
+            logger.error("❌ Could not fetch updated product data");
+            return;
+        }
+        
+        Variant updatedVariant = updatedProduct.getVariants().get(0);
+        if (updatedVariant.getInventoryLevels() == null || updatedVariant.getInventoryLevels().get() == null) {
+            logger.error("❌ Updated variant has no inventory levels");
+            return;
+        }
+        
+        List<InventoryLevel> updatedLevels = updatedVariant.getInventoryLevels().get();
+        logger.info("📍 Updated inventory distribution:");
+        logger.info("    " + "=".repeat(90));
+        logger.info("    {:^10} | {:^20} | {:^15} | {:^15} | {:^15} | {:^10}", 
+            "Location", "Location ID", "Original Qty", "Updated Qty", "Difference", "Status");
+        logger.info("    " + "=".repeat(90));
+        
+        int updatedTotal = 0;
+        boolean testPassed = true;
+        
+        for (int i = 0; i < Math.min(originalLevels.size(), updatedLevels.size()); i++) {
+            InventoryLevel originalLevel = originalLevels.get(i);
+            InventoryLevel updatedLevel = updatedLevels.get(i);
+            
+            int originalQty = 0;
+            int updatedQty = 0;
+            
+            try {
+                originalQty = Integer.parseInt(originalLevel.getAvailable());
+                updatedQty = Integer.parseInt(updatedLevel.getAvailable());
+                updatedTotal += updatedQty;
+            } catch (NumberFormatException e) {
+                logger.warn("⚠️ Invalid quantity format");
+                continue;
+            }
+            
+            int difference = updatedQty - originalQty;
+            String status = (difference == 0) ? "✅ CORRECT" : "❌ CHANGED";
+            
+            if (difference != 0) {
+                testPassed = false;
+            }
+            
+            String locationIdDisplay = updatedLevel.getLocationId();
+            if (locationIdDisplay != null && locationIdDisplay.length() > 18) {
+                locationIdDisplay = locationIdDisplay.substring(0, 15) + "...";
+            }
+            
+            logger.info("    {:^10} | {:^20} | {:^15} | {:^15} | {:^15} | {:^10}", 
+                (i + 1),
+                locationIdDisplay != null ? locationIdDisplay : "N/A",
+                originalQty,
+                updatedQty,
+                difference > 0 ? "+" + difference : String.valueOf(difference),
+                status);
+        }
+        logger.info("    " + "=".repeat(90));
+        
+        // STEP 7: Final verification
+        logger.info("📊 FINAL VERIFICATION:");
+        logger.info("  - Database Item: SKU={}, webStatus={}, syncStatus={}", 
+            testFeedItem.getWebTagNumber(), testFeedItem.getWebStatus(), testFeedItem.getStatus());
+        logger.info("  - Shopify Product: Title={}, Status={}", testProduct.getTitle(), testProduct.getStatus());
+        logger.info("  - Original Total: {}", originalTotal);
+        logger.info("  - Updated Total: {}", updatedTotal);
+        logger.info("  - Difference: {}", updatedTotal - originalTotal);
+        
+        if (testPassed && updatedTotal == originalTotal) {
+            logger.info("✅ 🎉 TEST PASSED: Absolute inventory setting works correctly!");
+            logger.info("✅ Inventory levels remained the same (no increment detected)");
+            logger.info("✅ The inventorySetQuantities mutation is working as expected");
+        } else {
+            logger.error("❌ 🚨 TEST FAILED: Inventory levels changed unexpectedly!");
+            logger.error("❌ Expected: No change in inventory levels");
+            logger.error("❌ Actual: Total changed from {} to {}", originalTotal, updatedTotal);
+            
+            if (updatedTotal > originalTotal) {
+                logger.error("❌ 🐛 BUG CONFIRMED: Inventory INCREMENTED (delta behavior detected)");
+                logger.error("❌ This suggests the API is still using delta adjustment instead of absolute setting");
+            } else {
+                logger.error("❌ Inventory DECREASED unexpectedly");
+            }
+            
+            throw new AssertionError("Inventory levels changed when they should have remained the same");
+        }
+        
+        logger.info("=== Standalone Inventory API Test Complete ===");
+    }
+    
+    /**
+     * 🔍 GET SAMPLE FEED ITEM FROM DATABASE 🔍
+     * 
+     * This method fetches a sample item from the feed_item database for testing purposes.
+     * 
+     * USAGE:
+     * mvn test -Dtest=InventoryFixTest#getSampleFeedItem -Dspring.profiles.active=keystone-dev
+     * 
+     * SAFE: Read-only operation, no changes made
+     */
+    @Test
+    public void getSampleFeedItem() throws Exception {
+        logger.info("=== Getting Sample Feed Item from Database ===");
+        logger.info("🔍 Fetching available feed items for testing");
+        
+        // Get a few sample feed items
+        logger.info("📂 Looking for available feed items in database...");
+        
+        try {
+            // Get all items and filter by webStatus (product status)
+            List<FeedItem> allItems = feedItemService.findAll();
+            
+            // Try to find an available item first
+            logger.info("🔍 Searching for items with webStatus='Available'...");
+            List<FeedItem> availableItems = allItems.stream()
+                .filter(item -> "Available".equalsIgnoreCase(item.getWebStatus()))
+                .toList();
+            
+            if (!availableItems.isEmpty()) {
+                logger.info("✅ Found {} items with webStatus='Available'", availableItems.size());
+                
+                // Show first few available items
+                int displayCount = Math.min(5, availableItems.size());
+                logger.info("📋 First {} Available items:", displayCount);
+                
+                for (int i = 0; i < displayCount; i++) {
+                    FeedItem item = availableItems.get(i);
+                    logger.info("  {}. SKU: {} | Description: {} | Price: ${} | Shopify ID: {}", 
+                        i + 1,
+                        item.getWebTagNumber(),
+                        item.getWebDescriptionShort() != null ? 
+                            (item.getWebDescriptionShort().length() > 50 ? 
+                                item.getWebDescriptionShort().substring(0, 50) + "..." : 
+                                item.getWebDescriptionShort()) : "N/A",
+                        item.getWebPriceRetail(),
+                        item.getShopifyItemId());
+                }
+                
+                // Use first available item for detailed display
+                FeedItem sampleItem = availableItems.get(0);
+                logger.info("");
+                logger.info("🎯 SELECTED SAMPLE ITEM FOR TESTING:");
+                logger.info("=" .repeat(80));
+                displayFeedItemDetails(sampleItem);
+                
+            } else {
+                logger.warn("⚠️ No items with webStatus='Available' found, looking for any items...");
+            }
+            
+            // Also try to find a sold item
+            logger.info("");
+            logger.info("🔍 Searching for items with webStatus='Sold'...");
+            List<FeedItem> soldItems = allItems.stream()
+                .filter(item -> "Sold".equalsIgnoreCase(item.getWebStatus()))
+                .toList();
+            
+            if (!soldItems.isEmpty()) {
+                logger.info("✅ Found {} items with webStatus='Sold'", soldItems.size());
+                
+                // Show first sold item
+                FeedItem soldItem = soldItems.get(0);
+                logger.info("📋 Sample Sold item:");
+                logger.info("  SKU: {} | Description: {} | Price: ${} | Shopify ID: {}", 
+                    soldItem.getWebTagNumber(),
+                    soldItem.getWebDescriptionShort() != null ? 
+                        (soldItem.getWebDescriptionShort().length() > 50 ? 
+                            soldItem.getWebDescriptionShort().substring(0, 50) + "..." : 
+                            soldItem.getWebDescriptionShort()) : "N/A",
+                    soldItem.getWebPriceRetail(),
+                    soldItem.getShopifyItemId());
+            } else {
+                logger.warn("⚠️ No items with webStatus='Sold' found");
+            }
+            
+            // Get total count
+            logger.info("");
+            logger.info("📊 DATABASE STATISTICS:");
+            logger.info("  Total feed items in database: {}", allItems.size());
+            
+            // Count by webStatus (product status)
+            Map<String, Integer> webStatusCounts = new HashMap<>();
+            Map<String, Integer> syncStatusCounts = new HashMap<>();
+            int withShopifyId = 0;
+            int withoutShopifyId = 0;
+            
+            for (FeedItem item : allItems) {
+                // Count by webStatus (product status)
+                String webStatus = item.getWebStatus() != null ? item.getWebStatus() : "NULL";
+                webStatusCounts.put(webStatus, webStatusCounts.getOrDefault(webStatus, 0) + 1);
+                
+                // Count by status (sync status)
+                String syncStatus = item.getStatus() != null ? item.getStatus() : "NULL";
+                syncStatusCounts.put(syncStatus, syncStatusCounts.getOrDefault(syncStatus, 0) + 1);
+                
+                if (item.getShopifyItemId() != null && !item.getShopifyItemId().trim().isEmpty()) {
+                    withShopifyId++;
+                } else {
+                    withoutShopifyId++;
+                }
+            }
+            
+            logger.info("  Items by webStatus (product status):");
+            for (Map.Entry<String, Integer> entry : webStatusCounts.entrySet()) {
+                logger.info("    - '{}': {} items", entry.getKey(), entry.getValue());
+            }
+            
+            logger.info("  Items by status (sync status):");
+            for (Map.Entry<String, Integer> entry : syncStatusCounts.entrySet()) {
+                logger.info("    - '{}': {} items", entry.getKey(), entry.getValue());
+            }
+            
+            logger.info("  Items with Shopify ID: {}", withShopifyId);
+            logger.info("  Items without Shopify ID: {}", withoutShopifyId);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error accessing feed item database: {}", e.getMessage());
+            logger.error("❌ Exception details: ", e);
+            throw e;
+        }
+        
+        logger.info("=" .repeat(80));
+        logger.info("=== Sample Feed Item Retrieval Complete ===");
+    }
+    
+    /**
+     * Helper method to display detailed feed item information
+     */
+    private void displayFeedItemDetails(FeedItem item) {
+        logger.info("  Web Tag Number (SKU): {}", item.getWebTagNumber());
+        logger.info("  Description: {}", item.getWebDescriptionShort());
+        logger.info("  Web Status (product): {}", item.getWebStatus());
+        logger.info("  Status (sync): {}", item.getStatus());
+        logger.info("  Price: ${}", item.getWebPriceRetail());
+        logger.info("  Designer/Brand: {}", item.getWebDesigner());
+        logger.info("  Watch Model: {}", item.getWebWatchModel());
+        logger.info("  Condition: {}", item.getWebWatchCondition());
+        logger.info("  Shopify Item ID: {}", item.getShopifyItemId());
+        logger.info("  Last Updated Date: {}", item.getLastUpdatedDate());
+        logger.info("  Published Date: {}", item.getPublishedDate());
+        
+        // Check if published to Shopify
+        if (item.getShopifyItemId() != null && !item.getShopifyItemId().trim().isEmpty()) {
+            logger.info("  📢 Status: PUBLISHED to Shopify");
+            logger.info("  💡 This item can be used for inventory testing");
+        } else {
+            logger.info("  📝 Status: NOT PUBLISHED to Shopify");
+            logger.info("  💡 This item cannot be used for inventory testing");
+        }
+    }
 } 

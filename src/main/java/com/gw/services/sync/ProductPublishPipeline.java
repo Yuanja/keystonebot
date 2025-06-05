@@ -88,10 +88,10 @@ public class ProductPublishPipeline {
         logger.info("🚀 Starting product publish pipeline for SKU: {}", item.getWebTagNumber());
         
         try {
-                    // Handle image processing
-        handleImageProcessing(item);
+            // Handle image processing
+            handleImageProcessing(item);
         
-        // Create product on Shopify
+            // Create product on Shopify
             Product newlyAddedProduct = createProductOnShopify(item);
             
             // Add images to product using FeedItem image URLs

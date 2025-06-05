@@ -217,8 +217,6 @@ public class ShopifyGraphQLService {
                                 sku
                                 price
                                 compareAtPrice
-                                weight
-                                weightUnit
                                 selectedOptions {
                                     name
                                     value
@@ -227,7 +225,6 @@ public class ShopifyGraphQLService {
                                     id
                                 }
                                 inventoryPolicy
-                                requiresShipping
                                 taxable
                                 barcode
                                 position
@@ -318,21 +315,18 @@ public class ShopifyGraphQLService {
                                             id
                                             title
                                             sku
-                                            price
-                                            compareAtPrice
-                                            weight
-                                            weightUnit
-                                            selectedOptions {
+                                                                                    price
+                                        compareAtPrice
+                                        selectedOptions {
                                                 name
                                                 value
                                             }
                                             inventoryItem {
                                                 id
                                             }
-                                            inventoryPolicy
-                                            requiresShipping
-                                            taxable
-                                            barcode
+                                                                                    inventoryPolicy
+                                        taxable
+                                        barcode
                                             position
                                         }
                                     }
@@ -443,8 +437,6 @@ public class ShopifyGraphQLService {
                                         sku
                                         price
                                         compareAtPrice
-                                        weight
-                                        weightUnit
                                         selectedOptions {
                                             name
                                             value
@@ -453,7 +445,6 @@ public class ShopifyGraphQLService {
                                             id
                                         }
                                         inventoryPolicy
-                                        requiresShipping
                                         taxable
                                         barcode
                                         position
@@ -827,29 +818,44 @@ public class ShopifyGraphQLService {
     /**
      * Set inventory levels to absolute values using inventorySetQuantities mutation
      * 
-     * This is the recommended method for setting exact inventory quantities.
-     * Based on: https://shopify.dev/docs/api/admin-graphql/latest/mutations/inventorySetQuantities
+     * This method uses the new absolute value setting API that properly sets
+     * inventory to a specific quantity instead of adjusting by delta.
+     * 
+     * API Reference: https://shopify.dev/docs/api/admin-graphql/latest/mutations/inventorySetQuantities
      */
     public void setInventoryLevelsAbsolute(List<InventoryLevel> inventoryLevels) throws Exception {
-        if (inventoryLevels == null || inventoryLevels.isEmpty()) {
-            logger.warn("No inventory levels provided for absolute setting");
-            return;
+        logger.info("🔧 Setting absolute inventory levels for {} inventory items", inventoryLevels.size());
+        
+        // Validate input
+        for (InventoryLevel level : inventoryLevels) {
+            if (level.getInventoryItemId() == null || level.getLocationId() == null || level.getAvailable() == null) {
+                logger.error("❌ Invalid inventory level - missing required fields:");
+                logger.error("  InventoryItemId: {}", level.getInventoryItemId());
+                logger.error("  LocationId: {}", level.getLocationId());
+                logger.error("  Available: {}", level.getAvailable());
+                throw new IllegalArgumentException("All inventory levels must have inventoryItemId, locationId, and available quantity");
+            }
         }
         
-        // Prepare quantities for the mutation
         List<Map<String, Object>> quantities = new ArrayList<>();
         
         for (InventoryLevel level : inventoryLevels) {
             Map<String, Object> quantity = new HashMap<>();
-            quantity.put("inventoryItemId", "gid://shopify/InventoryItem/" + level.getInventoryItemId());
-            quantity.put("locationId", "gid://shopify/Location/" + level.getLocationId());
-            quantity.put("quantity", Integer.valueOf(level.getAvailable()));
+            String inventoryItemGid = "gid://shopify/InventoryItem/" + level.getInventoryItemId();
+            String locationGid = "gid://shopify/Location/" + level.getLocationId();
+            Integer quantityValue = Integer.valueOf(level.getAvailable());
+            
+            quantity.put("inventoryItemId", inventoryItemGid);
+            quantity.put("locationId", locationGid);
+            quantity.put("quantity", quantityValue);
             // Note: Not setting compareQuantity to bypass compare-and-set validation
             // This allows absolute setting regardless of current value
             quantities.add(quantity);
             
-            logger.debug("Preparing absolute inventory set: Item={}, Location={}, Quantity={}", 
-                level.getInventoryItemId(), level.getLocationId(), level.getAvailable());
+            logger.debug("✅ Prepared inventory quantity input:");
+            logger.debug("  - InventoryItem GID: {}", inventoryItemGid);
+            logger.debug("  - Location GID: {}", locationGid);
+            logger.debug("  - Quantity: {}", quantityValue);
         }
         
         String mutation = """
@@ -884,8 +890,25 @@ public class ShopifyGraphQLService {
         Map<String, Object> variables = new HashMap<>();
         variables.put("input", input);
         
+        // Log the complete request details
+        logger.info("🚀 Executing inventorySetQuantities mutation:");
+        logger.info("  - API Version: {}", apiVersion);
+        logger.info("  - Endpoint: {}", getGraphQLEndpoint());
+        logger.info("  - Number of quantities: {}", quantities.size());
+        logger.info("  - Mutation input:");
+        logger.info("    - name: {}", input.get("name"));
+        logger.info("    - reason: {}", input.get("reason"));
+        logger.info("    - ignoreCompareQuantity: {}", input.get("ignoreCompareQuantity"));
+        logger.info("    - quantities count: {}", quantities.size());
+        
+        // Log each quantity for debugging
+        for (int i = 0; i < quantities.size(); i++) {
+            Map<String, Object> qty = quantities.get(i);
+            logger.info("    - Quantity #{}: inventoryItemId={}, locationId={}, quantity={}", 
+                i + 1, qty.get("inventoryItemId"), qty.get("locationId"), qty.get("quantity"));
+        }
+        
         try {
-            logger.info("🚀 Executing inventorySetQuantities mutation for {} inventory levels", quantities.size());
             JsonNode data = executeGraphQLQuery(mutation, variables);
             JsonNode inventorySet = data.get("inventorySetQuantities");
             
@@ -911,6 +934,10 @@ public class ShopifyGraphQLService {
             
         } catch (Exception e) {
             logger.error("❌ Error setting absolute inventory levels", e);
+            logger.error("❌ Request details that failed:");
+            logger.error("  - API Version: {}", apiVersion);
+            logger.error("  - Endpoint: {}", getGraphQLEndpoint());
+            logger.error("  - Input: {}", input);
             throw e;
         }
     }
@@ -1479,9 +1506,10 @@ public class ShopifyGraphQLService {
         if (product.getHandle() != null) {
             input.put("handle", product.getHandle());
         }
-        if (product.getBodyHtml() != null) {
-            input.put("bodyHtml", product.getBodyHtml());
-        }
+        // NOTE: bodyHtml is NOT supported in ProductInput in API version 2025-04+
+        // It must be set using a separate update operation after product creation
+        // We'll handle this in the addProduct method
+        
         if (product.getVendor() != null) {
             input.put("vendor", product.getVendor());
         }
@@ -1500,7 +1528,6 @@ public class ShopifyGraphQLService {
         }
         
         // Add metafields if present
-        // Add metafields
         if (product.getMetafields() != null && !product.getMetafields().isEmpty()) {
             List<Map<String, Object>> metafields = new ArrayList<>();
             for (Metafield metafield : product.getMetafields()) {
@@ -1517,55 +1544,13 @@ public class ShopifyGraphQLService {
             input.put("metafields", metafields);
         }
         
-        // Note: Images cannot be added directly in ProductInput via GraphQL
+        // NOTE: Images cannot be added directly in ProductInput via GraphQL
         // They must be added separately using productImageCreate mutation after product creation
         
-        // CRITICAL: Do NOT include options in productCreate/productUpdate
-        // Options must be created separately using productOptionsCreate mutation
-        // For updates, options are managed via updateProductOptions (remove & recreate)
-        
-        // Handle variants with COMPLETE inventory management settings
-        if (product.getVariants() != null && !product.getVariants().isEmpty()) {
-            List<Map<String, Object>> variants = new ArrayList<>();
-            for (Variant variant : product.getVariants()) {
-                Map<String, Object> variantInput = new HashMap<>();
-                
-                if (variant.getTitle() != null) {
-                    variantInput.put("title", variant.getTitle());
-                }
-                if (variant.getSku() != null) {
-                    variantInput.put("sku", variant.getSku());
-                }
-                if (variant.getPrice() != null) {
-                    variantInput.put("price", variant.getPrice());
-                }
-                
-                // Include inventory management settings for proper inventory tracking
-                if (variant.getInventoryManagement() != null) {
-                    variantInput.put("inventoryManagement", variant.getInventoryManagement().toUpperCase());
-                }
-                if (variant.getInventoryPolicy() != null) {
-                    variantInput.put("inventoryPolicy", variant.getInventoryPolicy().toUpperCase());
-                }
-                if (variant.getTaxable() != null) {
-                    variantInput.put("taxable", Boolean.parseBoolean(variant.getTaxable()));
-                }
-                
-                // Additional inventory-related fields
-                if (variant.getRequiresShipping() != null) {
-                    variantInput.put("requiresShipping", Boolean.parseBoolean(variant.getRequiresShipping()));
-                }
-                if (variant.getWeight() != null) {
-                    variantInput.put("weight", Double.parseDouble(variant.getWeight()));
-                }
-                if (variant.getWeightUnit() != null) {
-                    variantInput.put("weightUnit", variant.getWeightUnit().toUpperCase());
-                }
-                
-                variants.add(variantInput);
-            }
-            input.put("variants", variants);
-        }
+        // NOTE: Options and variants are NOT supported in ProductInput in API version 2025-04+
+        // Product options must be created using productOptionsCreate mutation
+        // Variants must be created using productVariantsBulkCreate mutation
+        // We'll handle these in the addProduct method after basic product creation
         
         return input;
     }
@@ -1800,20 +1785,22 @@ public class ShopifyGraphQLService {
     
     /**
      * Add a single image to an existing product using GraphQL
+     * Updated to use productCreateMedia mutation for API version 2025-04+
      */
     private void addImageToProduct(String productId, Image image) {
         String mutation = """
-            mutation productAppendImages($input: ProductAppendImagesInput!) {
-                productAppendImages(input: $input) {
-                    newImages {
+            mutation productCreateMedia($productId: ID!, $media: [CreateMediaInput!]!) {
+                productCreateMedia(productId: $productId, media: $media) {
+                    media {
                         id
-                        url
-                        altText
+                        alt
+                        mediaContentType
+                        status
                     }
                     product {
                         id
                     }
-                    userErrors {
+                    mediaUserErrors {
                         field
                         message
                     }
@@ -1821,38 +1808,38 @@ public class ShopifyGraphQLService {
             }
             """;
         
-        Map<String, Object> imageInput = new HashMap<>();
+        Map<String, Object> mediaInput = new HashMap<>();
         if (image.getSrc() != null) {
-            imageInput.put("src", image.getSrc());
+            mediaInput.put("originalSource", image.getSrc());
         }
+        mediaInput.put("mediaContentType", "IMAGE");
         
         // Handle alt text from metafields
         if (image.getMetafields() != null && !image.getMetafields().isEmpty()) {
             for (Metafield metafield : image.getMetafields()) {
                 if ("tags".equals(metafield.getNamespace()) && "alt".equals(metafield.getKey())) {
-                    imageInput.put("altText", metafield.getValue());
+                    mediaInput.put("alt", metafield.getValue());
                     break;
                 }
             }
         }
         
-        Map<String, Object> input = new HashMap<>();
-        input.put("id", "gid://shopify/Product/" + productId);
-        input.put("images", List.of(imageInput));
-        
         Map<String, Object> variables = new HashMap<>();
-        variables.put("input", input);
+        variables.put("productId", "gid://shopify/Product/" + productId);
+        variables.put("media", List.of(mediaInput));
         
         try {
             JsonNode data = executeGraphQLQuery(mutation, variables);
-            JsonNode imageAppend = data.get("productAppendImages");
+            JsonNode mediaCreate = data.get("productCreateMedia");
             
             // Check for user errors
-            JsonNode userErrors = imageAppend.get("userErrors");
+            JsonNode userErrors = mediaCreate.get("mediaUserErrors");
             if (userErrors != null && userErrors.size() > 0) {
-                logger.error("Image append failed with user errors: " + userErrors.toString());
-                throw new RuntimeException("Image append failed: " + userErrors.toString());
+                logger.error("Media creation failed with user errors: " + userErrors.toString());
+                throw new RuntimeException("Media creation failed: " + userErrors.toString());
             }
+            
+            logger.debug("Successfully added image to product: " + productId + ", image src: " + image.getSrc());
             
         } catch (Exception e) {
             logger.error("Error adding image to product: " + productId + ", image src: " + image.getSrc(), e);
@@ -2644,7 +2631,6 @@ public class ShopifyGraphQLService {
                             name
                         }
                         ownerType
-                        visibleToStorefrontApi
                     }
                     userErrors {
                         field
@@ -2660,7 +2646,8 @@ public class ShopifyGraphQLService {
         definition.put("name", name);
         definition.put("description", description);
         definition.put("ownerType", ownerType);
-        definition.put("visibleToStorefrontApi", true);
+        // NOTE: visibleToStorefrontApi field was removed in API version 2025-04
+        // Storefront API visibility is now controlled by other mechanisms
         
         // Set type as string directly (not as an object)
         definition.put("type", type);
@@ -2786,7 +2773,6 @@ public class ShopifyGraphQLService {
                             name
                         }
                         ownerType
-                        visibleToStorefrontApi
                     }
                     userErrors {
                         field
@@ -2802,7 +2788,8 @@ public class ShopifyGraphQLService {
         definition.put("name", name);
         definition.put("description", description);
         definition.put("ownerType", ownerType);
-        definition.put("visibleToStorefrontApi", true);
+        // NOTE: visibleToStorefrontApi field was removed in API version 2025-04
+        // Storefront API visibility is now controlled by other mechanisms
         
         // Set type as string directly (not as an object)
         definition.put("type", type);
@@ -3710,5 +3697,195 @@ public class ShopifyGraphQLService {
                 logger.warn("Failed to remove product " + productId + " from collection " + c.getCollectionId() + ": " + e.getMessage());
             }
         });
+    }
+
+    /**
+     * Create product variants using productVariantsBulkCreate mutation (required for API 2025-04+)
+     * This replaces the deprecated approach of including variants in ProductInput
+     * 
+     * @param productId The product ID to add variants to
+     * @param variants List of variants to create
+     * @return true if variants were created successfully
+     */
+    public boolean createProductVariants(String productId, List<Variant> variants) {
+        if (variants == null || variants.isEmpty()) {
+            logger.debug("No variants to create for product: {}", productId);
+            return true;
+        }
+        
+        logger.info("🔨 Creating {} variants for product ID: {} using productVariantsBulkCreate", variants.size(), productId);
+        
+        // First, get the product options to map variant option values to option IDs
+        Product product = getProductByProductId(productId);
+        if (product == null || product.getOptions() == null || product.getOptions().isEmpty()) {
+            logger.warn("⚠️ Product {} has no options defined - variants cannot be created without options in API 2025-04+", productId);
+            return false;
+        }
+        
+                    String mutation = """
+                mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!, $strategy: ProductVariantsBulkCreateStrategy) {
+                    productVariantsBulkCreate(productId: $productId, variants: $variants, strategy: $strategy) {
+                    product {
+                        id
+                        variants(first: 100) {
+                            edges {
+                                node {
+                                    id
+                                    title
+                                    sku
+                                    price
+                                    inventoryItem {
+                                        id
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    productVariants {
+                        id
+                        title
+                        sku
+                        price
+                    }
+                    userErrors {
+                        field
+                        message
+                        code
+                    }
+                }
+            }
+            """;
+        
+        try {
+            // Build variants input array using correct ProductVariantsBulkInput structure
+            List<Map<String, Object>> variantsInput = new ArrayList<>();
+            for (Variant variant : variants) {
+                Map<String, Object> variantInput = new HashMap<>();
+                
+                // Basic variant properties (API 2025-04+ compatible)
+                if (variant.getPrice() != null) {
+                    variantInput.put("price", variant.getPrice());
+                }
+                if (variant.getCompareAtPrice() != null) {
+                    variantInput.put("compareAtPrice", variant.getCompareAtPrice());
+                }
+                if (variant.getTaxable() != null) {
+                    variantInput.put("taxable", Boolean.parseBoolean(variant.getTaxable()));
+                }
+                if (variant.getInventoryPolicy() != null) {
+                    variantInput.put("inventoryPolicy", variant.getInventoryPolicy().toUpperCase());
+                }
+                
+                // Add inventory item with SKU
+                if (variant.getSku() != null) {
+                    Map<String, Object> inventoryItem = new HashMap<>();
+                    inventoryItem.put("sku", variant.getSku());
+                    inventoryItem.put("tracked", true);
+                    variantInput.put("inventoryItem", inventoryItem);
+                }
+                
+                // Add option values (CRITICAL for API 2025-04+)
+                // Map variant options to product option IDs
+                List<Map<String, Object>> optionValues = new ArrayList<>();
+                
+                // Map variant option values to product options
+                for (Option productOption : product.getOptions()) {
+                    String optionName = productOption.getName();
+                    String variantOptionValue = null;
+                    
+                    // Map option names to variant option values
+                    if ("Color".equalsIgnoreCase(optionName) && variant.getOption1() != null) {
+                        variantOptionValue = variant.getOption1();
+                    } else if ("Size".equalsIgnoreCase(optionName) && variant.getOption2() != null) {
+                        variantOptionValue = variant.getOption2();
+                    } else if ("Material".equalsIgnoreCase(optionName) && variant.getOption3() != null) {
+                        variantOptionValue = variant.getOption3();
+                    } else if ("Title".equalsIgnoreCase(optionName)) {
+                        variantOptionValue = variant.getTitle() != null ? variant.getTitle() : "Default Title";
+                    }
+                    
+                    if (variantOptionValue != null) {
+                        Map<String, Object> optionValueInput = new HashMap<>();
+                        optionValueInput.put("optionId", "gid://shopify/ProductOption/" + productOption.getId());
+                        optionValueInput.put("name", variantOptionValue);
+                        optionValues.add(optionValueInput);
+                        logger.debug("Mapped option {} (ID: {}) -> value: {}", optionName, productOption.getId(), variantOptionValue);
+                    }
+                }
+                
+                if (!optionValues.isEmpty()) {
+                    variantInput.put("optionValues", optionValues);
+                } else {
+                    logger.warn("⚠️ No option values mapped for variant SKU: {}", variant.getSku());
+                }
+                
+                // Add inventory quantities using correct structure
+                if (variant.getInventoryLevels() != null && variant.getInventoryLevels().get() != null) {
+                    List<Map<String, Object>> inventoryQuantities = new ArrayList<>();
+                    for (InventoryLevel level : variant.getInventoryLevels().get()) {
+                        Map<String, Object> quantityInput = new HashMap<>();
+                        quantityInput.put("locationId", "gid://shopify/Location/" + level.getLocationId());
+                        quantityInput.put("availableQuantity", Integer.parseInt(level.getAvailable()));
+                        inventoryQuantities.add(quantityInput);
+                    }
+                    if (!inventoryQuantities.isEmpty()) {
+                        variantInput.put("inventoryQuantities", inventoryQuantities);
+                    }
+                }
+                
+                variantsInput.add(variantInput);
+                logger.debug("Prepared variant input for SKU: {} with {} inventory locations", 
+                    variant.getSku(), 
+                    variant.getInventoryLevels() != null && variant.getInventoryLevels().get() != null ? 
+                        variant.getInventoryLevels().get().size() : 0);
+            }
+            
+            // Build GraphQL variables
+            Map<String, Object> variables = new HashMap<>();
+            variables.put("productId", "gid://shopify/Product/" + productId);
+            variables.put("variants", variantsInput);
+            variables.put("strategy", "REMOVE_STANDALONE_VARIANT"); // Remove default variant when creating new ones
+            
+            // Execute the mutation
+            JsonNode response = executeGraphQLQuery(mutation, variables);
+            
+            if (response != null) {
+                JsonNode productVariantsBulkCreate = response.get("productVariantsBulkCreate");
+                if (productVariantsBulkCreate != null) {
+                    JsonNode userErrors = productVariantsBulkCreate.get("userErrors");
+                    if (userErrors != null && userErrors.isArray() && userErrors.size() > 0) {
+                        logger.error("ProductVariantsBulkCreate failed with user errors:");
+                        for (JsonNode error : userErrors) {
+                            logger.error("  Error: {}", error.toString());
+                        }
+                        return false;
+                    } else {
+                        JsonNode createdVariants = productVariantsBulkCreate.get("productVariants");
+                        if (createdVariants != null && createdVariants.isArray()) {
+                            logger.info("✅ Successfully created {} variants for product ID: {}", 
+                                createdVariants.size(), productId);
+                            
+                            // Log created variants for verification
+                            for (JsonNode variantNode : createdVariants) {
+                                logger.info("  Created variant - ID: {}, SKU: {}, Price: {}", 
+                                    extractIdFromGid(variantNode.get("id").asText()),
+                                    variantNode.has("sku") ? variantNode.get("sku").asText() : "null",
+                                    variantNode.has("price") ? variantNode.get("price").asText() : "null");
+                            }
+                            return true;
+                        }
+                    }
+                } else {
+                    logger.error("No productVariantsBulkCreate field found in response");
+                }
+            }
+            
+            logger.error("Unexpected GraphQL response structure for productVariantsBulkCreate");
+            return false;
+            
+        } catch (Exception e) {
+            logger.error("Failed to create variants for product ID: " + productId, e);
+            return false;
+        }
     }
 } 

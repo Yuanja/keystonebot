@@ -8,9 +8,12 @@ import com.gw.services.FreeMakerService;
 import com.gw.services.constants.ShopifyConstants;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.Product;
+import com.gw.services.shopifyapi.objects.Variant;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 /**
  * Unified Product Creation Service
@@ -88,15 +91,9 @@ public class ProductCreationService {
     public Product createProductForUpdate(FeedItem feedItem) throws Exception {
         logger.debug("🔄 Building update product template for SKU: {} with correct inventory", feedItem.getWebTagNumber());
         
-        Product product = new Product();
-        
-        // Set basic product information
-        setBasicProductInfo(product, feedItem);
-        
-        // Use specialized services - create variant WITH correct inventory based on feedItem
-        productImageService.setProductImages(product, feedItem);
-        variantService.createDefaultVariant(product, feedItem, shopifyGraphQLService.getAllLocations());
-        metadataService.setProductMetadata(product, feedItem);
+        // FIXED: Use this.createProduct() to trigger the overridden method that adds eBay metafields
+        // This ensures that eBay metafields are refreshed with updated values during updates
+        Product product = this.createProduct(feedItem);
         
         logger.debug("✅ Update product template built for SKU: {} - {} variants, {} metafields (with correct inventory)", 
             feedItem.getWebTagNumber(), 
@@ -163,22 +160,25 @@ public class ProductCreationService {
     }
     
     /**
-     * Execute the complete product creation pipeline
+     * Execute the complete product creation pipeline (API 2025-04+ compatible)
      * 
      * @param productTemplate The prepared product template
      * @param feedItem The source feed item for options
-     * @return The fully created product with ID and options (images handled separately)
+     * @return The fully created product with ID, variants, and options (images handled separately)
      */
     public ProductCreationResult executeCreation(Product productTemplate, FeedItem feedItem) {
         String sku = feedItem.getWebTagNumber();
-        logger.info("🚀 Starting product creation pipeline for SKU: {}", sku);
+        logger.info("🚀 Starting 3-step product creation pipeline for SKU: {} (API 2025-04+ compatible)", sku);
         
         try {
-            // Create basic product
+            // Step 1: Create basic product (WITHOUT variants - API 2025-04+ requirement)
             Product basicProduct = createBasicProduct(productTemplate, sku);
             
-            // Add variant options
+            // Step 2: Add variant options FIRST (FIXED - required before creating variants in API 2025-04+)
             addVariantOptions(basicProduct.getId(), feedItem);
+            
+            // Step 3: Create variants with SKUs (NEW - required for API 2025-04+, AFTER options are created)
+            addProductVariants(basicProduct.getId(), productTemplate.getVariants());
             
             // Note: Images are handled separately by ImageService in the publish pipeline
             // This eliminates duplicate image uploads
@@ -186,11 +186,11 @@ public class ProductCreationService {
             // Fetch final product with all components (except images)
             Product finalProduct = fetchCompleteProduct(basicProduct.getId());
             
-            logger.info("✅ Product creation pipeline completed successfully for SKU: {}", sku);
+            logger.info("✅ 3-step product creation pipeline completed successfully for SKU: {}", sku);
             return ProductCreationResult.success(finalProduct);
             
         } catch (Exception e) {
-            logger.error("❌ Product creation pipeline failed for SKU: {} - {}", sku, e.getMessage());
+            logger.error("❌ 3-step product creation pipeline failed for SKU: {} - {}", sku, e.getMessage());
             return ProductCreationResult.failure(e);
         }
     }
@@ -209,6 +209,22 @@ public class ProductCreationService {
         
         logger.info("✅ Basic product created - ID: {}", created.getId());
         return created;
+    }
+    
+    /**
+     * Create product variants using productVariantsBulkCreate (NEW - required for API 2025-04+)
+     */
+    private void addProductVariants(String productId, List<Variant> variants) {
+        logger.info("🔨 Creating variants for product ID: {} (API 2025-04+ method)", productId);
+        
+        boolean variantsCreated = shopifyGraphQLService.createProductVariants(productId, variants);
+        
+        if (variantsCreated) {
+            logger.info("✅ Product variants created successfully");
+        } else {
+            logger.error("❌ Failed to create product variants");
+            throw new RuntimeException("Failed to create product variants for product ID: " + productId);
+        }
     }
     
     /**
@@ -242,12 +258,13 @@ public class ProductCreationService {
     }
     
     /**
-     * Create a clean template for basic product creation
+     * Create a clean template for basic product creation (API 2025-04+ compatible)
+     * Excludes variants, options, and images which must be created separately
      */
     private Product createCleanTemplate(Product template) {
         Product clean = new Product();
         
-        // Copy only basic fields
+        // Copy only basic fields that are supported in ProductInput for API 2025-04+
         clean.setTitle(template.getTitle());
         clean.setBodyHtml(template.getBodyHtml());
         clean.setVendor(template.getVendor());
@@ -255,20 +272,16 @@ public class ProductCreationService {
         clean.setPublishedScope(template.getPublishedScope());
         clean.setTags(template.getTags());
         clean.setMetafields(template.getMetafields());
-        clean.setVariants(template.getVariants());
         
-        // Clean variants of option values (these are added in Step 2)
-        if (clean.getVariants() != null) {
-            clean.getVariants().forEach(variant -> {
-                variant.setOption1(null);
-                variant.setOption2(null);
-                variant.setOption3(null);
-            });
-        }
-        
-        // Exclude images and options (added in separate steps)
-        clean.setImages(null);
+        // CRITICAL: Exclude variants, options, and images (must be created separately in API 2025-04+)
+        // - Variants must be created using productVariantsBulkCreate mutation
+        // - Options must be created using productOptionsCreate mutation  
+        // - Images must be created using productImageCreate mutation
+        clean.setVariants(null);
         clean.setOptions(null);
+        clean.setImages(null);
+        
+        logger.debug("🧹 Clean template created - excluding variants, options, and images for separate creation");
         
         return clean;
     }
