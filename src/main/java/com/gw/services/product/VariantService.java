@@ -14,10 +14,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.gw.services.shopifyapi.objects.InventoryLevel;
 
 /**
  * Service responsible for creating and managing product variants
@@ -184,9 +186,10 @@ public class VariantService {
     
     /**
      * Merges existing variants with new variants, preserving IDs and inventory item IDs
+     * The newVariants already have correct inventory levels from createDefaultVariant
      * 
      * @param existingVariants Variants from the existing product
-     * @param newVariants Variants from the new product data
+     * @param newVariants Variants from the new product data (with correct inventory)
      */
     public void mergeVariants(List<Variant> existingVariants, List<Variant> newVariants) {
         logger.debug("Merging {} existing variants with {} new variants", 
@@ -207,12 +210,18 @@ public class VariantService {
                 newVariant.setId(existingVariant.getId());
                 newVariant.setInventoryItemId(existingVariant.getInventoryItemId());
                 
-                // Merge inventory levels
+                // Handle inventory levels - newVariant has correct levels from createDefaultVariant
                 if (existingVariant.getInventoryLevels() != null && newVariant.getInventoryLevels() != null) {
+                    // Both have inventory levels - merge to preserve inventory item IDs
+                    logger.debug("Merging inventory levels for SKU: {}", newVariant.getSku());
                     inventoryLevelService.mergeInventoryLevels(
                         existingVariant.getInventoryLevels(), 
                         newVariant.getInventoryLevels()
                     );
+                } else if (existingVariant.getInventoryLevels() != null && newVariant.getInventoryLevels() == null) {
+                    // Existing has inventory but new doesn't - preserve existing as fallback
+                    logger.debug("Preserving existing inventory levels for SKU: {}", newVariant.getSku());
+                    newVariant.setInventoryLevels(existingVariant.getInventoryLevels());
                 }
             } else {
                 logger.debug("New variant with SKU: {} - no existing variant to merge", newVariant.getSku());

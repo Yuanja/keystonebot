@@ -22,29 +22,45 @@ public class InventoryLevelService {
     
     /**
      * Creates inventory levels for a feed item across all locations
+     * CRITICAL: Total inventory across ALL locations = exactly 1 (not per location)
      * 
-     * @param feedItem The feed item to create inventory for
+     * @param feedItem The feed item to create inventory for (source of truth)
      * @param locations List of all available locations
-     * @return InventoryLevels object with appropriate quantities
+     * @return InventoryLevels object with distributed quantities (total=1)
      */
     public InventoryLevels createInventoryLevels(FeedItem feedItem, List<Location> locations) {
         logger.debug("Creating inventory levels for SKU: {}", feedItem.getWebTagNumber());
         
         InventoryLevels inventoryLevels = new InventoryLevels();
-        String availableQuantity = determineAvailableQuantity(feedItem);
+        String totalQuantity = determineAvailableQuantity(feedItem);
+        boolean hasInventory = !totalQuantity.equals(ShopifyConstants.INVENTORY_SOLD);
         
-        for (Location location : locations) {
+        logger.debug("📦 FeedItem {} status: {} -> Total inventory: {}", 
+            feedItem.getWebTagNumber(), feedItem.getWebStatus(), totalQuantity);
+        
+        // Distribute inventory across locations (total = exactly 1, not per location)
+        for (int i = 0; i < locations.size(); i++) {
+            Location location = locations.get(i);
             InventoryLevel inventoryLevel = new InventoryLevel();
             inventoryLevel.setLocationId(location.getId());
-            inventoryLevel.setAvailable(availableQuantity);
+            
+            // CRITICAL: Only first location gets inventory, others get 0
+            // This ensures total inventory = exactly 1 (not multiplied by location count)
+            String locationQuantity;
+            if (hasInventory && i == 0) {
+                locationQuantity = totalQuantity; // First location gets the inventory
+            } else {
+                locationQuantity = ShopifyConstants.INVENTORY_SOLD; // Others get 0
+            }
+            
+            inventoryLevel.setAvailable(locationQuantity);
             inventoryLevels.addInventoryLevel(inventoryLevel);
             
-            logger.debug("Created inventory level - Location: {}, Quantity: {}", 
-                location.getId(), availableQuantity);
+            logger.debug("📍 Location[{}]: {} -> Quantity: {}", 
+                i, location.getId(), locationQuantity);
         }
         
-        logger.debug("Created {} inventory levels for SKU: {}", 
-            locations.size(), feedItem.getWebTagNumber());
+        logger.debug("✅ Created inventory distribution - Total across all locations: {}", totalQuantity);
         
         return inventoryLevels;
     }

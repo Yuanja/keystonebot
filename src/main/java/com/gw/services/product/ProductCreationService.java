@@ -78,27 +78,27 @@ public class ProductCreationService {
     }
     
     /**
-     * Create a product template for UPDATES without inventory creation
-     * Inventory is handled separately by InventoryManagementService based on status changes
+     * Create a product template for UPDATES with correct inventory based on feedItem
+     * The newVariant will have correct inventory levels, mergeVariants preserves inventory IDs
      * 
-     * @param feedItem The feed item with source data
-     * @return Product template ready for update (no inventory data)
+     * @param feedItem The feed item with source data (source of truth for inventory)
+     * @return Product template ready for update with correct inventory levels
      * @throws Exception if template building fails
      */
     public Product createProductForUpdate(FeedItem feedItem) throws Exception {
-        logger.debug("🔄 Building update product template for SKU: {} (inventory handled separately)", feedItem.getWebTagNumber());
+        logger.debug("🔄 Building update product template for SKU: {} with correct inventory", feedItem.getWebTagNumber());
         
         Product product = new Product();
         
         // Set basic product information
         setBasicProductInfo(product, feedItem);
         
-        // Use specialized services but SKIP inventory creation for updates
+        // Use specialized services - create variant WITH correct inventory based on feedItem
         productImageService.setProductImages(product, feedItem);
-        variantService.createVariantWithoutInventory(product, feedItem);  // New method without inventory
+        variantService.createDefaultVariant(product, feedItem, shopifyGraphQLService.getAllLocations());
         metadataService.setProductMetadata(product, feedItem);
         
-        logger.debug("✅ Update product template built for SKU: {} - {} variants, {} metafields (no inventory)", 
+        logger.debug("✅ Update product template built for SKU: {} - {} variants, {} metafields (with correct inventory)", 
             feedItem.getWebTagNumber(), 
             product.getVariants() != null ? product.getVariants().size() : 0,
             product.getMetafields() != null ? product.getMetafields().size() : 0);
