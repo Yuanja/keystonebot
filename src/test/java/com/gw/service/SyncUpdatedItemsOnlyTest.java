@@ -207,4 +207,4 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
         logger.info("✅ Remove-and-recreate approach for variant options is working correctly");
         logger.info("=== End sync test for updated items ===");
     }
-} 
+}
