@@ -33,9 +33,11 @@ import java.util.HashMap;
  * ===================================
  * 
  * 🛡️ **PRODUCTION SAFE**: Does NOT extend BaseGraphqlTest - will NOT delete existing data!
+ * 🎯 **PARAMETER CONTROLLED**: No source code edits needed - uses command line parameters!
+ * 📍 **LOCATION AWARE**: Enhanced with detailed inventory by location analysis!
  * 
  * 1. **ALWAYS RUN SCAN FIRST**: Use scanInventoryIssues() to identify problems before fixing
- * 2. **DRY RUN BY DEFAULT**: The tool defaults to DRY_RUN = true for safety
+ * 2. **SAFE BY DEFAULT**: Defaults to dry run mode unless explicitly overridden
  * 3. **BACKUP RECOMMENDED**: Consider backing up inventory data before running fixes
  * 4. **TEST ENVIRONMENT**: Test on dev/staging environment first if possible
  * 5. **BUSINESS HOURS**: Run during low-traffic periods to minimize impact
@@ -45,55 +47,79 @@ import java.util.HashMap;
  * This class was updated to NOT extend BaseGraphqlTest to prevent accidental data deletion.
  * Previous versions would have deleted all Shopify products and database records on startup!
  * 
+ * 🎯 NEW FEATURES 🎯
+ * ==================
+ * 
+ * ✅ **Parameter-Based Control**: No more source code edits! Use -DdryRun=false
+ * ✅ **Specific SKU Scanner**: Deep-dive analysis for individual items
+ * ✅ **Location Overview**: Complete inventory distribution analysis
+ * ✅ **Enhanced Tables**: Formatted location displays with detailed breakdowns
+ * ✅ **Smart Detection**: Automatic identification of concentration risks
+ * 
  * 🔧 PRODUCTION USAGE GUIDE 🔧
  * ============================
  * 
- * STEP 1: SCAN FOR ISSUES (READ-ONLY)
+ * STEP 1: SCAN FOR ISSUES (READ-ONLY) 
  * ------------------------------------
- * This is SAFE to run anytime - it only reads data and reports issues:
+ * This is SAFE to run anytime - only reads data and reports issues:
  * 
- *   mvn test -Dtest=InventoryFixTest#scanInventoryIssues -Dspring.profiles.active=keystone-prod
+ *   mvn test -Dtest=InventoryFixTest#scanInventoryIssues
  * 
  * Expected output:
  * - List of products with inventory > 1
  * - Breakdown by feed item status (SOLD/AVAILABLE/NOT_FOUND)
  * - Total excess inventory count
  * 
- * STEP 2: REVIEW SCAN RESULTS
- * ---------------------------
- * Look for:
- * - How many products are affected
- * - Whether the issues make sense (SOLD items should have 0, AVAILABLE should have 1)
- * - Any products with "NOT_FOUND" status (these need manual review)
+ * STEP 2: ANALYZE SPECIFIC ITEMS (READ-ONLY)
+ * ------------------------------------------
+ * For deep-dive analysis of specific SKUs:
  * 
- * STEP 3: RUN DRY RUN FIX (SIMULATION)
- * -----------------------------------
- * This shows what WOULD be fixed without making changes:
+ *   # Edit TARGET_WEB_TAG_NUMBER in the method first
+ *   mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber
  * 
- *   mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -Dspring.profiles.active=keystone-prod
+ * Expected output:
+ * - Complete product details (variants, options, images, metafields)
+ * - Formatted inventory by location tables
+ * - Database vs Shopify comparison
+ * - Automatic issue detection with recommendations
+ * 
+ * STEP 3: LOCATION OVERVIEW (READ-ONLY)
+ * -------------------------------------
+ * For understanding inventory distribution patterns:
+ * 
+ *   mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview
+ * 
+ * Expected output:
+ * - Complete location breakdown with statistics
+ * - Top locations by inventory and product count
+ * - Concentration risk analysis
+ * - Distribution patterns and averages
+ * 
+ * STEP 4: DRY RUN FIX (SIMULATION)
+ * --------------------------------
+ * Shows what WOULD be fixed without making changes:
+ * 
+ *   mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
  * 
  * Expected output:
  * - Detailed fix plan showing current → correct inventory
+ * - Enhanced location change tables
  * - "DRY RUN MODE - No actual changes will be made" message
  * - Count of issues that would be fixed
  * 
- * STEP 4: APPLY ACTUAL FIXES (LIVE MODE)
+ * STEP 5: APPLY ACTUAL FIXES (LIVE MODE)
  * -------------------------------------
  * ⚠️  THIS MAKES REAL CHANGES TO SHOPIFY INVENTORY ⚠️
  * 
- * 1. First, change DRY_RUN setting:
- *    Edit this file and change: private static boolean DRY_RUN = false;
+ * No source code edits needed! Use parameter control:
  * 
- * 2. Run the fix:
- *    mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -Dspring.profiles.active=keystone-prod
+ *   mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
  * 
- * 3. Monitor the output for:
- *    - "LIVE MODE - Changes will be applied to Shopify" message
- *    - Success/failure count for each fix
- *    - Any error messages
- * 
- * 4. Restore DRY_RUN setting:
- *    Change back to: private static boolean DRY_RUN = true;
+ * Monitor the output for:
+ * - "LIVE MODE - Changes will be applied to Shopify!" message
+ * - Enhanced location change tables showing before/after
+ * - Success/failure count for each fix
+ * - Any error messages
  * 
  * 📊 UNDERSTANDING THE OUTPUT 📊
  * ==============================
@@ -114,6 +140,12 @@ import java.util.HashMap;
  * - Diff: How much inventory needs to change
  * - Action: REDUCE (lower inventory) or INCREASE (raise inventory)
  * 
+ * 📍 NEW: Location Analysis Tables:
+ * - Formatted tables showing inventory by location with Location ID, quantities, and changes
+ * - Top locations ranked by inventory and product count
+ * - Concentration risk warnings (>80% inventory in one location)
+ * - Distribution statistics and averages
+ * 
  * 🚨 TROUBLESHOOTING 🚨
  * ====================
  * 
@@ -126,6 +158,11 @@ import java.util.HashMap;
  * - May be test data or manually created products
  * - Defaults to treating as AVAILABLE (inventory = 1)
  * 
+ * "Product not found in Shopify":
+ * - Item exists in database but was deleted from Shopify
+ * - Database has stale Shopify ID
+ * - Run reconciliation to clean up
+ * 
  * "Failed to fix inventory for SKU":
  * - API call failed for that specific product
  * - Check Shopify API rate limits
@@ -136,6 +173,11 @@ import java.util.HashMap;
  * - Check network connectivity
  * - Verify Shopify API credentials
  * - May be hitting rate limits (tool includes delays)
+ * 
+ * "High location concentration" warning:
+ * - Most inventory is in one location (>80%)
+ * - Consider redistribution for risk management
+ * - Normal for single-location setups
  * 
  * 💡 BEST PRACTICES 💡
  * ===================
@@ -150,18 +192,25 @@ import java.util.HashMap;
  * ========================
  * 
  * Recommended frequency:
- * - Weekly scan: mvn test -Dtest=InventoryFixTest#scanInventoryIssues -Dspring.profiles.active=keystone-prod
+ * - Weekly scan: mvn test -Dtest=InventoryFixTest#scanInventoryIssues
+ * - Monthly location overview: mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview
  * - Fix as needed: When scan shows issues > 5% of products
  * - After major updates: When sync system changes are deployed
+ * - Specific SKU analysis: As needed for troubleshooting individual items
  * 
  * ⚡ EMERGENCY USAGE ⚡
  * ===================
  * 
  * If you need to quickly fix inventory issues:
  * 
- * 1. Quick scan: mvn test -Dtest=InventoryFixTest#scanInventoryIssues -Dspring.profiles.active=keystone-prod | grep "Total products with issues"
- * 2. If issues found, set DRY_RUN = false and run: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -Dspring.profiles.active=keystone-prod
- * 3. Restore DRY_RUN = true immediately after
+ * 1. Quick scan: mvn test -Dtest=InventoryFixTest#scanInventoryIssues | grep "Total products with issues"
+ * 2. If issues found: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
+ * 
+ * For specific problem SKUs:
+ * mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=YOUR_SKU
+ * 
+ * For location distribution issues:
+ * 1. Run: mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview
  * 
  * 📋 PRODUCTION CHECKLIST 📋
  * ==========================
@@ -183,9 +232,17 @@ import java.util.HashMap;
  * □ Verify inventory levels are correct
  * □ Check for customer impact
  * □ Save logs for audit
- * □ Restore DRY_RUN = true
+ * □ ~~Restore DRY_RUN = true~~ (Not needed - uses parameters!)
  * 
  * =====================================
+ * 
+ * 🎯 AVAILABLE METHODS 🎯
+ * =======================
+ * 
+ * 1. scanInventoryIssues() - READ-ONLY general scan
+ * 2. scanSpecificInventoryByWebTagNumber() - READ-ONLY single SKU deep-dive
+ * 3. showInventoryByLocationOverview() - READ-ONLY location distribution analysis
+ * 4. fixInflatedInventoryLevels() - Fix method (respects -DdryRun parameter)
  * 
  * PURPOSE: Identify and fix products with inflated inventory levels
  * 
@@ -196,29 +253,27 @@ import java.util.HashMap;
  *    - SOLD status → Set inventory to 0
  *    - Available status → Set inventory to 1
  * 
- * METHODS:
- * - scanInventoryIssues(): READ-ONLY scan and report
- * - fixInflatedInventoryLevels(): Main fix method (respects DRY_RUN flag)
- * 
- * IMPORTANT: This test does NOT extend BaseGraphqlTest to avoid the destructive
- * setUp() method that would delete all products and data!
+ * KEY FEATURES:
+ * - Parameter-based control (no source code edits)
+ * - Enhanced location analysis with formatted tables
+ * - Smart concentration risk detection
+ * - Comprehensive single-SKU analysis
+ * - Production-safe (does not extend BaseGraphqlTest)
  * 
  * SAFETY FEATURES:
  * - Temporarily disables cron schedule during execution to prevent conflicts
  * - Does not clear existing data (unlike BaseGraphqlTest)
  * - Only performs actions when actually needed (smart validation)
- * - DRY_RUN mode for safe testing
+ * - Safe dry run mode by default
+ * - Parameter-controlled live mode
  * 
- * Usage:
+ * QUICK USAGE REFERENCE:
  * 
- * 1. Scan for inventory issues (read-only):
- *    mvn test -Dtest=InventoryFixTest#scanInventoryIssues -Dspring.profiles.active=keystone-prod
- * 
- * 2. Fix inventory issues (dry run):
- *    mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -Dspring.profiles.active=keystone-prod
- * 
- * 3. Fix inventory issues (live mode - edit DRY_RUN = false first):
- *    mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -Dspring.profiles.active=keystone-prod
+ * 1. General scan: mvn test -Dtest=InventoryFixTest#scanInventoryIssues
+ * 2. Location overview: mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview
+ * 3. Specific SKU: mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=YOUR_SKU
+ * 4. Dry run fix: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
+ * 5. Live fix: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
  */
 @SpringJUnitConfig
 @SpringBootTest
@@ -228,7 +283,19 @@ import java.util.HashMap;
 public class InventoryFixTest {
     
     private static final Logger logger = LoggerFactory.getLogger(InventoryFixTest.class);
-    private static boolean DRY_RUN = true; // Set to false to actually apply fixes
+    
+    /**
+     * DRY_RUN mode control via system property
+     * 
+     * Usage:
+     * - Dry run (default): mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
+     * - Live mode: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
+     * - Explicit dry run: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=true
+     */
+    private static boolean getDryRunMode() {
+        String dryRunProperty = System.getProperty("dryRun", "true");
+        return Boolean.parseBoolean(dryRunProperty);
+    }
     
     @Autowired
     private ShopifyGraphQLService shopifyApiService;
@@ -244,17 +311,18 @@ public class InventoryFixTest {
      * 
      * This is the primary method for fixing inventory issues in production.
      * 
-     * SAFETY: Respects DRY_RUN flag - set to false only when ready to apply real changes
+     * SAFETY: Respects dryRun parameter - defaults to safe dry run mode
      * 
      * PROCESS:
      * 1. Scans all Shopify products for inventory > 1
      * 2. Looks up feed_items in database
      * 3. Determines correct inventory based on status
      * 4. Generates detailed fix plan
-     * 5. Applies fixes (if DRY_RUN = false)
+     * 5. Applies fixes (if -DdryRun=false specified)
      * 
      * USAGE:
-     * mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
+     * Dry run (safe): mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
+     * Live mode: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
      * 
      * IMPORTANT: Always run scanInventoryIssues() first to understand scope!
      */
@@ -263,10 +331,13 @@ public class InventoryFixTest {
         logger.info("=== Starting Inventory Fix Test - Production Data Cleanup ===");
         logger.info("🔍 Scanning for products with inflated inventory levels (total > 1)");
         
-        if (DRY_RUN) {
+        boolean dryRun = getDryRunMode();
+        if (dryRun) {
             logger.warn("🧪 DRY RUN MODE - No actual changes will be made");
+            logger.info("💡 To apply actual fixes, add: -DdryRun=false");
         } else {
-            logger.info("🔧 LIVE MODE - Changes will be applied to Shopify");
+            logger.warn("🔧 LIVE MODE - Changes will be applied to Shopify!");
+            logger.warn("⚠️ This will make REAL changes to inventory levels");
         }
         
         // STEP 1: Get all products from Shopify
@@ -431,7 +502,7 @@ public class InventoryFixTest {
         logger.info("=" .repeat(120));
         
         // STEP 6: Apply fixes if not in dry run mode
-        if (!DRY_RUN && !fixableIssues.isEmpty()) {
+        if (!dryRun && !fixableIssues.isEmpty()) {
             logger.info("🔧 Applying inventory fixes...");
             
             int successfulFixes = 0;
@@ -467,8 +538,8 @@ public class InventoryFixTest {
             logger.info("  - Success rate: {:.2f}%", 
                 fixableIssues.size() > 0 ? (double) successfulFixes / fixableIssues.size() * 100 : 0);
             
-        } else if (DRY_RUN) {
-            logger.info("🧪 DRY RUN - No changes applied. Set DRY_RUN = false to apply fixes.");
+        } else if (dryRun) {
+            logger.info("🧪 DRY RUN - No changes applied. Add -DdryRun=false to apply fixes.");
         }
         
         logger.info("=== Inventory Fix Test Complete ===");
@@ -693,18 +764,30 @@ public class InventoryFixTest {
      * - Detailed product information for support
      * 
      * USAGE:
-     * 1. Edit the TARGET_WEB_TAG_NUMBER constant below
-     * 2. Run: mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber
+     * Parameter method (recommended):
+     *   mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=SKU123
+     * 
+     * Alternative - edit constant:
+     *   1. Edit the TARGET_WEB_TAG_NUMBER constant below
+     *   2. Run: mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber
      * 
      * SAFE: Read-only operation, no changes made
      */
     @Test
     public void scanSpecificInventoryByWebTagNumber() throws Exception {
-        // ⚠️ EDIT THIS VALUE TO SCAN A SPECIFIC SKU ⚠️
-        String TARGET_WEB_TAG_NUMBER = "GW12345"; // Replace with actual web_tag_number
+        // Get web tag number from system property or fallback to constant
+        String TARGET_WEB_TAG_NUMBER = System.getProperty("webTagNumber", "GW12345"); // Default fallback
         
         logger.info("=== Specific Inventory Scanner for Web Tag Number: {} ===", TARGET_WEB_TAG_NUMBER);
         logger.info("🔍 Performing detailed inventory analysis for specific SKU");
+        
+        // Show how the web tag number was determined
+        String providedWebTagNumber = System.getProperty("webTagNumber");
+        if (providedWebTagNumber != null) {
+            logger.info("💡 Using web tag number from parameter: -DwebTagNumber={}", providedWebTagNumber);
+        } else {
+            logger.info("💡 Using default web tag number: {} (add -DwebTagNumber=YOUR_SKU to specify different SKU)", TARGET_WEB_TAG_NUMBER);
+        }
         
         // STEP 1: Look up FeedItem in database
         logger.info("📂 Looking up FeedItem in database...");

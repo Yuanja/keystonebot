@@ -21,17 +21,15 @@ mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
 
 ### 3. Live Fix (⚠️ Makes Real Changes)
 ```bash
-# FIRST: Edit src/test/java/com/gw/service/InventoryFixTest.java
-# Change: private static boolean DRY_RUN = false;
-
-mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
-
-# IMMEDIATELY AFTER: Change back to DRY_RUN = true;
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
 ```
 
 ### 4. 🆕 Scan Specific Item by SKU (Safe - Read Only)
 ```bash
-# FIRST: Edit TARGET_WEB_TAG_NUMBER in scanSpecificInventoryByWebTagNumber method
+# Parameter method (recommended)
+mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=YOUR_SKU
+
+# Alternative: Edit TARGET_WEB_TAG_NUMBER in method, then run
 mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber
 ```
 
@@ -64,8 +62,12 @@ mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview
 - Database vs Shopify comparison
 - Automatic inventory issue detection
 
-**Usage**: Edit `TARGET_WEB_TAG_NUMBER` in the method, then run:
+**Usage**: 
 ```bash
+# Parameter method (recommended - no source edits needed)
+mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=YOUR_SKU
+
+# Alternative: Edit TARGET_WEB_TAG_NUMBER in the method, then run
 mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber
 ```
 
@@ -148,6 +150,34 @@ All methods now show inventory with **formatted location tables**:
   - Success rate: 92.00%
 ```
 
+### 🆕 Parameter Control
+**No more editing source code!** Control via command line parameters:
+
+**Dry Run Control:**
+```bash
+# Safe dry run (default)
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
+
+# Live mode with actual changes
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
+
+# Explicit dry run 
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=true
+```
+
+**Specific SKU Analysis:**
+```bash
+# Analyze a specific SKU (recommended method)
+mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=WATCH-001
+
+# Multiple examples
+mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=GW12345
+mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=ROL2023-001
+
+# Alternative: edit constant in source code (not recommended)
+mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber
+```
+
 ---
 
 ## 🚨 Safety Checklist
@@ -168,7 +198,7 @@ All methods now show inventory with **formatted location tables**:
 - [ ] Verify inventory corrections
 - [ ] Check for customer impact
 - [ ] Save logs for audit
-- [ ] Restore `DRY_RUN = true`
+- [ ] ~~Restore `DRY_RUN = true`~~ (No longer needed - uses parameters!)
 
 ---
 
@@ -203,10 +233,8 @@ If inventory issues are urgent:
 # 1. Quick check
 mvn test -Dtest=InventoryFixTest#scanInventoryIssues | grep "Total products with issues"
 
-# 2. If issues found, edit file to set DRY_RUN = false, then:
-mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
-
-# 3. Immediately set DRY_RUN = true
+# 2. If issues found, apply fixes immediately:
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
 ```
 
 ### 🆕 Quick Location Analysis
@@ -216,8 +244,8 @@ For location-specific issues:
 # Check inventory distribution
 mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview | grep "TOP 5"
 
-# Analyze specific SKU (edit TARGET_WEB_TAG_NUMBER first)
-mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber
+# Analyze specific SKU (parameter method)
+mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=YOUR_SKU
 ```
 
 ---
@@ -225,8 +253,8 @@ mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber
 ## 📂 File Locations
 
 - **Test class**: `src/test/java/com/gw/service/InventoryFixTest.java`
-- **DRY_RUN setting**: Line ~31 in InventoryFixTest.java
-- **TARGET_WEB_TAG_NUMBER**: Line ~26 in scanSpecificInventoryByWebTagNumber method
+- **~~DRY_RUN setting~~**: ~~Line ~31 in InventoryFixTest.java~~ (Now uses -DdryRun parameter!)
+- **~~TARGET_WEB_TAG_NUMBER~~**: ~~Line ~26 in scanSpecificInventoryByWebTagNumber method~~ (Now uses -DwebTagNumber parameter!)
 - **This README**: `README-InventoryFixTool.md`
 
 ---
@@ -236,7 +264,7 @@ mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber
 | Method | Purpose | Safety | Output |
 |--------|---------|--------|---------|
 | `scanInventoryIssues` | Find all inventory issues | ✅ Read-only | Issue summary by status |
-| `fixInflatedInventoryLevels` | Fix inventory issues | ⚠️ Respects DRY_RUN | Detailed fix plan + results |
+| `fixInflatedInventoryLevels` | Fix inventory issues | ⚠️ Respects -DdryRun parameter | Detailed fix plan + results |
 | **🆕 `scanSpecificInventoryByWebTagNumber`** | **Deep-dive single SKU analysis** | **✅ Read-only** | **Complete product + location details** |
 | **🆕 `showInventoryByLocationOverview`** | **Analyze inventory distribution** | **✅ Read-only** | **Location statistics + rankings** |
 
