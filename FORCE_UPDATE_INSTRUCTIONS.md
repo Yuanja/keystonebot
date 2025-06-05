@@ -7,9 +7,10 @@ The Force Update Test provides comprehensive force update capabilities for produ
 1. **Force update ALL items** with fresh feed data (smallest web_tag_number first)
 2. **Force update specific items** by web_tag_number using database data
 3. **Sync database only** without making any Shopify API calls
-4. **Validate and fix eBay metafields** to ensure proper configuration and pinning
-5. **Analyze impact** before making changes (read-only dry run)
-6. **Production-safe batch processing** with detailed logging
+4. **Retry failed items** that have STATUS_UPDATE_FAILED status
+5. **Validate and fix eBay metafields** to ensure proper configuration and pinning
+6. **Analyze impact** before making changes (read-only dry run)
+7. **Production-safe batch processing** with detailed logging
 
 ## ⚠️ Important Safety Notes
 
@@ -173,7 +174,62 @@ mvn test -P sync-database-only-prod
 ℹ️ NOTE: No Shopify products were modified - database only sync
 ```
 
-### 6. 🔧 VALIDATE AND FIX EBAY METAFIELDS
+### 6. 🔄 RETRY ITEMS WITH STATUS_UPDATE_FAILED
+
+Retry all items in the database that have STATUS_UPDATE_FAILED using the ProductUpdatePipeline. This is useful for recovering from previous failed update attempts.
+
+#### Development Retry:
+```bash
+mvn test -Dtest=ForceUpdateTest#retryUpdateFailedItems -Dspring.profiles.active=keystone-dev
+```
+
+#### Production Retry:
+```bash
+mvn test -Dtest=ForceUpdateTest#retryUpdateFailedItems -Dspring.profiles.active=keystone-prod
+```
+
+**What this does:**
+- 🔍 **Finds all items** with STATUS_UPDATE_FAILED in database
+- 🛍️ **Filters to retryable items** (only those with Shopify IDs)
+- 🔄 **Simple for loop approach** - no batching, processes one by one
+- ⚡ **Uses ProductUpdatePipeline** for efficient individual item updates
+- 🏷️ **Handles collection errors gracefully** (treats as non-critical)
+- 📊 **Provides detailed progress tracking** and final statistics
+
+**Features:**
+- ✅ Uses existing database data (no feed refresh)
+- ✅ Simple and straightforward approach
+- ✅ Individual item processing with detailed logging
+- ✅ Safe error handling for collection association failures
+- ✅ Comprehensive success/failure reporting
+
+**Output Example:**
+```
+📊 Update Failed Items Analysis:
+  - Items with STATUS_UPDATE_FAILED: 23
+  - Items with Shopify ID (retryable): 20
+  - Items without Shopify ID (skipped): 3
+
+📋 Sample of items to retry:
+  📝 12345 (Shopify ID: gid://shopify/Product/8961333461231)
+  📝 12346 (Shopify ID: gid://shopify/Product/8961333461232)
+  ...
+
+🔄 Starting simple retry process...
+🔄 Retrying item 1/20: 12345
+✅ Successfully retried item: 12345
+🔄 Retrying item 2/20: 12346
+⚠️ Collection association issues for item: 12346
+✅ Item retry succeeded despite collection issues
+
+📊 Retry Results:
+  - Total items processed: 20
+  - Total items succeeded: 18
+  - Total items still failed: 2
+  - Success rate: 90.00%
+```
+
+### 7. 🔧 VALIDATE AND FIX EBAY METAFIELDS
 
 Ensure eBay metafield definitions are properly configured and pinned in Shopify admin.
 
@@ -262,6 +318,10 @@ Watch the logs carefully for:
 | `fix-ebay-metafields-prod` | Production | Fix metafields | ✅ Safe | No | No |
 | `force-update-item-dev` | Dev | Single item | ⚠️ Medium | No | Yes |
 | `force-update-item-prod` | Production | Single item | ⚠️ Medium | No | Yes |
+| `sync-database-only-dev` | Dev | Database sync | ✅ Safe | Yes | No |
+| `sync-database-only-prod` | Production | Database sync | ✅ Safe | Yes | No |
+| `retryUpdateFailedItems` (dev) | Dev | Retry failed items | ⚠️ Medium | No | Yes |
+| `retryUpdateFailedItems` (prod) | Production | Retry failed items | ⚠️ Medium | No | Yes |
 | `force-update-all-dev` | Dev | All items | 🚨 High | Yes | Yes |
 | `force-update-all-prod` | Production | All items | 🚨 EXTREME | Yes | Yes |
 

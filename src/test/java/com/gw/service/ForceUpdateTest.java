@@ -59,6 +59,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * 4. Validate and fix eBay metafields:
  *    mvn test -Dtest=ForceUpdateTest#validateAndFixEbayMetafields -Dspring.profiles.active=keystone-prod
  * 
+ * 5. Retry items with STATUS_UPDATE_FAILED:
+ *    mvn test -Dtest=ForceUpdateTest#retryUpdateFailedItems -Dspring.profiles.active=keystone-prod
+ * 
  * Safety Features:
  * - Processes items in controlled batches
  * - Detailed logging of every action
