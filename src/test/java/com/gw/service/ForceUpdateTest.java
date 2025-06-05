@@ -196,66 +196,7 @@ public class ForceUpdateTest {
                         targetItem.getWebDescriptionShort().substring(0, Math.min(50, targetItem.getWebDescriptionShort().length())) + "..." : "N/A"));
             logger.info("  - Shopify ID: " + targetItem.getShopifyItemId());
             
-            // Set status to force update to trigger all update logic
-            String originalStatus = targetItem.getStatus();
-            targetItem.setStatus("FORCE_UPDATE");
-            
-            // Call ProductUpdatePipeline executeUpdate method
-            ProductUpdatePipeline.ProductUpdateResult result = productUpdatePipeline.executeUpdate(targetItem);
-            
-            if (result.isSuccess()) {
-                logger.info("✅ Successfully updated item using ProductUpdatePipeline");
-                logger.info("📊 Updated product details:");
-                if (result.getProduct() != null) {
-                    logger.info("  - Product ID: " + result.getProduct().getId());
-                    logger.info("  - Product Title: " + result.getProduct().getTitle());
-                }
-            } else {
-                // Check if this is a collection-related error that we can treat as non-critical
-                boolean isCollectionError = false;
-                if (result.getError() != null) {
-                    String errorMessage = result.getError().getMessage();
-                    if (errorMessage != null && 
-                        (errorMessage.contains("Failed to add product to collection") ||
-                         errorMessage.contains("collection") ||
-                         errorMessage.contains("Collection"))) {
-                        isCollectionError = true;
-                    }
-                }
-                
-                if (isCollectionError) {
-                    logger.warn("⚠️ ProductUpdatePipeline had collection association issues for item: " + targetWebTagNumber);
-                    logger.warn("⚠️ Collection error (treating as non-critical): " + result.getError().getMessage());
-                    
-                    // Enhanced debugging: Extract collection name from error message if possible
-                    String collectionInfo = extractCollectionInfoFromError(result.getError().getMessage());
-                    if (collectionInfo != null) {
-                        logger.warn("🔍 DEBUG: Failed collection details: " + collectionInfo);
-                    }
-                    
-                    // Additional enhanced debugging: Try to extract just the collection title for clearer reporting
-                    String collectionTitle = extractCollectionTitleFromError(result.getError().getMessage());
-                    if (collectionTitle != null) {
-                        logger.warn("🏷️ FAILED COLLECTION: '{}'", collectionTitle);
-                    } else {
-                        logger.warn("🏷️ FAILED COLLECTION: Unable to determine collection name from error");
-                    }
-                    
-                    logger.info("✅ Product update succeeded despite collection association issues");
-                    logger.info("ℹ️ The main product data was likely updated successfully - only collection associations failed");
-                    
-                    // Continue as if successful since collection issues are non-critical for force updates
-                } else {
-                    String errorMessage = "ProductUpdatePipeline failed for item: " + targetWebTagNumber;
-                    if (result.getError() != null) {
-                        errorMessage += " - " + result.getError().getMessage();
-                        logger.error("❌ " + errorMessage, result.getError());
-                    } else {
-                        logger.error("❌ " + errorMessage);
-                    }
-                    throw new RuntimeException(errorMessage, result.getError());
-                }
-            }
+            syncService.updateItemOnShopify(targetItem);
             
             // Validate the specific item update
             validateSpecificItemUpdate(targetWebTagNumber);
@@ -264,12 +205,7 @@ public class ForceUpdateTest {
             logger.info("📋 Summary:");
             logger.info("  - Item: " + targetWebTagNumber);
             logger.info("  - Method: ProductUpdatePipeline.executeUpdate");
-            logger.info("  - Original status: " + originalStatus);
             logger.info("  - Final status: " + targetItem.getStatus());
-            logger.info("  - Pipeline result: " + (result.isSuccess() ? "SUCCESS" : 
-                       (result.getError() != null && result.getError().getMessage() != null && 
-                        result.getError().getMessage().contains("Failed to add product to collection")) ? 
-                       "SUCCESS (with collection warnings)" : "FAILED"));
             
         } catch (Exception e) {
             logger.error("❌ Force update failed for item: " + targetWebTagNumber, e);
@@ -402,48 +338,7 @@ public class ForceUpdateTest {
                 try {
                     logger.info("🔄 Retrying item " + (totalProcessed + 1) + "/" + retryableItems.size() + 
                                ": " + item.getWebTagNumber());
-                    
-                    // Set status to indicate retry attempt
-                    String originalStatus = item.getStatus();
-                    item.setStatus("RETRY_UPDATE_FAILED");
-                    
-                    // Call ProductUpdatePipeline executeUpdate method
-                    ProductUpdatePipeline.ProductUpdateResult result = productUpdatePipeline.executeUpdate(item);
-                    
-                    if (result.isSuccess()) {
-                        logger.info("✅ Successfully retried item: " + item.getWebTagNumber());
-                        totalSucceeded++;
-                        
-                        if (result.getProduct() != null) {
-                            logger.info("📊 Updated product: " + result.getProduct().getId());
-                        }
-                    } else {
-                        // Check if this is a collection-related error that we can treat as non-critical
-                        boolean isCollectionError = false;
-                        if (result.getError() != null) {
-                            String errorMessage = result.getError().getMessage();
-                            if (errorMessage != null && 
-                                (errorMessage.contains("Failed to add product to collection") ||
-                                 errorMessage.contains("collection") ||
-                                 errorMessage.contains("Collection"))) {
-                                isCollectionError = true;
-                            }
-                        }
-                        
-                        if (isCollectionError) {
-                            logger.warn("⚠️ Collection association issues for item: " + item.getWebTagNumber());
-                            logger.warn("⚠️ Collection error (treating as success): " + result.getError().getMessage());
-                            logger.info("✅ Item retry succeeded despite collection issues");
-                            totalSucceeded++;
-                        } else {
-                            logger.error("❌ Retry failed for item: " + item.getWebTagNumber());
-                            if (result.getError() != null) {
-                                logger.error("❌ Error: " + result.getError().getMessage());
-                            }
-                            totalStillFailed++;
-                        }
-                    }
-                    
+                    syncService.updateItemOnShopify(item);
                     totalProcessed++;
                     
                 } catch (Exception e) {
