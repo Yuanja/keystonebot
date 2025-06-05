@@ -4,6 +4,9 @@ import com.gw.domain.FeedItem;
 import com.gw.services.shopifyapi.objects.Product;
 import com.gw.services.shopifyapi.objects.Variant;
 import com.gw.services.shopifyapi.objects.InventoryLevel;
+import com.gw.services.shopifyapi.objects.Option;
+import com.gw.services.shopifyapi.objects.Image;
+import com.gw.services.shopifyapi.objects.Metafield;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.BaseShopifySyncService;
 import com.gw.services.FeedItemService;
@@ -496,8 +499,22 @@ public class InventoryFixTest {
         List<InventoryLevel> inventoryLevels = variant.getInventoryLevels().get();
         
         try {
+            logger.info("📍 Updating inventory across {} locations:", inventoryLevels.size());
+            logger.info("    " + "=".repeat(90));
+            logger.info("    {:^10} | {:^25} | {:^15} | {:^15} | {:^10}", 
+                "Location", "Location ID", "Current Qty", "New Qty", "Change");
+            logger.info("    " + "=".repeat(90));
+            
             for (int i = 0; i < inventoryLevels.size(); i++) {
                 InventoryLevel level = inventoryLevels.get(i);
+                
+                int currentQuantity = 0;
+                try {
+                    currentQuantity = Integer.parseInt(level.getAvailable());
+                } catch (NumberFormatException e) {
+                    logger.warn("⚠️ Invalid current quantity for location {}: {}", 
+                        level.getLocationId(), level.getAvailable());
+                }
                 
                 int newQuantity;
                 if (i == 0) {
@@ -508,12 +525,26 @@ public class InventoryFixTest {
                     newQuantity = 0;
                 }
                 
+                int change = newQuantity - currentQuantity;
+                String changeDisplay = change > 0 ? "+" + change : String.valueOf(change);
+                
+                // Format location ID for display
+                String locationIdDisplay = level.getLocationId();
+                if (locationIdDisplay != null && locationIdDisplay.length() > 23) {
+                    locationIdDisplay = locationIdDisplay.substring(0, 20) + "...";
+                }
+                
+                logger.info("    {:^10} | {:^25} | {:^15} | {:^15} | {:^10}", 
+                    (i + 1),
+                    locationIdDisplay != null ? locationIdDisplay : "N/A",
+                    currentQuantity,
+                    newQuantity,
+                    changeDisplay);
+                
                 // Update inventory level
                 level.setAvailable(String.valueOf(newQuantity));
-                
-                logger.debug("✅ Prepared inventory for location {}: {}", 
-                    level.getLocationId(), newQuantity);
             }
+            logger.info("    " + "=".repeat(90));
             
             // Apply all inventory level updates via Shopify API
             shopifyApiService.updateInventoryLevels(inventoryLevels);
@@ -646,4 +677,516 @@ public class InventoryFixTest {
     
     // NOTE: Demo test methods removed to prevent accidental data creation in production
     // This is a PRODUCTION TOOL - only scan and fix methods should be available
+    
+    /**
+     * 🔍 SCAN SPECIFIC ITEM BY WEB_TAG_NUMBER 🔍
+     * 
+     * This method scans inventory for a specific web_tag_number by:
+     * 1. Looking up the FeedItem in the database by web_tag_number
+     * 2. Getting the Shopify product ID from the FeedItem
+     * 3. Retrieving detailed product information from Shopify
+     * 4. Displaying comprehensive inventory and variant details
+     * 
+     * PURPOSE:
+     * - Deep-dive analysis for specific SKUs
+     * - Troubleshooting individual inventory issues
+     * - Detailed product information for support
+     * 
+     * USAGE:
+     * 1. Edit the TARGET_WEB_TAG_NUMBER constant below
+     * 2. Run: mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber
+     * 
+     * SAFE: Read-only operation, no changes made
+     */
+    @Test
+    public void scanSpecificInventoryByWebTagNumber() throws Exception {
+        // ⚠️ EDIT THIS VALUE TO SCAN A SPECIFIC SKU ⚠️
+        String TARGET_WEB_TAG_NUMBER = "GW12345"; // Replace with actual web_tag_number
+        
+        logger.info("=== Specific Inventory Scanner for Web Tag Number: {} ===", TARGET_WEB_TAG_NUMBER);
+        logger.info("🔍 Performing detailed inventory analysis for specific SKU");
+        
+        // STEP 1: Look up FeedItem in database
+        logger.info("📂 Looking up FeedItem in database...");
+        FeedItem feedItem = feedItemService.findByWebTagNumber(TARGET_WEB_TAG_NUMBER);
+        
+        if (feedItem == null) {
+            logger.error("❌ FeedItem not found in database for web_tag_number: {}", TARGET_WEB_TAG_NUMBER);
+            logger.info("💡 Possible reasons:");
+            logger.info("  - SKU doesn't exist in the database");
+            logger.info("  - Typo in the web_tag_number");
+            logger.info("  - Item was deleted from database");
+            return;
+        }
+        
+        logger.info("✅ FeedItem found in database:");
+        logger.info("  - Web Tag Number: {}", feedItem.getWebTagNumber());
+        logger.info("  - Description: {}", feedItem.getWebDescriptionShort());
+        logger.info("  - Status: {}", feedItem.getWebStatus());
+        logger.info("  - Price: ${}", feedItem.getWebPriceRetail());
+        logger.info("  - Brand: {}", feedItem.getWebDesigner());
+        logger.info("  - Model: {}", feedItem.getWebWatchModel());
+        logger.info("  - Condition: {}", feedItem.getWebWatchCondition());
+        logger.info("  - Shopify Item ID: {}", feedItem.getShopifyItemId());
+        
+        // STEP 2: Check if item has Shopify ID
+        String shopifyItemId = feedItem.getShopifyItemId();
+        if (shopifyItemId == null || shopifyItemId.trim().isEmpty()) {
+            logger.warn("⚠️ FeedItem has no Shopify ID - item not published to Shopify");
+            logger.info("💡 This means:");
+            logger.info("  - Item exists in database but not in Shopify");
+            logger.info("  - Item may be waiting to be published");
+            logger.info("  - Item may have failed to publish");
+            logger.info("  - No inventory issues possible (not in Shopify)");
+            return;
+        }
+        
+        // STEP 3: Get detailed product information from Shopify
+        logger.info("🛍️ Retrieving detailed product information from Shopify...");
+        logger.info("  Shopify Product ID: {}", shopifyItemId);
+        
+        Product shopifyProduct;
+        try {
+            shopifyProduct = shopifyApiService.getProductByProductId(shopifyItemId);
+        } catch (Exception e) {
+            logger.error("❌ Failed to retrieve product from Shopify: {}", e.getMessage());
+            logger.info("💡 Possible reasons:");
+            logger.info("  - Product was deleted from Shopify");
+            logger.info("  - Shopify ID in database is outdated");
+            logger.info("  - Network or API issues");
+            logger.info("  - Invalid product ID format");
+            return;
+        }
+        
+        if (shopifyProduct == null) {
+            logger.error("❌ Product not found in Shopify with ID: {}", shopifyItemId);
+            logger.info("💡 This indicates:");
+            logger.info("  - Product exists in database but was deleted from Shopify");
+            logger.info("  - Database has stale Shopify ID");
+            logger.info("  - Possible data synchronization issue");
+            return;
+        }
+        
+        // STEP 4: Display comprehensive product information
+        logger.info("✅ Product found in Shopify - Detailed Analysis:");
+        logger.info("=" .repeat(100));
+        
+        // Basic Product Information
+        logger.info("📦 BASIC PRODUCT INFORMATION:");
+        logger.info("  Product ID: {}", shopifyProduct.getId());
+        logger.info("  Title: {}", shopifyProduct.getTitle());
+        logger.info("  Vendor: {}", shopifyProduct.getVendor());
+        logger.info("  Product Type: {}", shopifyProduct.getProductType());
+        logger.info("  Status: {}", shopifyProduct.getStatus());
+        logger.info("  Handle: {}", shopifyProduct.getHandle());
+        logger.info("  Tags: {}", shopifyProduct.getTags());
+        logger.info("  Created At: {}", shopifyProduct.getCreatedAt());
+        logger.info("  Updated At: {}", shopifyProduct.getUpdatedAt());
+        
+        // Variants Analysis
+        logger.info("");
+        logger.info("🔧 VARIANTS ANALYSIS:");
+        if (shopifyProduct.getVariants() == null || shopifyProduct.getVariants().isEmpty()) {
+            logger.warn("  ⚠️ No variants found - this is unusual!");
+        } else {
+            logger.info("  Total Variants: {}", shopifyProduct.getVariants().size());
+            
+            for (int i = 0; i < shopifyProduct.getVariants().size(); i++) {
+                Variant variant = shopifyProduct.getVariants().get(i);
+                logger.info("");
+                logger.info("  📋 VARIANT {} DETAILS:", i + 1);
+                logger.info("    Variant ID: {}", variant.getId());
+                logger.info("    SKU: {}", variant.getSku());
+                logger.info("    Title: {}", variant.getTitle());
+                logger.info("    Price: ${}", variant.getPrice());
+                logger.info("    Compare At Price: ${}", variant.getCompareAtPrice());
+                logger.info("    Weight: {} {}", variant.getWeight(), variant.getWeightUnit());
+                logger.info("    Inventory Management: {}", variant.getInventoryManagement());
+                logger.info("    Inventory Policy: {}", variant.getInventoryPolicy());
+                logger.info("    Taxable: {}", variant.getTaxable());
+                logger.info("    Barcode: {}", variant.getBarcode());
+                
+                // Variant Options
+                logger.info("    Options:");
+                logger.info("      Option 1: {}", variant.getOption1());
+                logger.info("      Option 2: {}", variant.getOption2());
+                logger.info("      Option 3: {}", variant.getOption3());
+                
+                                 // Inventory Levels Analysis
+                 logger.info("");
+                 logger.info("    📊 INVENTORY LEVELS BY LOCATION:");
+                 if (variant.getInventoryLevels() == null || variant.getInventoryLevels().get() == null) {
+                     logger.warn("      ⚠️ No inventory levels found");
+                 } else {
+                     List<InventoryLevel> inventoryLevels = variant.getInventoryLevels().get();
+                     logger.info("      Total Locations: {}", inventoryLevels.size());
+                     logger.info("      " + "=".repeat(80));
+                     logger.info("      {:^15} | {:^20} | {:^10} | {:^20}", "Location #", "Location ID", "Available", "Inventory Item ID");
+                     logger.info("      " + "=".repeat(80));
+                     
+                     int totalInventory = 0;
+                     for (int j = 0; j < inventoryLevels.size(); j++) {
+                         InventoryLevel level = inventoryLevels.get(j);
+                         int quantity = 0;
+                         try {
+                             quantity = Integer.parseInt(level.getAvailable());
+                             totalInventory += quantity;
+                         } catch (NumberFormatException e) {
+                             logger.warn("      ⚠️ Invalid inventory quantity: {}", level.getAvailable());
+                             quantity = 0; // Set to 0 for display purposes
+                         }
+                         
+                         // Format location ID for display (truncate if too long)
+                         String locationIdDisplay = level.getLocationId();
+                         if (locationIdDisplay != null && locationIdDisplay.length() > 18) {
+                             locationIdDisplay = locationIdDisplay.substring(0, 15) + "...";
+                         }
+                         
+                         // Format inventory item ID for display (truncate if too long)
+                         String inventoryItemIdDisplay = level.getInventoryItemId();
+                         if (inventoryItemIdDisplay != null && inventoryItemIdDisplay.length() > 18) {
+                             inventoryItemIdDisplay = inventoryItemIdDisplay.substring(0, 15) + "...";
+                         }
+                         
+                         logger.info("      {:^15} | {:^20} | {:^10} | {:^20}", 
+                             "Location " + (j + 1), 
+                             locationIdDisplay != null ? locationIdDisplay : "N/A",
+                             quantity,
+                             inventoryItemIdDisplay != null ? inventoryItemIdDisplay : "N/A");
+                     }
+                     logger.info("      " + "=".repeat(80));
+                    
+                    logger.info("      📈 INVENTORY SUMMARY:");
+                    logger.info("        Total Inventory Across All Locations: {}", totalInventory);
+                    
+                    // Inventory Analysis
+                    String expectedStatus = feedItem.getWebStatus();
+                    int expectedInventory = "SOLD".equalsIgnoreCase(expectedStatus) ? 0 : 1;
+                    
+                    logger.info("        Expected Inventory (based on status '{}'): {}", expectedStatus, expectedInventory);
+                    
+                    if (totalInventory == expectedInventory) {
+                        logger.info("        ✅ INVENTORY CORRECT - No issues found");
+                    } else {
+                        logger.warn("        ⚠️ INVENTORY ISSUE DETECTED:");
+                        logger.warn("          Current: {}", totalInventory);
+                        logger.warn("          Expected: {}", expectedInventory);
+                        logger.warn("          Difference: {}", totalInventory - expectedInventory);
+                        
+                        if (totalInventory > expectedInventory) {
+                            logger.warn("          Issue Type: INFLATED INVENTORY");
+                            logger.warn("          Action Needed: REDUCE by {}", totalInventory - expectedInventory);
+                        } else {
+                            logger.warn("          Issue Type: INSUFFICIENT INVENTORY");
+                            logger.warn("          Action Needed: INCREASE by {}", expectedInventory - totalInventory);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Product Options Analysis
+        logger.info("");
+        logger.info("🎛️ PRODUCT OPTIONS:");
+        if (shopifyProduct.getOptions() == null || shopifyProduct.getOptions().isEmpty()) {
+            logger.info("  No product options configured");
+        } else {
+            logger.info("  Total Options: {}", shopifyProduct.getOptions().size());
+            for (int i = 0; i < shopifyProduct.getOptions().size(); i++) {
+                Option option = shopifyProduct.getOptions().get(i);
+                logger.info("    Option {}: {} = {}", i + 1, option.getName(), 
+                    option.getValues() != null ? String.join(", ", option.getValues()) : "No values");
+            }
+        }
+        
+        // Images Analysis
+        logger.info("");
+        logger.info("🖼️ IMAGES ANALYSIS:");
+        if (shopifyProduct.getImages() == null || shopifyProduct.getImages().isEmpty()) {
+            logger.info("  No images found");
+        } else {
+            logger.info("  Total Images: {}", shopifyProduct.getImages().size());
+            for (int i = 0; i < shopifyProduct.getImages().size(); i++) {
+                Image image = shopifyProduct.getImages().get(i);
+                logger.info("    Image {}: ID {} - {}", i + 1, image.getId(), 
+                    image.getSrc() != null ? image.getSrc().substring(0, Math.min(80, image.getSrc().length())) + "..." : "No URL");
+            }
+        }
+        
+        // Metafields Analysis
+        logger.info("");
+        logger.info("🏷️ METAFIELDS ANALYSIS:");
+        if (shopifyProduct.getMetafields() == null || shopifyProduct.getMetafields().isEmpty()) {
+            logger.info("  No metafields found");
+        } else {
+            logger.info("  Total Metafields: {}", shopifyProduct.getMetafields().size());
+            for (Metafield metafield : shopifyProduct.getMetafields()) {
+                logger.info("    {} ({}): {}", 
+                    metafield.getKey(), 
+                    metafield.getNamespace(),
+                    metafield.getValue() != null && metafield.getValue().length() > 50 ? 
+                        metafield.getValue().substring(0, 50) + "..." : metafield.getValue());
+            }
+        }
+        
+        // Database vs Shopify Comparison
+        logger.info("");
+        logger.info("🔄 DATABASE vs SHOPIFY COMPARISON:");
+        logger.info("  Database Status: {} | Shopify Status: {}", feedItem.getWebStatus(), shopifyProduct.getStatus());
+        logger.info("  Database Description: {} | Shopify Title: {}", feedItem.getWebDescriptionShort(), shopifyProduct.getTitle());
+        logger.info("  Database Brand: {} | Shopify Vendor: {}", feedItem.getWebDesigner(), shopifyProduct.getVendor());
+        logger.info("  Database Price: ${} | Shopify Price: ${}", feedItem.getWebPriceRetail(), 
+            shopifyProduct.getVariants() != null && !shopifyProduct.getVariants().isEmpty() ? 
+                shopifyProduct.getVariants().get(0).getPrice() : "N/A");
+        
+        // Final Summary
+        logger.info("");
+        logger.info("📋 SCAN SUMMARY:");
+        logger.info("  - FeedItem found in database: ✅");
+        logger.info("  - Shopify ID present: ✅");
+        logger.info("  - Product found in Shopify: ✅");
+        logger.info("  - Total variants: {}", shopifyProduct.getVariants() != null ? shopifyProduct.getVariants().size() : 0);
+        logger.info("  - Total inventory locations: {}", 
+            shopifyProduct.getVariants() != null && !shopifyProduct.getVariants().isEmpty() &&
+            shopifyProduct.getVariants().get(0).getInventoryLevels() != null &&
+            shopifyProduct.getVariants().get(0).getInventoryLevels().get() != null ?
+                shopifyProduct.getVariants().get(0).getInventoryLevels().get().size() : 0);
+        
+        // Calculate total inventory for summary
+        int totalInventoryAcrossAllVariants = 0;
+        if (shopifyProduct.getVariants() != null) {
+            for (Variant variant : shopifyProduct.getVariants()) {
+                if (variant.getInventoryLevels() != null && variant.getInventoryLevels().get() != null) {
+                    for (InventoryLevel level : variant.getInventoryLevels().get()) {
+                        try {
+                            totalInventoryAcrossAllVariants += Integer.parseInt(level.getAvailable());
+                        } catch (NumberFormatException e) {
+                            // Skip invalid quantities
+                        }
+                    }
+                }
+            }
+        }
+        
+        String expectedStatus = feedItem.getWebStatus();
+        int expectedInventory = "SOLD".equalsIgnoreCase(expectedStatus) ? 0 : 1;
+        
+        logger.info("  - Total inventory: {}", totalInventoryAcrossAllVariants);
+        logger.info("  - Expected inventory: {}", expectedInventory);
+        
+        if (totalInventoryAcrossAllVariants == expectedInventory) {
+            logger.info("  - Inventory status: ✅ CORRECT");
+        } else {
+            logger.warn("  - Inventory status: ⚠️ ISSUE DETECTED");
+        }
+        
+        logger.info("=" .repeat(100));
+        logger.info("=== Specific Inventory Scan Complete for {} ===", TARGET_WEB_TAG_NUMBER);
+    }
+    
+    /**
+     * 📍 INVENTORY BY LOCATION OVERVIEW 📍
+     * 
+     * This method provides a comprehensive overview of inventory distribution
+     * across all Shopify locations for all products.
+     * 
+     * PURPOSE:
+     * - Understand inventory distribution patterns
+     * - Identify location-specific inventory issues
+     * - Analyze inventory concentration by location
+     * 
+     * USAGE:
+     * mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview
+     * 
+     * SAFE: Read-only operation, no changes made
+     */
+    @Test
+    public void showInventoryByLocationOverview() throws Exception {
+        logger.info("=== Inventory by Location Overview ===");
+        logger.info("📍 Analyzing inventory distribution across all Shopify locations");
+        
+        // Get all products from Shopify
+        logger.info("📡 Fetching all products from Shopify...");
+        List<Product> allProducts = shopifyApiService.getAllProducts();
+        logger.info("📊 Found {} total products in Shopify", allProducts.size());
+        
+        // Track location statistics
+        Map<String, LocationStats> locationStatsMap = new HashMap<>();
+        int totalProductsAnalyzed = 0;
+        int productsWithInventory = 0;
+        int totalInventoryAcrossAllProducts = 0;
+        
+        logger.info("🔍 Analyzing inventory by location...");
+        
+        for (int i = 0; i < allProducts.size(); i++) {
+            Product product = allProducts.get(i);
+            
+            if (i % 100 == 0) {
+                logger.info("📊 Progress: {}/{} products analyzed", i, allProducts.size());
+            }
+            
+            try {
+                totalProductsAnalyzed++;
+                boolean productHasInventory = false;
+                
+                if (product.getVariants() != null) {
+                    for (Variant variant : product.getVariants()) {
+                        if (variant.getInventoryLevels() != null && variant.getInventoryLevels().get() != null) {
+                            for (InventoryLevel level : variant.getInventoryLevels().get()) {
+                                String locationId = level.getLocationId();
+                                int quantity = 0;
+                                
+                                try {
+                                    quantity = Integer.parseInt(level.getAvailable());
+                                } catch (NumberFormatException e) {
+                                    // Skip invalid quantities
+                                    continue;
+                                }
+                                
+                                // Track location statistics
+                                LocationStats stats = locationStatsMap.computeIfAbsent(locationId, k -> new LocationStats());
+                                stats.totalProducts++;
+                                stats.totalInventory += quantity;
+                                
+                                if (quantity > 0) {
+                                    stats.productsWithInventory++;
+                                    productHasInventory = true;
+                                }
+                                
+                                totalInventoryAcrossAllProducts += quantity;
+                            }
+                        }
+                    }
+                }
+                
+                if (productHasInventory) {
+                    productsWithInventory++;
+                }
+                
+            } catch (Exception e) {
+                logger.warn("⚠️ Error analyzing product {}: {}", product.getId(), e.getMessage());
+            }
+        }
+        
+        logger.info("📊 Analysis Complete - Inventory by Location Results:");
+        logger.info("=" .repeat(120));
+        
+        // Display overall statistics
+        logger.info("📈 OVERALL STATISTICS:");
+        logger.info("  - Total products analyzed: {}", totalProductsAnalyzed);
+        logger.info("  - Products with inventory: {}", productsWithInventory);
+        logger.info("  - Products without inventory: {}", totalProductsAnalyzed - productsWithInventory);
+        logger.info("  - Total inventory across all locations: {}", totalInventoryAcrossAllProducts);
+        logger.info("  - Average inventory per product: {:.2f}", 
+            totalProductsAnalyzed > 0 ? (double) totalInventoryAcrossAllProducts / totalProductsAnalyzed : 0);
+        logger.info("  - Unique locations found: {}", locationStatsMap.size());
+        
+        // Display location breakdown
+        logger.info("");
+        logger.info("📍 INVENTORY BY LOCATION BREAKDOWN:");
+        logger.info("=" .repeat(120));
+        logger.info("{:^5} | {:^35} | {:^15} | {:^20} | {:^15} | {:^15}", 
+            "#", "Location ID", "Total Products", "Products w/ Inventory", "Total Inventory", "Avg per Product");
+        logger.info("=" .repeat(120));
+        
+        // Sort locations by total inventory (descending)
+        List<Map.Entry<String, LocationStats>> sortedLocations = locationStatsMap.entrySet()
+            .stream()
+            .sorted((e1, e2) -> Integer.compare(e2.getValue().totalInventory, e1.getValue().totalInventory))
+            .toList();
+        
+        for (int i = 0; i < sortedLocations.size(); i++) {
+            Map.Entry<String, LocationStats> entry = sortedLocations.get(i);
+            String locationId = entry.getKey();
+            LocationStats stats = entry.getValue();
+            
+            // Format location ID for display
+            String locationIdDisplay = locationId;
+            if (locationIdDisplay != null && locationIdDisplay.length() > 33) {
+                locationIdDisplay = locationIdDisplay.substring(0, 30) + "...";
+            }
+            
+            double avgPerProduct = stats.totalProducts > 0 ? (double) stats.totalInventory / stats.totalProducts : 0;
+            
+            logger.info("{:^5} | {:^35} | {:^15} | {:^20} | {:^15} | {:^15.2f}", 
+                i + 1,
+                locationIdDisplay != null ? locationIdDisplay : "N/A",
+                stats.totalProducts,
+                stats.productsWithInventory,
+                stats.totalInventory,
+                avgPerProduct);
+        }
+        logger.info("=" .repeat(120));
+        
+        // Show locations with highest inventory
+        logger.info("");
+        logger.info("🏆 TOP 5 LOCATIONS BY TOTAL INVENTORY:");
+        int topCount = Math.min(5, sortedLocations.size());
+        for (int i = 0; i < topCount; i++) {
+            Map.Entry<String, LocationStats> entry = sortedLocations.get(i);
+            LocationStats stats = entry.getValue();
+            double percentage = totalInventoryAcrossAllProducts > 0 ? 
+                (double) stats.totalInventory / totalInventoryAcrossAllProducts * 100 : 0;
+                
+            logger.info("  {}. Location: {} - {} units ({:.1f}% of total)", 
+                i + 1, entry.getKey(), stats.totalInventory, percentage);
+        }
+        
+        // Show locations with most products
+        logger.info("");
+        logger.info("📦 TOP 5 LOCATIONS BY PRODUCT COUNT:");
+        List<Map.Entry<String, LocationStats>> sortedByProducts = locationStatsMap.entrySet()
+            .stream()
+            .sorted((e1, e2) -> Integer.compare(e2.getValue().totalProducts, e1.getValue().totalProducts))
+            .toList();
+            
+        topCount = Math.min(5, sortedByProducts.size());
+        for (int i = 0; i < topCount; i++) {
+            Map.Entry<String, LocationStats> entry = sortedByProducts.get(i);
+            LocationStats stats = entry.getValue();
+            double percentage = totalProductsAnalyzed > 0 ? 
+                (double) stats.totalProducts / totalProductsAnalyzed * 100 : 0;
+                
+            logger.info("  {}. Location: {} - {} products ({:.1f}% of total)", 
+                i + 1, entry.getKey(), stats.totalProducts, percentage);
+        }
+        
+        // Identify potential issues
+        logger.info("");
+        logger.info("⚠️ POTENTIAL ISSUES DETECTED:");
+        boolean issuesFound = false;
+        
+        for (Map.Entry<String, LocationStats> entry : locationStatsMap.entrySet()) {
+            LocationStats stats = entry.getValue();
+            double avgInventory = stats.totalProducts > 0 ? (double) stats.totalInventory / stats.totalProducts : 0;
+            
+            if (avgInventory > 1.5) {
+                logger.warn("  - Location {} has high average inventory: {:.2f} per product", 
+                    entry.getKey(), avgInventory);
+                issuesFound = true;
+            }
+            
+            if (stats.totalInventory > totalInventoryAcrossAllProducts * 0.8) {
+                logger.warn("  - Location {} contains {:.1f}% of total inventory (potential concentration risk)", 
+                    entry.getKey(), (double) stats.totalInventory / totalInventoryAcrossAllProducts * 100);
+                issuesFound = true;
+            }
+        }
+        
+        if (!issuesFound) {
+            logger.info("  ✅ No obvious inventory distribution issues detected");
+        }
+        
+        logger.info("=" .repeat(120));
+        logger.info("=== Inventory by Location Overview Complete ===");
+    }
+    
+    /**
+     * Helper class to track location statistics
+     */
+    private static class LocationStats {
+        int totalProducts = 0;
+        int productsWithInventory = 0;
+        int totalInventory = 0;
+    }
 } 
