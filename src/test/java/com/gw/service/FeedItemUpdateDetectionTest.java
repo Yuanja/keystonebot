@@ -43,7 +43,7 @@ public class FeedItemUpdateDetectionTest extends BaseGraphqlTest {
     public void testFeedItemChangeDetection() throws Exception {
         logger.info("=== Testing Feed Item Change Detection ===");
         
-        // Step 1: Create and publish an initial product
+        // Create and publish an initial product
         List<FeedItem> topFeedItems = getTopFeedItems(1);
         assertNotNull(topFeedItems, "Should have feed items from live feed");
         assertTrue(topFeedItems.size() >= 1, "Should have at least 1 item from live feed");
@@ -60,19 +60,19 @@ public class FeedItemUpdateDetectionTest extends BaseGraphqlTest {
         
         logger.info("✅ Initial product created: " + shopifyProductId + " - " + initialProduct.getTitle());
         
-        // Step 2: Test unchanged item detection
+        // Test unchanged item detection
         testUnchangedItemDetection(originalItem);
         
-        // Step 3: Test pricing changes
+        // Test pricing changes
         testPricingChanges(originalItem, initialProduct);
         
-        // Step 4: Test product information changes
+        // Test product information changes
         testProductInformationChanges(originalItem, initialProduct);
         
-        // Step 5: Test watch specification changes
+        // Test watch specification changes
         testWatchSpecificationChanges(originalItem, initialProduct);
         
-        // Step 6: Test status and image changes
+        // Test status and image changes
         testStatusAndImageChanges(originalItem, initialProduct);
         
         logger.info("🎉 All feed item change detection tests passed!");
@@ -328,5 +328,6 @@ public class FeedItemUpdateDetectionTest extends BaseGraphqlTest {
                   "Product title should reflect the change");
         
         logger.info("✅ Multiple field changes successfully detected and processed");
+    
     }
-} 
+}

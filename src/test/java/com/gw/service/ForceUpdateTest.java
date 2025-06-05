@@ -113,15 +113,15 @@ public class ForceUpdateTest {
             logger.warn("🧪 DRY RUN MODE - No actual changes will be made");
         }
         
-        // Step 1: Get baseline statistics
+        // Get baseline statistics
         analyzeCurrentState();
         
-        // Step 2: Refresh feed from live source
-        logger.info("📡 Step 2: Refreshing live feed data...");
+        // Refresh feed from live source
+        logger.info("📡 Refreshing live feed data...");
         List<FeedItem> feedItems = keyStoneFeedService.getItemsFromFeed();
         logger.info("📊 Fresh feed items loaded: " + feedItems.size());
         
-        // Step 3: Sort by web_tag_number (smallest first)
+        // Sort by web_tag_number (smallest first)
         List<FeedItem> sortedFeedItems = feedItems.stream()
             .sorted(Comparator.comparing(FeedItem::getWebTagNumber, 
                 Comparator.nullsLast(Comparator.naturalOrder())))
@@ -133,10 +133,10 @@ public class ForceUpdateTest {
             .map(FeedItem::getWebTagNumber)
             .collect(Collectors.toList()));
         
-        // Step 4: Force update all items in batches
+        // Force update all items in batches
         forceUpdateItemsInBatches(sortedFeedItems, "ALL-ITEMS");
         
-        // Step 5: Final validation
+        // Final validation
         validateForceUpdateResults();
         
         logger.info("🎉 Production force update completed successfully!");
@@ -168,8 +168,8 @@ public class ForceUpdateTest {
         }
         
         try {
-            // Step 1: Find the specific item in database
-            logger.info("🔍 Step 1: Finding item in database...");
+            // Find the specific item in database
+            logger.info("🔍 Finding item in database...");
             FeedItem targetItem = feedItemService.findByWebTagNumber(targetWebTagNumber);
             
             if (targetItem == null) {
@@ -185,8 +185,8 @@ public class ForceUpdateTest {
                 throw new IllegalArgumentException("❌ Item " + targetWebTagNumber + " has no Shopify ID - cannot update");
             }
             
-            // Step 2: Update the specific item directly using ProductUpdatePipeline
-            logger.info("🔄 Step 2: Updating item on Shopify using ProductUpdatePipeline...");
+            // Update the specific item directly using ProductUpdatePipeline
+            logger.info("🔄 Updating item on Shopify using ProductUpdatePipeline...");
             logger.info("📝 Item details:");
             logger.info("  - SKU: " + targetItem.getWebTagNumber());
             logger.info("  - Title: " + (targetItem.getWebDescriptionShort() != null ? 
@@ -254,7 +254,7 @@ public class ForceUpdateTest {
                 }
             }
             
-            // Step 3: Validate the specific item update
+            // Validate the specific item update
             validateSpecificItemUpdate(targetWebTagNumber);
             
             logger.info("🎉 Specific item force update completed successfully!");
@@ -343,10 +343,10 @@ public class ForceUpdateTest {
         }
         
         try {
-            // Step 1: Analyze current metafield state
+            // Analyze current metafield state
             MetafieldValidationResult validationResult = analyzeEbayMetafieldState();
             
-            // Step 2: Check if everything is already perfect
+            // Check if everything is already perfect
             boolean isPerfect = validationResult.hasAllExpected && 
                                validationResult.allPinned && 
                                validationResult.structureValid && 
@@ -363,7 +363,7 @@ public class ForceUpdateTest {
             
             logger.info("🔧 Issues found - determining minimal fixes needed...");
             
-            // Step 3: Determine if recreation is needed
+            // Determine if recreation is needed
             boolean needsRecreation = shouldRecreateMetafields(validationResult);
             
             if (needsRecreation) {
@@ -376,7 +376,7 @@ public class ForceUpdateTest {
                 logger.info("✅ No fixes needed");
             }
             
-            // Step 4: Final validation only if we made changes
+            // Final validation only if we made changes
             if (needsRecreation || !validationResult.allPinned) {
                 validateMetafieldFixResults();
             }
@@ -406,8 +406,8 @@ public class ForceUpdateTest {
             logger.warn("🧪 DRY RUN MODE - No actual changes will be made");
         }
         
-        // Step 1: Get baseline database statistics
-        logger.info("📊 Step 1: Analyzing current database state...");
+        // Get baseline database statistics
+        logger.info("📊 Analyzing current database state...");
         List<FeedItem> dbItemsBefore = feedItemService.findAll();
         long publishedItemsBefore = dbItemsBefore.stream().filter(item -> item.getShopifyItemId() != null).count();
         
@@ -422,12 +422,12 @@ public class ForceUpdateTest {
         statusCountsBefore.forEach((status, count) -> 
                logger.info("  - Status '" + status + "': " + count + " items"));
         
-        // Step 2: Refresh feed from live source
-        logger.info("📡 Step 2: Refreshing live feed data...");
+        // Refresh feed from live source
+        logger.info("📡 Refreshing live feed data...");
         List<FeedItem> feedItems = keyStoneFeedService.getItemsFromFeed();
         logger.info("📊 Fresh feed items loaded: " + feedItems.size());
         
-        // Step 3: Sort by web_tag_number (smallest first)
+        // Sort by web_tag_number (smallest first)
         List<FeedItem> sortedFeedItems = feedItems.stream()
             .sorted(Comparator.comparing(FeedItem::getWebTagNumber, 
                 Comparator.nullsLast(Comparator.naturalOrder())))
@@ -439,8 +439,8 @@ public class ForceUpdateTest {
             .map(FeedItem::getWebTagNumber)
             .collect(Collectors.toList()));
         
-        // Step 4: Analyze changes (database comparison only)
-        logger.info("🔍 Step 3: Analyzing changes between feed and database...");
+        // Analyze changes (database comparison only)
+        logger.info("🔍 Analyzing changes between feed and database...");
         FeedItemChangeSet changeSet = feedItemService.compareFeedItemWithDB(false, sortedFeedItems);
         
         int newItems = changeSet.getNewItems() != null ? changeSet.getNewItems().size() : 0;
@@ -458,15 +458,15 @@ public class ForceUpdateTest {
             return;
         }
         
-        // Step 5: Perform database-only sync operations
+        // Perform database-only sync operations
         if (!DRY_RUN) {
             syncDatabaseWithFeedData(changeSet);
         } else {
             logger.info("🧪 DRY RUN: Would sync database with " + (newItems + changedItems + deletedItems) + " total changes");
         }
         
-        // Step 6: Analyze final database state
-        logger.info("📊 Step 4: Analyzing final database state...");
+        // Analyze final database state
+        logger.info("📊 Analyzing final database state...");
         List<FeedItem> dbItemsAfter = feedItemService.findAll();
         long publishedItemsAfter = dbItemsAfter.stream().filter(item -> item.getShopifyItemId() != null).count();
         
@@ -491,7 +491,7 @@ public class ForceUpdateTest {
      * Perform database synchronization with feed data without any Shopify operations
      */
     private void syncDatabaseWithFeedData(FeedItemChangeSet changeSet) throws Exception {
-        logger.info("🔄 Step 4: Performing database-only synchronization...");
+        logger.info("🔄 Performing database-only synchronization...");
         
         int totalProcessed = 0;
         int totalErrors = 0;
@@ -595,7 +595,7 @@ public class ForceUpdateTest {
      * Analyze current state before force update
      */
     private void analyzeCurrentState() throws Exception {
-        logger.info("📊 Step 1: Analyzing current state...");
+        logger.info("📊 Analyzing current state...");
         
         // Database analysis
         List<FeedItem> dbItems = feedItemService.findAll();
@@ -635,7 +635,7 @@ public class ForceUpdateTest {
      * Process feed items in controlled batches with force update (only update what needs updating)
      */
     private void forceUpdateItemsInBatches(List<FeedItem> sortedFeedItems, String operation) throws Exception {
-        logger.info("🔄 Step 3: Analyzing items for force update in batches of " + BATCH_SIZE + " (" + operation + ")...");
+        logger.info("🔄 Analyzing items for force update in batches of " + BATCH_SIZE + " (" + operation + ")...");
         
         // First, check which items actually need updating
         logger.info("🔍 Pre-checking which items need force updates...");
@@ -757,7 +757,7 @@ public class ForceUpdateTest {
      * Validate force update results
      */
     private void validateForceUpdateResults() throws Exception {
-        logger.info("🔍 Step 4: Validating force update results...");
+        logger.info("🔍 Validating force update results...");
         
         // Check database status distribution
         List<FeedItem> dbItems = feedItemService.findAll();
@@ -793,7 +793,7 @@ public class ForceUpdateTest {
      * Validate specific item update
      */
     private void validateSpecificItemUpdate(String webTagNumber) throws Exception {
-        logger.info("🔍 Step 3: Validating specific item update...");
+        logger.info("🔍 Validating specific item update...");
         
         // Re-fetch the item from database
         FeedItem updatedItem = feedItemService.findByWebTagNumber(webTagNumber);
@@ -836,7 +836,7 @@ public class ForceUpdateTest {
      * Analyze current eBay metafield state
      */
     private MetafieldValidationResult analyzeEbayMetafieldState() throws Exception {
-        logger.info("🔍 Step 1: Analyzing current eBay metafield state...");
+        logger.info("🔍 Analyzing current eBay metafield state...");
         
         MetafieldValidationResult result = new MetafieldValidationResult();
         
@@ -1002,7 +1002,7 @@ public class ForceUpdateTest {
      * Recreate all eBay metafields from scratch (only if needed)
      */
     private void recreateEbayMetafields() throws Exception {
-        logger.info("🔄 Step 2: Checking if eBay metafields need recreation...");
+        logger.info("🔄 Checking if eBay metafields need recreation...");
         
         if (DRY_RUN) {
             logger.info("🧪 DRY RUN: Would recreate eBay metafields");
@@ -1021,7 +1021,7 @@ public class ForceUpdateTest {
             
             logger.info("🔄 eBay metafields need recreation (count: " + existingMetafields.size() + "/13, structure valid: " + validateMetafieldStructure(existingMetafields) + ")");
             
-            // Step 1: Remove existing eBay metafield definitions
+            // Remove existing eBay metafield definitions
             if (!existingMetafields.isEmpty()) {
                 logger.info("🗑️ Removing " + existingMetafields.size() + " existing eBay metafield definitions...");
                 for (Map<String, String> metafield : existingMetafields) {
@@ -1041,7 +1041,7 @@ public class ForceUpdateTest {
                 logger.info("ℹ️ No existing eBay metafield definitions to remove");
             }
             
-            // Step 2: Create fresh eBay metafield definitions
+            // Create fresh eBay metafield definitions
             logger.info("🏗️ Creating fresh eBay metafield definitions...");
             shopifyApiService.createEbayMetafieldDefinitions();
             logger.info("✅ Successfully recreated eBay metafield definitions");
@@ -1056,7 +1056,7 @@ public class ForceUpdateTest {
      * Fix metafield pinning without recreating (only pin what needs pinning)
      */
     private void fixMetafieldPinning() throws Exception {
-        logger.info("📌 Step 2: Checking which eBay metafields need pinning...");
+        logger.info("📌 Checking which eBay metafields need pinning...");
         
         if (DRY_RUN) {
             logger.info("🧪 DRY RUN: Would fix metafield pinning");
@@ -1123,7 +1123,7 @@ public class ForceUpdateTest {
      * Validate that metafield fix was successful
      */
     private void validateMetafieldFixResults() throws Exception {
-        logger.info("🔍 Step 3: Validating metafield fix results...");
+        logger.info("🔍 Validating metafield fix results...");
         
         try {
             // Re-analyze metafield state

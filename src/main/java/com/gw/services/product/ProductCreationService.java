@@ -89,13 +89,13 @@ public class ProductCreationService {
     public Product createProductWithOptions(FeedItem feedItem) throws Exception {
         logger.info("🚀 Creating product structure with options for SKU: {}", feedItem.getWebTagNumber());
         
-        // Step 1: Build product template (calls createProduct which can be overridden)
+        // Build product template (calls createProduct which can be overridden)
         Product productTemplate = this.createProduct(feedItem);
         
-        // Step 2: Execute the clean creation pipeline (structure only)
+        // Execute the clean creation pipeline (structure only)
         ProductCreationResult result = executeCreation(productTemplate, feedItem);
         
-        // Step 3: Handle result
+        // Handle result
         if (result.isSuccess()) {
             logger.info("✅ Product structure creation completed successfully for SKU: {}", feedItem.getWebTagNumber());
             return result.getProduct();
@@ -145,10 +145,10 @@ public class ProductCreationService {
         logger.info("🚀 Starting product creation pipeline for SKU: {}", sku);
         
         try {
-            // Step 1: Create basic product
+            // Create basic product
             Product basicProduct = createBasicProduct(productTemplate, sku);
             
-            // Step 2: Add variant options
+            // Add variant options
             addVariantOptions(basicProduct.getId(), feedItem);
             
             // Note: Images are handled separately by ImageService in the publish pipeline
@@ -167,10 +167,10 @@ public class ProductCreationService {
     }
     
     /**
-     * Step 1: Create basic product structure without options or images
+     * Create basic product structure without options or images
      */
     private Product createBasicProduct(Product template, String sku) throws Exception {
-        logger.info("📦 Step 1: Creating basic product structure for SKU: {}", sku);
+        logger.info("📦 Creating basic product structure for SKU: {}", sku);
         
         // Clean template for basic creation
         Product cleanTemplate = createCleanTemplate(template);
@@ -178,22 +178,22 @@ public class ProductCreationService {
         Product created = shopifyGraphQLService.addProduct(cleanTemplate);
         validateProductCreation(created, sku);
         
-        logger.info("✅ Step 1: Basic product created - ID: {}", created.getId());
+        logger.info("✅ Basic product created - ID: {}", created.getId());
         return created;
     }
     
     /**
-     * Step 2: Add variant options to the created product
+     * Add variant options to the created product
      */
     private void addVariantOptions(String productId, FeedItem feedItem) {
-        logger.info("🎛️ Step 2: Adding variant options to product ID: {}", productId);
+        logger.info("🎛️ Adding variant options to product ID: {}", productId);
         
         boolean optionsAdded = shopifyGraphQLService.createProductOptions(productId, feedItem);
         
         if (optionsAdded) {
-            logger.info("✅ Step 2: Variant options added successfully");
+            logger.info("✅ Variant options added successfully");
         } else {
-            logger.warn("⚠️ Step 2: No variant options added (may not be needed)");
+            logger.warn("⚠️ No variant options added (may not be needed)");
         }
     }
     
@@ -291,4 +291,4 @@ public class ProductCreationService {
         public Product getProduct() { return product; }
         public Exception getError() { return error; }
     }
-} 
+}

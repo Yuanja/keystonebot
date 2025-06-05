@@ -3366,14 +3366,14 @@ public class ShopifyGraphQLService {
         try {
             logger.info("🔄 Updating product options for product ID: {} by removing and recreating all options", productId);
             
-            // Step 1: Remove all existing options
+            // Remove all existing options
             boolean optionsRemoved = removeProductOptions(productId);
             if (!optionsRemoved) {
                 logger.error("Failed to remove existing options for product ID: {}", productId);
                 return false;
             }
             
-            // Step 2: Create new options using the same logic as product creation
+            // Create new options using the same logic as product creation
             boolean optionsCreated = createProductOptions(productId, feedItem);
             if (!optionsCreated) {
                 logger.error("Failed to create new options for product ID: {}", productId);

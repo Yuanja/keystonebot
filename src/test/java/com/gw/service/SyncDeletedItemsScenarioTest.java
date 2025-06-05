@@ -22,13 +22,13 @@ public class SyncDeletedItemsScenarioTest extends BaseGraphqlTest {
     public void syncTestDeletedItemsScenario() throws Exception {
         logger.info("=== Starting Deleted Items Scenario Sync Test ===");
         
-        // Step 1: Get top 5 items from live feed using the same pattern as other tests
+        // Get top 5 items from live feed using the same pattern as other tests
         List<FeedItem> topFeedItems = getTopFeedItems(5);
         Assertions.assertTrue(topFeedItems.size() >= 5, "Should have at least 5 items from live feed");
         
         List<FeedItem> initialItems = topFeedItems.stream().limit(5).collect(Collectors.toList());
         
-        logger.info("Step 1: Publishing initial 5 items from live feed...");
+        logger.info("Publishing initial 5 items from live feed...");
         logger.info("Items to be published:");
         for (FeedItem item : initialItems) {
             logger.info("- " + item.getWebTagNumber() + " - " + item.getWebDescriptionShort());
@@ -51,7 +51,7 @@ public class SyncDeletedItemsScenarioTest extends BaseGraphqlTest {
         
         logger.info("✅ Initial state verified: 5 items in both Shopify and database");
         
-        logger.info("Step 2: Creating reduced feed (simulating 2 items removed from feed)...");
+        logger.info("Creating reduced feed (simulating 2 items removed from feed)...");
         // Create a reduced feed that only contains the first 3 items
         // This simulates the scenario where 2 items have been removed from the feed
         List<FeedItem> reducedFeed = initialItems.stream().limit(3).collect(Collectors.toList());
@@ -69,14 +69,14 @@ public class SyncDeletedItemsScenarioTest extends BaseGraphqlTest {
             logger.info("- " + item.getWebTagNumber() + " (should be deleted)");
         }
         
-        logger.info("Step 3: Running sync with reduced feed (3 items instead of 5)...");
+        logger.info("Running sync with reduced feed (3 items instead of 5)...");
         long startTime = System.currentTimeMillis();
         syncService.doSyncForFeedItems(reducedFeed);
         long endTime = System.currentTimeMillis();
         
         logger.info("✅ Deleted items sync completed in " + (endTime - startTime) + "ms");
         
-        logger.info("Step 4: Verifying deletions occurred...");
+        logger.info("Verifying deletions occurred...");
         
         // Verify Shopify state
         List<Product> finalProducts = shopifyApiService.getAllProducts();
@@ -140,4 +140,4 @@ public class SyncDeletedItemsScenarioTest extends BaseGraphqlTest {
         logger.info("✅ Successfully verified deletion of 2 items from both Shopify and database");
         logger.info("✅ Successfully verified retention of 3 items in both Shopify and database");
     }
-} 
+}

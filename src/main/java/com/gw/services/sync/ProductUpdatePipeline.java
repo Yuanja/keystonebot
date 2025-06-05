@@ -68,28 +68,28 @@ public class ProductUpdatePipeline {
         logger.info("🔄 Starting product update pipeline for SKU: {}", item.getWebTagNumber());
         
         try {
-            // Step 1: Validate item for update
-            validateItemForUpdate(item);
-            
-            // Step 2: Retrieve existing product
+                    // Validate item for update
+        validateItemForUpdate(item);
+        
+        // Retrieve existing product
             Product existingProduct = retrieveExistingProduct(item);
             
-            // Step 3: Handle image processing
+            // Handle image processing
             handleImageProcessing(item);
             
-            // Step 4: Create updated product and merge
+            // Create updated product and merge
             Product updatedProduct = createAndMergeUpdatedProduct(item, existingProduct);
             
-            // Step 5: Update product on Shopify
+            // Update product on Shopify
             updateProductOnShopify(updatedProduct, item);
             
-            // Step 6: Handle image updates
+            // Handle image updates
             handleImageUpdates(item, existingProduct);
             
-            // Step 7: Update inventory
+            // Update inventory
             updateInventory(item, updatedProduct);
             
-            // Step 8: Update collection associations
+            // Update collection associations
             updateCollectionAssociations(item);
             
             logger.info("✅ Product update pipeline completed successfully for SKU: {}", item.getWebTagNumber());
@@ -102,7 +102,7 @@ public class ProductUpdatePipeline {
     }
     
     /**
-     * Step 1: Validate that the item has required data for updating
+     * Validate that the item has required data for updating
      */
     private void validateItemForUpdate(FeedItem item) {
         logger.debug("📋 Validating item for update: {}", item.getWebTagNumber());
@@ -113,7 +113,7 @@ public class ProductUpdatePipeline {
     }
     
     /**
-     * Step 2: Retrieve the existing product from Shopify with validation
+     * Retrieve the existing product from Shopify with validation
      */
     private Product retrieveExistingProduct(FeedItem item) {
         logger.debug("🔍 Retrieving existing product for SKU: {}", item.getWebTagNumber());
@@ -128,7 +128,7 @@ public class ProductUpdatePipeline {
     }
     
     /**
-     * Step 3: Handle image processing using centralized service
+     * Handle image processing using centralized service
      */
     private void handleImageProcessing(FeedItem item) {
         ImageService.ImageProcessingResult result = imageService.handleImageProcessing(item, item.getWebTagNumber());
@@ -143,7 +143,7 @@ public class ProductUpdatePipeline {
     }
     
     /**
-     * Step 4: Create updated product and merge with existing product data
+     * Create updated product and merge with existing product data
      */
     private Product createAndMergeUpdatedProduct(FeedItem item, Product existingProduct) throws Exception {
         logger.debug("🔧 Creating and merging updated product for SKU: {}", item.getWebTagNumber());
@@ -162,7 +162,7 @@ public class ProductUpdatePipeline {
     }
     
     /**
-     * Step 5: Update the product on Shopify
+     * Update the product on Shopify
      * Always updates basic product information, handles variant options separately
      */
     private void updateProductOnShopify(Product product, FeedItem item) throws Exception {
@@ -240,7 +240,7 @@ public class ProductUpdatePipeline {
     }
     
     /**
-     * Step 6: Handle image updates using direct FeedItem approach
+     * Handle image updates using direct FeedItem approach
      * This properly replaces images instead of duplicating them
      */
     private void handleImageUpdates(FeedItem item, Product existingProduct) {
@@ -328,7 +328,7 @@ public class ProductUpdatePipeline {
     }
     
     /**
-     * Step 7: Update inventory after product update
+     * Update inventory after product update
      */
     private void updateInventory(FeedItem item, Product updatedProduct) throws Exception {
         logger.debug("📦 Updating inventory for product: {}", updatedProduct.getId());
@@ -339,7 +339,7 @@ public class ProductUpdatePipeline {
     }
     
     /**
-     * Step 8: Update collection associations
+     * Update collection associations
      */
     private void updateCollectionAssociations(FeedItem item) throws Exception {
         logger.debug("🏷️ Updating collection associations for SKU: {}", item.getWebTagNumber());
@@ -391,4 +391,4 @@ public class ProductUpdatePipeline {
         public Product getProduct() { return product; }
         public Exception getError() { return error; }
     }
-} 
+}

@@ -88,25 +88,25 @@ public class ProductPublishPipeline {
         logger.info("🚀 Starting product publish pipeline for SKU: {}", item.getWebTagNumber());
         
         try {
-            // Step 1: Handle image processing
-            handleImageProcessing(item);
-            
-            // Step 2: Create product on Shopify
+                    // Handle image processing
+        handleImageProcessing(item);
+        
+        // Create product on Shopify
             Product newlyAddedProduct = createProductOnShopify(item);
             
-            // Step 3: Add images to product using FeedItem image URLs
+            // Add images to product using FeedItem image URLs
             handleImageUpload(item, newlyAddedProduct.getId());
             
-            // Step 4: Setup inventory levels
+            // Setup inventory levels
             setupInventoryLevels(newlyAddedProduct);
             
-            // Step 5: Setup collection associations
+            // Setup collection associations
             setupCollectionAssociations(item, newlyAddedProduct);
             
-            // Step 6: Publish product to all channels
+            // Publish product to all channels
             publishToAllChannels(newlyAddedProduct);
             
-            // Step 7: Update item status and send notifications
+            // Update item status and send notifications
             finalizeSuccessfulPublish(item, newlyAddedProduct);
             
             logger.info("✅ Product publish pipeline completed successfully for SKU: {}", item.getWebTagNumber());
@@ -120,7 +120,7 @@ public class ProductPublishPipeline {
     }
     
     /**
-     * Step 1: Handle image processing using centralized service
+     * Handle image processing using centralized service
      */
     private void handleImageProcessing(FeedItem item) {
         ImageService.ImageProcessingResult result = imageService.handleImageProcessing(item, item.getWebTagNumber());
@@ -135,7 +135,7 @@ public class ProductPublishPipeline {
     }
     
     /**
-     * Step 2: Create product on Shopify using the product factory
+     * Create product on Shopify using the product factory
      */
     private Product createProductOnShopify(FeedItem item) throws Exception {
         logger.debug("🔧 Creating product on Shopify for SKU: {}", item.getWebTagNumber());
@@ -152,7 +152,7 @@ public class ProductPublishPipeline {
     }
     
     /**
-     * Step 4: Setup inventory levels for the new product
+     * Setup inventory levels for the new product
      */
     private void setupInventoryLevels(Product newlyAddedProduct) throws Exception {
         logger.debug("📦 Setting up inventory levels for product: {}", newlyAddedProduct.getId());
@@ -209,7 +209,7 @@ public class ProductPublishPipeline {
     }
 
     /**
-     * Step 5: Setup collection associations for the new product
+     * Setup collection associations for the new product
      */
     private void setupCollectionAssociations(FeedItem item, Product newlyAddedProduct) throws Exception {
         logger.debug("🏷️ Setting up collection associations for product: {}", newlyAddedProduct.getId());
@@ -220,7 +220,7 @@ public class ProductPublishPipeline {
     }
 
     /**
-     * Step 6: Publish product to all sales channels
+     * Publish product to all sales channels
      */
     private void publishToAllChannels(Product newlyAddedProduct) {
         logger.debug("📢 Publishing product to all channels: {}", newlyAddedProduct.getId());
@@ -235,7 +235,7 @@ public class ProductPublishPipeline {
     }
     
     /**
-     * Step 7: Finalize successful publish
+     * Finalize successful publish
      */
     private void finalizeSuccessfulPublish(FeedItem item, Product newlyAddedProduct) {
         logger.debug("✅ Finalizing successful publish for SKU: {}", item.getWebTagNumber());
@@ -393,4 +393,4 @@ public class ProductPublishPipeline {
         public Product getProduct() { return product; }
         public Exception getError() { return error; }
     }
-} 
+}

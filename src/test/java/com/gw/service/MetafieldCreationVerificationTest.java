@@ -25,7 +25,7 @@ public class MetafieldCreationVerificationTest extends BaseGraphqlTest {
     public void testMetafieldCreationAndVisibility() throws Exception {
         logger.info("=== Starting Comprehensive Metafield Creation & Visibility Test ===");
         
-        // Step 1: Get a test item from live feed
+        // Get a test item from live feed
         List<FeedItem> topFeedItems = getTopFeedItems(1);
         Assertions.assertTrue(topFeedItems.size() >= 1, "Should have at least 1 item from live feed");
         
@@ -43,7 +43,7 @@ public class MetafieldCreationVerificationTest extends BaseGraphqlTest {
         logger.info("  Serial: " + testItem.getWebSerialNumber());
         logger.info("  Reference: " + testItem.getWebWatchManufacturerReferenceNumber());
         
-        // Step 2: Create and publish the product
+        // Create and publish the product
         logger.info("🚀 Publishing item to Shopify...");
         syncService.doSyncForFeedItems(Arrays.asList(testItem));
         
@@ -51,7 +51,7 @@ public class MetafieldCreationVerificationTest extends BaseGraphqlTest {
         String shopifyProductId = testItem.getShopifyItemId();
         logger.info("✅ Product created with Shopify ID: " + shopifyProductId);
         
-        // Step 3: Retrieve the product and examine metafields
+        // Retrieve the product and examine metafields
         logger.info("🔍 Retrieving product from Shopify to verify metafields...");
         Product shopifyProduct = shopifyApiService.getProductByProductId(shopifyProductId);
         Assertions.assertNotNull(shopifyProduct, "Should be able to retrieve product from Shopify");
@@ -62,7 +62,7 @@ public class MetafieldCreationVerificationTest extends BaseGraphqlTest {
         logger.info("  Handle: " + shopifyProduct.getHandle());
         logger.info("  Status: " + shopifyProduct.getStatus());
         
-        // Step 4: Examine all metafields
+        // Examine all metafields
         List<Metafield> allMetafields = shopifyProduct.getMetafields();
         logger.info("📊 Metafield Analysis:");
         
@@ -77,7 +77,7 @@ public class MetafieldCreationVerificationTest extends BaseGraphqlTest {
         
         logger.info("  Total metafields found: " + allMetafields.size());
         
-        // Step 5: Categorize metafields by namespace
+        // Categorize metafields by namespace
         Map<String, List<Metafield>> metafieldsByNamespace = allMetafields.stream()
             .collect(Collectors.groupingBy(mf -> mf.getNamespace() != null ? mf.getNamespace() : "null"));
         
@@ -92,7 +92,7 @@ public class MetafieldCreationVerificationTest extends BaseGraphqlTest {
             }
         }
         
-        // Step 6: Specifically verify eBay metafields
+        // Specifically verify eBay metafields
         List<Metafield> ebayMetafields = allMetafields.stream()
             .filter(mf -> "ebay".equals(mf.getNamespace()))
             .collect(Collectors.toList());
@@ -106,7 +106,7 @@ public class MetafieldCreationVerificationTest extends BaseGraphqlTest {
             Assertions.fail("No eBay metafields found - check KeyStoneShopifyProductFactoryService.addEbayMetafields()");
         }
         
-        // Step 7: Verify specific eBay metafields that should exist based on feed data
+        // Verify specific eBay metafields that should exist based on feed data
         logger.info("🔍 Verifying specific eBay metafields:");
         
         int expectedMetafields = 0;
@@ -167,11 +167,11 @@ public class MetafieldCreationVerificationTest extends BaseGraphqlTest {
         logger.info("  Found eBay metafields: " + foundMetafields);
         logger.info("  Total eBay metafields: " + ebayMetafields.size());
         
-        // Step 8: Assertions
+        // Assertions
         Assertions.assertTrue(ebayMetafields.size() > 0, "Should have at least one eBay metafield");
         Assertions.assertTrue(foundMetafields > 0, "Should have found at least one expected eBay metafield");
         
-        // Step 9: Test metafield accessibility via different methods
+        // Test metafield accessibility via different methods
         logger.info("🔧 Testing metafield accessibility:");
         
         // Try retrieving product again to ensure metafields persist
@@ -185,7 +185,7 @@ public class MetafieldCreationVerificationTest extends BaseGraphqlTest {
             logger.error("  ❌ Metafields lost on re-retrieval!");
         }
         
-        // Step 10: Shopify Admin Interface Visibility Check
+        // Shopify Admin Interface Visibility Check
         logger.info("🖥️ Shopify Admin Visibility Information:");
         logger.info("  To check metafields in Shopify Admin:");
         logger.info("  1. Go to Products > All products");

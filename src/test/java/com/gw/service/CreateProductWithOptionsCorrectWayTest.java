@@ -37,35 +37,35 @@ public class CreateProductWithOptionsCorrectWayTest {
         logger.info("=== CREATING PRODUCT WITH OPTIONS - CORRECT TWO-STEP APPROACH ===");
         logger.info("📚 Based on Shopify documentation: https://shopify.dev/docs/api/admin-graphql/latest/mutations/productoptionscreate");
         
-        // STEP 1: Create basic product WITHOUT options
-        logger.info("\n🏗️ STEP 1: Creating basic product...");
+        // Create basic product WITHOUT options
+        logger.info("\n🏗️ Creating basic product...");
         Product basicProduct = createBasicProduct();
         
         if (basicProduct != null && basicProduct.getId() != null) {
-            logger.info("✅ STEP 1 SUCCESS: Product created with ID: {}", basicProduct.getId());
+            logger.info("✅ SUCCESS: Product created with ID: {}", basicProduct.getId());
             
-            // STEP 2: Add options to the existing product
-            logger.info("\n🔧 STEP 2: Adding options to product...");
+            // Add options to the existing product
+            logger.info("\n🔧 Adding options to product...");
             boolean optionsAdded = addOptionsToProduct(basicProduct.getId());
             
             if (optionsAdded) {
-                logger.info("✅ STEP 2 SUCCESS: Options added to product");
+                logger.info("✅ SUCCESS: Options added to product");
                 
-                // STEP 3: Examine the final result
-                logger.info("\n🔍 STEP 3: Examining final product...");
+                // Examine the final result
+                logger.info("\n🔍 Examining final product...");
                 examineProductWithOptions(basicProduct.getId());
                 
             } else {
-                logger.error("❌ STEP 2 FAILED: Could not add options to product");
+                logger.error("❌ FAILED: Could not add options to product");
             }
             
         } else {
-            logger.error("❌ STEP 1 FAILED: Could not create basic product");
+            logger.error("❌ FAILED: Could not create basic product");
         }
     }
     
     /**
-     * Step 1: Create basic product without options
+     * Create basic product without options
      */
     private Product createBasicProduct() {
         try {
@@ -105,7 +105,7 @@ public class CreateProductWithOptionsCorrectWayTest {
     }
     
     /**
-     * Step 2: Add options to existing product using productOptionsCreate
+     * Add options to existing product using productOptionsCreate
      */
     private boolean addOptionsToProduct(String productId) {
         try {
@@ -309,7 +309,7 @@ public class CreateProductWithOptionsCorrectWayTest {
     }
     
     /**
-     * Step 3: Examine the final product with options
+     * Examine the final product with options
      */
     private void examineProductWithOptions(String productId) {
         try {

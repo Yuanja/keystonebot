@@ -214,7 +214,7 @@ mvn test -P fix-ebay-metafields-prod
 
 ## Typical Production Workflow
 
-### Step 1: Always Analyze First
+### Always Analyze First
 ```bash
 mvn test -P analyze-force-update-prod
 ```
@@ -224,7 +224,7 @@ Review the output to understand:
 - What the processing order will be
 - Sample of items that would change
 
-### Step 2: Choose Your Approach
+### Choose Your Approach
 
 **Option A: Fix eBay Metafields**
 If metafields are causing issues or not properly pinned:
@@ -244,7 +244,7 @@ Only if you need to force update everything:
 mvn test -P force-update-all-prod
 ```
 
-### Step 3: Monitor Progress
+### Monitor Progress
 
 Watch the logs carefully for:
 - ✅ Successful updates
@@ -351,18 +351,18 @@ The force update process provides detailed logging:
 📡 Will refresh live feed data
 🔢 Processing from smallest web_tag_number first
 
-📊 Step 1: Analyzing current state...
+📊 Analyzing current state...
 📋 Database State:
   - Total items in database: 1,247
   - Items with Shopify ID: 1,198
 
-📡 Step 2: Refreshing live feed data...
+📡 Refreshing live feed data...
 📊 Fresh feed items loaded: 1,247
 
 🔢 Items sorted by web_tag_number (smallest first)
 📋 First 5 items: [10001, 10002, 10003, 10004, 10005]
 
-🔄 Step 3: Force updating items in batches of 25...
+🔄 Force updating items in batches of 25...
 📦 Processing batch 1/50 (items 0-24)
 🔢 Batch web_tag_numbers: 10001, 10002, 10003, ...
 ✅ Batch completed: 25 processed, 25 updated, 0 errors

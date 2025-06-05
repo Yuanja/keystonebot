@@ -47,10 +47,10 @@ public class CollectionManagementService {
             Map<PredefinedCollection, CustomCollection> collectionMappings = 
                 syncConfigurationService.getCollectionMappings();
             
-            // Step 1: Get current managed collections for this product
+            // Get current managed collections for this product
             List<Collect> currentManagedCollections = getCurrentManagedCollections(item.getShopifyItemId(), collectionMappings);
             
-            // Step 2: Determine which collections the product should be in
+            // Determine which collections the product should be in
             List<Collect> collectsToAdd = CollectionUtility.getCollectionForProduct(
                 item.getShopifyItemId(), item, collectionMappings);
             
@@ -107,10 +107,10 @@ public class CollectionManagementService {
             Map<PredefinedCollection, CustomCollection> collectionMappings = 
                 syncConfigurationService.getCollectionMappings();
             
-            // Step 1: Get current managed collections for this product
+            // Get current managed collections for this product
             List<Collect> currentManagedCollections = getCurrentManagedCollections(productId, collectionMappings);
             
-            // Step 2: Determine which collections the product should be in
+            // Determine which collections the product should be in
             List<Collect> collectsToAdd = CollectionUtility.getCollectionForProduct(
                 productId, item, collectionMappings);
             
@@ -376,4 +376,4 @@ public class CollectionManagementService {
             }
         }
     }
-} 
+}

@@ -36,7 +36,7 @@ The reconciliation system has been refactored to provide better control and safe
 
 ## Usage
 
-### Step 1: Analyze First (Always)
+### Analyze First (Always)
 
 Run analysis to understand what discrepancies exist:
 
@@ -60,7 +60,7 @@ This will provide a comprehensive report showing:
 - Image count mismatches (would be marked for update)
 - Safety threshold check
 
-### Step 2: Review Analysis Results
+### Review Analysis Results
 
 The analysis will show:
 
@@ -85,7 +85,7 @@ The analysis will show:
       mvn test -Pperform-reconciliation-prod (production)
 ```
 
-### Step 3: Reconcile (If Safe)
+### Reconcile (If Safe)
 
 Only after reviewing analysis results:
 

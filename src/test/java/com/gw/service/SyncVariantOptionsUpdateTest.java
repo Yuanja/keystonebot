@@ -19,8 +19,8 @@ public class SyncVariantOptionsUpdateTest extends BaseGraphqlTest {
         logger.info("=== Testing Variant Options Update Scenario ===");
         logger.info("💡 This test verifies that when feed item attributes change, product options are updated correctly");
         
-        // STEP 1: Create initial product with specific variant options
-        logger.info("\n🏗️ STEP 1: Creating initial product with variant options...");
+        // Create initial product with specific variant options
+        logger.info("\n🏗️ Creating initial product with variant options...");
         
         FeedItem initialItem = createTestFeedItem(
             "UPDATE-TEST-001",
@@ -59,8 +59,8 @@ public class SyncVariantOptionsUpdateTest extends BaseGraphqlTest {
         logger.info("Initial variant options: [{}, {}, {}]", 
             initialVariant.getOption1(), initialVariant.getOption2(), initialVariant.getOption3());
         
-        // STEP 2: Modify feed item with different variant option values
-        logger.info("\n🔄 STEP 2: Modifying feed item with different variant option values...");
+        // Modify feed item with different variant option values
+        logger.info("\n🔄 Modifying feed item with different variant option values...");
         
         FeedItem modifiedItem = createTestFeedItem(
             "UPDATE-TEST-001",       // Same SKU
@@ -76,8 +76,8 @@ public class SyncVariantOptionsUpdateTest extends BaseGraphqlTest {
         logger.info("  Size: 40mm -> 42mm");
         logger.info("  Material: Steel -> Gold");
         
-        // STEP 3: Run sync update to test the variant options update logic
-        logger.info("\n🚀 STEP 3: Running sync update to test variant options update...");
+        // Run sync update to test the variant options update logic
+        logger.info("\n🚀 Running sync update to test variant options update...");
         
         long startTime = System.currentTimeMillis();
         syncService.updateItemOnShopify(modifiedItem);
@@ -85,8 +85,8 @@ public class SyncVariantOptionsUpdateTest extends BaseGraphqlTest {
         
         logger.info("✅ Update completed in {}ms", (endTime - startTime));
         
-        // STEP 4: Verify that options were updated correctly
-        logger.info("\n🔍 STEP 4: Verifying that variant options were updated correctly...");
+        // Verify that options were updated correctly
+        logger.info("\n🔍 Verifying that variant options were updated correctly...");
         
         Product updatedProduct = shopifyApiService.getProductByProductId(modifiedItem.getShopifyItemId());
         Assertions.assertNotNull(updatedProduct, "Updated product should exist in Shopify");
@@ -148,8 +148,8 @@ public class SyncVariantOptionsUpdateTest extends BaseGraphqlTest {
         Assertions.assertTrue(variantHasNewValues, "Updated variant should have at least one of the new option values");
         logger.info("✅ Variant option values updated correctly");
         
-        // STEP 5: Test removing options (when feed item has no option attributes)
-        logger.info("\n🗑️ STEP 5: Testing option removal when feed item has no option attributes...");
+        // Test removing options (when feed item has no option attributes)
+        logger.info("\n🗑️ Testing option removal when feed item has no option attributes...");
         
         FeedItem itemWithoutOptions = createTestFeedItem(
             "UPDATE-TEST-001",       // Same SKU

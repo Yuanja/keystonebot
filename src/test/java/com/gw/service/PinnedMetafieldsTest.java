@@ -24,13 +24,13 @@ public class PinnedMetafieldsTest extends BaseGraphqlTest {
     @Test
     public void testEbayMetafieldDefinitionsArePinned() throws Exception {
         logger.info("=== Starting Pinned eBay Metafields Test ===");
-        logger.info("📌 Step 1: Creating eBay metafield definitions with pinning...");
+        logger.info("📌 Creating eBay metafield definitions with pinning...");
         
         // Create eBay metafield definitions with pinning enabled
         shopifyGraphQLService.createEbayMetafieldDefinitions();
         logger.info("✅ eBay metafield definitions created");
         
-        logger.info("🔍 Step 2: Retrieving eBay metafield definitions...");
+        logger.info("🔍 Retrieving eBay metafield definitions...");
         
         // Get all metafield definitions to verify they exist and are pinned
         List<Map<String, String>> definitions = shopifyGraphQLService.getMetafieldDefinitions("ebay");
@@ -40,7 +40,7 @@ public class PinnedMetafieldsTest extends BaseGraphqlTest {
         Assertions.assertEquals(13, definitions.size(), "Should have exactly 13 eBay metafield definitions");
         logger.info("✅ Found {} eBay metafield definitions", definitions.size());
         
-        logger.info("📌 Step 3: Verifying metafields are pinned...");
+        logger.info("📌 Verifying metafields are pinned...");
         
         // Check each definition to ensure it's pinned (has a pinnedPosition)
         int pinnedCount = 0;
@@ -115,8 +115,8 @@ public class PinnedMetafieldsTest extends BaseGraphqlTest {
     public void testEbayMetafieldDefinitionCleanupAndRecreation() throws Exception {
         logger.info("=== Testing eBay Metafield Definition Cleanup and Recreration ===");
         
-        // Step 1: Remove existing eBay metafield definitions
-        logger.info("🧹 Step 1: Cleaning up existing eBay metafield definitions...");
+        // Remove existing eBay metafield definitions
+        logger.info("🧹 Cleaning up existing eBay metafield definitions...");
         try {
             shopifyGraphQLService.removeEbayMetafieldDefinitions();
             logger.info("✅ Cleanup completed");
@@ -124,12 +124,12 @@ public class PinnedMetafieldsTest extends BaseGraphqlTest {
             logger.info("ℹ️ Cleanup encountered expected errors: " + e.getMessage());
         }
         
-        // Step 2: Recreate eBay metafield definitions with pinning
-        logger.info("📌 Step 2: Recreating eBay metafield definitions with pinning...");
+        // Recreate eBay metafield definitions with pinning
+        logger.info("📌 Recreating eBay metafield definitions with pinning...");
         shopifyGraphQLService.createEbayMetafieldDefinitions();
         
-        // Step 3: Verify they were recreated
-        logger.info("🔍 Step 3: Verifying recreated definitions...");
+        // Verify they were recreated
+        logger.info("🔍 Verifying recreated definitions...");
         List<Map<String, String>> ebayDefinitions = shopifyGraphQLService.getMetafieldDefinitions("ebay");
         
         Assertions.assertFalse(ebayDefinitions.isEmpty(), "Should have recreated eBay metafield definitions");
