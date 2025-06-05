@@ -1936,7 +1936,12 @@ public class ShopifyGraphQLService {
     /**
      * Add a product to a collection using GraphQL
      */
-    private void addProductToCollection(String productId, String collectionId) {
+    public void addProductToCollection(String productId, String collectionId) {
+        // First, get collection name for better logging
+        String collectionName = getCollectionName(collectionId);
+        
+        logger.debug("🔗 Adding product {} to collection '{}' (ID: {})", productId, collectionName, collectionId);
+        
         String mutation = """
             mutation collectionAddProducts($id: ID!, $productIds: [ID!]!) {
                 collectionAddProducts(id: $id, productIds: $productIds) {
@@ -1963,14 +1968,53 @@ public class ShopifyGraphQLService {
             // Check for user errors
             JsonNode userErrors = collectionAdd.get("userErrors");
             if (userErrors != null && userErrors.size() > 0) {
-                logger.error("Adding product to collection failed with user errors: " + userErrors.toString());
-                throw new RuntimeException("Adding product to collection failed: " + userErrors.toString());
+                String errorMsg = "Adding product " + productId + " to collection '" + collectionName + 
+                                 "' (ID: " + collectionId + ") failed with user errors: " + userErrors.toString();
+                logger.error("❌ " + errorMsg);
+                throw new RuntimeException(errorMsg);
             }
             
+            // Log successful addition
+            logger.debug("✅ Successfully added product {} to collection '{}'", productId, collectionName);
+            
         } catch (Exception e) {
-            logger.error("Error adding product " + productId + " to collection " + collectionId, e);
-            throw new RuntimeException("Failed to add product to collection", e);
+            String errorMsg = "Error adding product " + productId + " to collection '" + collectionName + 
+                             "' (ID: " + collectionId + ")";
+            logger.error("❌ " + errorMsg, e);
+            throw new RuntimeException("Failed to add product to collection '" + collectionName + "' (ID: " + collectionId + ")", e);
         }
+    }
+    
+    /**
+     * Helper method to get collection name by ID for better logging
+     * Returns collection title if found, otherwise returns a fallback with ID
+     */
+    private String getCollectionName(String collectionId) {
+        try {
+            String query = """
+                query getCollectionName($id: ID!) {
+                    collection(id: $id) {
+                        id
+                        title
+                    }
+                }
+                """;
+            
+            Map<String, Object> variables = new HashMap<>();
+            variables.put("id", "gid://shopify/Collection/" + collectionId);
+            
+            JsonNode data = executeGraphQLQuery(query, variables);
+            JsonNode collectionNode = data.get("collection");
+            
+            if (collectionNode != null && !collectionNode.isNull() && collectionNode.has("title")) {
+                return collectionNode.get("title").asText();
+            }
+        } catch (Exception e) {
+            logger.debug("Could not fetch collection name for ID: {} - {}", collectionId, e.getMessage());
+        }
+        
+        // Fallback if we can't get the name
+        return "Unknown Collection (ID: " + collectionId + ")";
     }
     
     /**

@@ -50,13 +50,62 @@ public class CollectionManagementService {
                 item.getShopifyItemId(), item, collectionMappings);
             
             if (!collectsToAdd.isEmpty()) {
-                shopifyGraphQLService.addProductAndCollectionsAssociations(collectsToAdd);
-                logger.debug("Added product to {} collections", collectsToAdd.size());
+                // Enhanced logging: Show which collections we're trying to add
+                logger.debug("🏷️ Attempting to add product {} (SKU: {}) to {} collections", 
+                    item.getShopifyItemId(), item.getWebTagNumber(), collectsToAdd.size());
+                
+                // Process each collection individually for better error handling
+                int successCount = 0;
+                int failCount = 0;
+                StringBuilder failedCollections = new StringBuilder();
+                
+                for (Collect collect : collectsToAdd) {
+                    String collectionId = collect.getCollectionId();
+                    String collectionName = findCollectionNameById(collectionId, collectionMappings);
+                    
+                    try {
+                        logger.debug("  🔗 Adding to collection: '{}' (ID: {})", collectionName, collectionId);
+                        
+                        // Perform individual ShopifyQL operation for this collection
+                        shopifyGraphQLService.addProductToCollection(collect.getProductId(), collectionId);
+                        
+                        logger.debug("  ✅ Successfully added to collection: '{}'", collectionName);
+                        successCount++;
+                        
+                    } catch (Exception e) {
+                        logger.warn("  ❌ Failed to add to collection: '{}' (ID: {}) - {}", 
+                            collectionName, collectionId, e.getMessage());
+                        failCount++;
+                        
+                        if (failedCollections.length() > 0) {
+                            failedCollections.append(", ");
+                        }
+                        failedCollections.append("'").append(collectionName).append("'");
+                        
+                        // Continue with other collections instead of failing completely
+                    }
+                }
+                
+                // Summary logging
+                if (successCount > 0) {
+                    logger.debug("✅ Successfully added product to {}/{} collections", successCount, collectsToAdd.size());
+                }
+                
+                if (failCount > 0) {
+                    logger.warn("⚠️ Failed to add product to {}/{} collections: {}", 
+                        failCount, collectsToAdd.size(), failedCollections.toString());
+                    
+                    // Only throw exception if ALL collections failed
+                    if (successCount == 0) {
+                        throw new Exception("Failed to add product to any collections. Failed collections: " + failedCollections.toString());
+                    }
+                }
+                
             } else {
-                logger.debug("No collections found for product SKU: {}", item.getWebTagNumber());
+                logger.debug("⚠️ No collections found for product SKU: {}", item.getWebTagNumber());
             }
         } catch (Exception e) {
-            logger.error("Failed to update collections for SKU: {}", item.getWebTagNumber(), e);
+            logger.error("❌ Failed to update collections for SKU: {}", item.getWebTagNumber(), e);
             throw e;
         }
     }
@@ -74,8 +123,57 @@ public class CollectionManagementService {
                 productId, item, collectionMappings);
             
             if (!collectsToAdd.isEmpty()) {
-                shopifyGraphQLService.addProductAndCollectionsAssociations(collectsToAdd);
-                logger.debug("✅ Added product {} to {} collections", productId, collectsToAdd.size());
+                // Enhanced logging: Show which collections we're trying to add
+                logger.debug("🏷️ Attempting to add product {} (SKU: {}) to {} collections", 
+                    productId, item.getWebTagNumber(), collectsToAdd.size());
+                
+                // Process each collection individually for better error handling
+                int successCount = 0;
+                int failCount = 0;
+                StringBuilder failedCollections = new StringBuilder();
+                
+                for (Collect collect : collectsToAdd) {
+                    String collectionId = collect.getCollectionId();
+                    String collectionName = findCollectionNameById(collectionId, collectionMappings);
+                    
+                    try {
+                        logger.debug("  🔗 Adding to collection: '{}' (ID: {})", collectionName, collectionId);
+                        
+                        // Perform individual ShopifyQL operation for this collection
+                        shopifyGraphQLService.addProductToCollection(productId, collectionId);
+                        
+                        logger.debug("  ✅ Successfully added to collection: '{}'", collectionName);
+                        successCount++;
+                        
+                    } catch (Exception e) {
+                        logger.warn("  ❌ Failed to add to collection: '{}' (ID: {}) - {}", 
+                            collectionName, collectionId, e.getMessage());
+                        failCount++;
+                        
+                        if (failedCollections.length() > 0) {
+                            failedCollections.append(", ");
+                        }
+                        failedCollections.append("'").append(collectionName).append("'");
+                        
+                        // Continue with other collections instead of failing completely
+                    }
+                }
+                
+                // Summary logging
+                if (successCount > 0) {
+                    logger.debug("✅ Successfully added product {} to {}/{} collections", productId, successCount, collectsToAdd.size());
+                }
+                
+                if (failCount > 0) {
+                    logger.warn("⚠️ Failed to add product {} to {}/{} collections: {}", 
+                        productId, failCount, collectsToAdd.size(), failedCollections.toString());
+                    
+                    // Only throw exception if ALL collections failed
+                    if (successCount == 0) {
+                        throw new Exception("Failed to add product to any collections. Failed collections: " + failedCollections.toString());
+                    }
+                }
+                
             } else {
                 logger.debug("⚠️ No collections found for product SKU: {}", item.getWebTagNumber());
             }
@@ -83,5 +181,16 @@ public class CollectionManagementService {
             logger.error("❌ Failed to update collections for SKU: {} with product ID: {}", item.getWebTagNumber(), productId, e);
             throw e;
         }
+    }
+    
+    /**
+     * Helper method to find collection name by ID from the mappings
+     */
+    private String findCollectionNameById(String collectionId, Map<PredefinedCollection, CustomCollection> collectionMappings) {
+        return collectionMappings.values().stream()
+            .filter(collection -> collectionId.equals(collection.getId()))
+            .map(CustomCollection::getTitle)
+            .findFirst()
+            .orElse("Unknown Collection (ID: " + collectionId + ")");
     }
 } 

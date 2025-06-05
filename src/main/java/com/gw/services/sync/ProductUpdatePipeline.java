@@ -344,9 +344,25 @@ public class ProductUpdatePipeline {
     private void updateCollectionAssociations(FeedItem item) throws Exception {
         logger.debug("🏷️ Updating collection associations for SKU: {}", item.getWebTagNumber());
         
-        // Delegate to specialized collection service
-        collectionManagementService.updateProductCollections(item);
-        logger.debug("✅ Collection associations updated");
+        try {
+            // Delegate to specialized collection service
+            collectionManagementService.updateProductCollections(item);
+            logger.debug("✅ Collection associations updated");
+        } catch (Exception e) {
+            // Enhanced error logging for collection association failures
+            logger.error("❌ Failed to update collection associations for SKU: {} (Product ID: {})", 
+                item.getWebTagNumber(), item.getShopifyItemId(), e);
+            
+            // Add specific context about the item to help with debugging
+            logger.error("🔍 DEBUG Context - Item details:");
+            logger.error("  - SKU: {}", item.getWebTagNumber());
+            logger.error("  - Shopify Product ID: {}", item.getShopifyItemId());
+            logger.error("  - Category: {}", item.getWebCategory());
+            logger.error("  - Brand: {}", item.getWebDesigner());
+            logger.error("  - Status: {}", item.getStatus());
+            
+            throw e;
+        }
     }
     
     /**
