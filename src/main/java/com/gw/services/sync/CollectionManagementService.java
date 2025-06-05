@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Reusable Collection Management Service
@@ -46,12 +47,16 @@ public class CollectionManagementService {
             Map<PredefinedCollection, CustomCollection> collectionMappings = 
                 syncConfigurationService.getCollectionMappings();
             
+            // Step 1: Remove product from ALL managed collections first (clean state)
+            removeProductFromManagedCollections(item.getShopifyItemId(), item.getWebTagNumber(), collectionMappings);
+            
+            // Step 2: Determine which collections the product should be in
             List<Collect> collectsToAdd = CollectionUtility.getCollectionForProduct(
                 item.getShopifyItemId(), item, collectionMappings);
             
             if (!collectsToAdd.isEmpty()) {
                 // Enhanced logging: Show which collections we're trying to add
-                logger.debug("🏷️ Attempting to add product {} (SKU: {}) to {} collections", 
+                logger.debug("🏷️ Step 2: Adding product {} (SKU: {}) to {} collections", 
                     item.getShopifyItemId(), item.getWebTagNumber(), collectsToAdd.size());
                 
                 // Process each collection individually for better error handling
@@ -102,7 +107,7 @@ public class CollectionManagementService {
                 }
                 
             } else {
-                logger.debug("⚠️ No collections found for product SKU: {}", item.getWebTagNumber());
+                logger.debug("⚠️ No collections found for product SKU: {} (product will remain in no managed collections)", item.getWebTagNumber());
             }
         } catch (Exception e) {
             logger.error("❌ Failed to update collections for SKU: {}", item.getWebTagNumber(), e);
@@ -119,12 +124,16 @@ public class CollectionManagementService {
             Map<PredefinedCollection, CustomCollection> collectionMappings = 
                 syncConfigurationService.getCollectionMappings();
             
+            // Step 1: Remove product from ALL managed collections first (clean state)
+            removeProductFromManagedCollections(productId, item.getWebTagNumber(), collectionMappings);
+            
+            // Step 2: Determine which collections the product should be in
             List<Collect> collectsToAdd = CollectionUtility.getCollectionForProduct(
                 productId, item, collectionMappings);
             
             if (!collectsToAdd.isEmpty()) {
                 // Enhanced logging: Show which collections we're trying to add
-                logger.debug("🏷️ Attempting to add product {} (SKU: {}) to {} collections", 
+                logger.debug("🏷️ Step 2: Adding product {} (SKU: {}) to {} collections", 
                     productId, item.getWebTagNumber(), collectsToAdd.size());
                 
                 // Process each collection individually for better error handling
@@ -175,7 +184,7 @@ public class CollectionManagementService {
                 }
                 
             } else {
-                logger.debug("⚠️ No collections found for product SKU: {}", item.getWebTagNumber());
+                logger.debug("⚠️ No collections found for product SKU: {} (product will remain in no managed collections)", item.getWebTagNumber());
             }
         } catch (Exception e) {
             logger.error("❌ Failed to update collections for SKU: {} with product ID: {}", item.getWebTagNumber(), productId, e);
@@ -192,5 +201,88 @@ public class CollectionManagementService {
             .map(CustomCollection::getTitle)
             .findFirst()
             .orElse("Unknown Collection (ID: " + collectionId + ")");
+    }
+    
+    /**
+     * Remove product from all managed collections with detailed logging
+     * This provides better debugging information than the base ShopifyGraphQLService method
+     */
+    private void removeProductFromManagedCollections(String productId, String sku, 
+                                                   Map<PredefinedCollection, CustomCollection> collectionMappings) {
+        if (collectionMappings == null || collectionMappings.isEmpty()) {
+            logger.debug("🔍 No managed collections defined, skipping removal for product: {} (SKU: {})", productId, sku);
+            return;
+        }
+        
+        // Get current collections for this product
+        List<Collect> currentCollections = shopifyGraphQLService.getCollectsForProductId(productId);
+        
+        // Create a map of managed collection IDs to their titles for easy lookup
+        Map<String, String> managedCollectionTitles = collectionMappings.values().stream()
+            .collect(java.util.stream.Collectors.toMap(CustomCollection::getId, CustomCollection::getTitle));
+        
+        Set<String> managedCollectionIds = managedCollectionTitles.keySet();
+        
+        // Filter to only managed collections that the product is currently in
+        List<Collect> managedCollectionsToRemove = currentCollections.stream()
+            .filter(collect -> managedCollectionIds.contains(collect.getCollectionId()))
+            .collect(java.util.stream.Collectors.toList());
+        
+        if (managedCollectionsToRemove.isEmpty()) {
+            logger.debug("🔍 Product {} (SKU: {}) is not in any managed collections, no removal needed", productId, sku);
+            return;
+        }
+        
+        logger.debug("🧹 Removing product {} (SKU: {}) from {} managed collections", 
+            productId, sku, managedCollectionsToRemove.size());
+        
+        // Remove from each managed collection individually
+        int removalSuccessCount = 0;
+        int removalFailCount = 0;
+        StringBuilder failedRemovals = new StringBuilder();
+        
+        for (Collect collect : managedCollectionsToRemove) {
+            String collectionId = collect.getCollectionId();
+            String collectionTitle = managedCollectionTitles.get(collectionId);
+            
+            try {
+                logger.debug("  🗑️ Removing from collection: '{}' (ID: {})", collectionTitle, collectionId);
+                shopifyGraphQLService.deleteCollectByProductAndCollection(productId, collectionId);
+                logger.debug("  ✅ Successfully removed from collection: '{}'", collectionTitle);
+                removalSuccessCount++;
+                
+            } catch (Exception e) {
+                logger.warn("  ❌ Failed to remove from collection: '{}' (ID: {}) - {}", 
+                    collectionTitle, collectionId, e.getMessage());
+                removalFailCount++;
+                
+                if (failedRemovals.length() > 0) {
+                    failedRemovals.append(", ");
+                }
+                failedRemovals.append("'").append(collectionTitle).append("'");
+                
+                // Continue with other collections instead of failing completely
+            }
+        }
+        
+        // Summary logging for removals
+        if (removalSuccessCount > 0) {
+            logger.debug("✅ Successfully removed product from {}/{} managed collections", 
+                removalSuccessCount, managedCollectionsToRemove.size());
+        }
+        
+        if (removalFailCount > 0) {
+            logger.warn("⚠️ Failed to remove product from {}/{} managed collections: {}", 
+                removalFailCount, managedCollectionsToRemove.size(), failedRemovals.toString());
+        }
+        
+        // Log info about non-managed collections we're leaving untouched
+        long untouchedCount = currentCollections.stream()
+            .filter(collect -> !managedCollectionIds.contains(collect.getCollectionId()))
+            .count();
+        
+        if (untouchedCount > 0) {
+            logger.debug("ℹ️ Left product in {} non-managed collections (not removed)", untouchedCount);
+        }
     }
 } 
