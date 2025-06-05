@@ -99,7 +99,11 @@ import java.util.HashMap;
  * --------------------------------
  * Shows what WOULD be fixed without making changes:
  * 
+ * All products:
  *   mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
+ * 
+ * Specific item:
+ *   mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DwebTagNumber=YOUR_SKU
  * 
  * Expected output:
  * - Detailed fix plan showing current → correct inventory
@@ -113,7 +117,11 @@ import java.util.HashMap;
  * 
  * No source code edits needed! Use parameter control:
  * 
+ * All products:
  *   mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
+ * 
+ * Specific item:
+ *   mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false -DwebTagNumber=YOUR_SKU
  * 
  * Monitor the output for:
  * - "LIVE MODE - Changes will be applied to Shopify!" message
@@ -204,13 +212,16 @@ import java.util.HashMap;
  * If you need to quickly fix inventory issues:
  * 
  * 1. Quick scan: mvn test -Dtest=InventoryFixTest#scanInventoryIssues | grep "Total products with issues"
- * 2. If issues found: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
+ * 2. If issues found:
+ *    - All products: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
+ *    - Specific item: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false -DwebTagNumber=YOUR_SKU
  * 
  * For specific problem SKUs:
- * mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=YOUR_SKU
+ * 1. Analyze: mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=YOUR_SKU
+ * 2. Fix: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false -DwebTagNumber=YOUR_SKU
  * 
  * For location distribution issues:
- * 1. Run: mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview
+ * 1. Overview: mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview
  * 
  * 📋 PRODUCTION CHECKLIST 📋
  * ==========================
@@ -271,9 +282,11 @@ import java.util.HashMap;
  * 
  * 1. General scan: mvn test -Dtest=InventoryFixTest#scanInventoryIssues
  * 2. Location overview: mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview
- * 3. Specific SKU: mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=YOUR_SKU
- * 4. Dry run fix: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
- * 5. Live fix: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
+ * 3. Specific SKU scan: mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=YOUR_SKU
+ * 4. Dry run fix (all): mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
+ * 5. Dry run fix (specific): mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DwebTagNumber=YOUR_SKU
+ * 6. Live fix (all): mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
+ * 7. Live fix (specific): mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false -DwebTagNumber=YOUR_SKU
  */
 @SpringJUnitConfig
 @SpringBootTest
@@ -314,22 +327,34 @@ public class InventoryFixTest {
      * SAFETY: Respects dryRun parameter - defaults to safe dry run mode
      * 
      * PROCESS:
-     * 1. Scans all Shopify products for inventory > 1
+     * 1. Scans all Shopify products (or specific item) for inventory > 1
      * 2. Looks up feed_items in database
      * 3. Determines correct inventory based on status
      * 4. Generates detailed fix plan
      * 5. Applies fixes (if -DdryRun=false specified)
      * 
      * USAGE:
-     * Dry run (safe): mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
-     * Live mode: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
+     * All products dry run: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
+     * All products live: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
+     * Specific item dry run: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DwebTagNumber=YOUR_SKU
+     * Specific item live: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false -DwebTagNumber=YOUR_SKU
      * 
      * IMPORTANT: Always run scanInventoryIssues() first to understand scope!
      */
     @Test
     public void fixInflatedInventoryLevels() throws Exception {
         logger.info("=== Starting Inventory Fix Test - Production Data Cleanup ===");
-        logger.info("🔍 Scanning for products with inflated inventory levels (total > 1)");
+        
+        // Check for specific web tag number parameter
+        String specificWebTagNumber = System.getProperty("webTagNumber");
+        
+        if (specificWebTagNumber != null && !specificWebTagNumber.trim().isEmpty()) {
+            logger.info("🎯 TARGETED FIX MODE - Processing specific item: {}", specificWebTagNumber);
+            logger.info("💡 Using web tag number from parameter: -DwebTagNumber={}", specificWebTagNumber);
+        } else {
+            logger.info("🔍 BULK FIX MODE - Scanning all products with inflated inventory levels (total > 1)");
+            logger.info("💡 To fix specific item, add: -DwebTagNumber=YOUR_SKU");
+        }
         
         boolean dryRun = getDryRunMode();
         if (dryRun) {
@@ -340,10 +365,28 @@ public class InventoryFixTest {
             logger.warn("⚠️ This will make REAL changes to inventory levels");
         }
         
-        // STEP 1: Get all products from Shopify
-        logger.info("📡 Fetching all products from Shopify...");
-        List<Product> allProducts = shopifyApiService.getAllProducts();
-        logger.info("📊 Found {} total products in Shopify", allProducts.size());
+        // STEP 1: Get products from Shopify (all or specific)
+        List<Product> allProducts;
+        
+        if (specificWebTagNumber != null && !specificWebTagNumber.trim().isEmpty()) {
+            // Process specific item only
+            logger.info("📡 Looking up specific product by web tag number: {}", specificWebTagNumber);
+            allProducts = getProductByWebTagNumber(specificWebTagNumber);
+            if (allProducts.isEmpty()) {
+                logger.error("❌ Product not found for web tag number: {}", specificWebTagNumber);
+                logger.info("💡 Possible reasons:");
+                logger.info("  - SKU doesn't exist in database");
+                logger.info("  - SKU not published to Shopify");
+                logger.info("  - Product was deleted from Shopify");
+                return;
+            }
+            logger.info("✅ Found product for SKU: {}", specificWebTagNumber);
+        } else {
+            // Process all products
+            logger.info("📡 Fetching all products from Shopify...");
+            allProducts = shopifyApiService.getAllProducts();
+            logger.info("📊 Found {} total products in Shopify", allProducts.size());
+        }
         
         // STEP 2: Analyze inventory levels
         logger.info("🔍 Analyzing inventory levels for all products...");
@@ -1262,6 +1305,46 @@ public class InventoryFixTest {
         
         logger.info("=" .repeat(120));
         logger.info("=== Inventory by Location Overview Complete ===");
+    }
+    
+    /**
+     * Helper method to get a specific product by web tag number
+     * 
+     * @param webTagNumber The SKU to look up
+     * @return List containing the product if found, empty list if not found
+     */
+    private List<Product> getProductByWebTagNumber(String webTagNumber) throws Exception {
+        List<Product> result = new ArrayList<>();
+        
+        // Look up feed item in database
+        FeedItem feedItem = feedItemService.findByWebTagNumber(webTagNumber);
+        if (feedItem == null) {
+            logger.warn("⚠️ Feed item not found in database for web tag number: {}", webTagNumber);
+            return result;
+        }
+        
+        // Check if feed item has Shopify ID
+        String shopifyItemId = feedItem.getShopifyItemId();
+        if (shopifyItemId == null || shopifyItemId.trim().isEmpty()) {
+            logger.warn("⚠️ Feed item found but has no Shopify ID - not published to Shopify");
+            return result;
+        }
+        
+        // Get product from Shopify
+        try {
+            Product product = shopifyApiService.getProductByProductId(shopifyItemId);
+            if (product != null) {
+                result.add(product);
+                logger.debug("✅ Successfully retrieved product for SKU: {}", webTagNumber);
+            } else {
+                logger.warn("⚠️ Product not found in Shopify with ID: {}", shopifyItemId);
+            }
+        } catch (Exception e) {
+            logger.error("❌ Error retrieving product from Shopify: {}", e.getMessage());
+            throw e;
+        }
+        
+        return result;
     }
     
     /**

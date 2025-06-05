@@ -7,35 +7,73 @@
 - ✅ **SAFE** to run in production environments
 - ✅ **PRESERVES** existing Shopify products and database records
 
+## 🔧 Production Profile Configuration
+
+⚠️ **CRITICAL FOR PRODUCTION USE** ⚠️
+
+**For production environments, you MUST specify the `keystone-prod` Spring profile:**
+
+- **ALL production commands** must include: `-Dspring.profiles.active=keystone-prod`
+- **Without this profile**, the tool may connect to the wrong database/environment
+- **Development commands** can run without profile (uses default configuration)
+
+**Quick Examples:**
+```bash
+# ❌ Development (may not connect to prod database)
+mvn test -Dtest=InventoryFixTest#scanInventoryIssues
+
+# ✅ Production (connects to production database)  
+mvn test -Dtest=InventoryFixTest#scanInventoryIssues -Dspring.profiles.active=keystone-prod
+```
+
+**Safety Note**: Always verify you're connected to the correct environment by checking the scan results against expected product counts.
+
 ## ⚡ Quick Start Commands
 
-### 1. Scan for Issues (Safe - Read Only)
+### 🔧 Development/Testing Environment
+For testing or development environments:
+
 ```bash
+# 1. Scan for Issues (Safe - Read Only)
 mvn test -Dtest=InventoryFixTest#scanInventoryIssues
-```
 
-### 2. Dry Run Fix (Safe - Shows What Would Change)
-```bash
+# 2. Dry Run Fix (Safe - Shows What Would Change)
 mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels
-```
 
-### 3. Live Fix (⚠️ Makes Real Changes)
-```bash
+# 3. Live Fix - All Products (⚠️ Makes Real Changes)
 mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
-```
 
-### 4. 🆕 Scan Specific Item by SKU (Safe - Read Only)
-```bash
-# Parameter method (recommended)
+# 4. 🆕 Live Fix - Specific Item (⚠️ Makes Real Changes)
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false -DwebTagNumber=YOUR_SKU
+
+# 5. Scan Specific Item by SKU (Safe - Read Only)
 mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=YOUR_SKU
 
-# Alternative: Edit TARGET_WEB_TAG_NUMBER in method, then run
-mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber
+# 6. Inventory by Location Overview (Safe - Read Only)
+mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview
 ```
 
-### 5. 🆕 Inventory by Location Overview (Safe - Read Only)
+### 🚨 Production Environment (keystone-prod profile)
+For production usage with keystone-prod active profile:
+
 ```bash
-mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview
+# 1. Scan for Issues (Safe - Read Only)
+mvn test -Dtest=InventoryFixTest#scanInventoryIssues -Dspring.profiles.active=keystone-prod
+
+# 2. Dry Run Fix (Safe - Shows What Would Change) 
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -Dspring.profiles.active=keystone-prod
+
+# 3. Live Fix - All Products (⚠️ Makes Real Changes to Production!)
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false -Dspring.profiles.active=keystone-prod
+
+# 4. 🆕 Live Fix - Specific Item (⚠️ Makes Real Changes to Production!)
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false -DwebTagNumber=YOUR_SKU -Dspring.profiles.active=keystone-prod
+
+# 5. Scan Specific Item by SKU (Safe - Read Only)
+mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=YOUR_SKU -Dspring.profiles.active=keystone-prod
+
+# 6. Inventory by Location Overview (Safe - Read Only)
+mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview -Dspring.profiles.active=keystone-prod
 ```
 
 ---
@@ -165,6 +203,22 @@ mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
 mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=true
 ```
 
+**🆕 Targeted Fix Control:**
+```bash
+# Fix all products with inventory issues
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
+
+# Fix only a specific SKU (much faster!)
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false -DwebTagNumber=WATCH-001
+
+# Dry run for specific SKU
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DwebTagNumber=WATCH-001
+
+# Multiple examples
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DwebTagNumber=GW12345 -DdryRun=false
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DwebTagNumber=ROL2023-001
+```
+
 **Specific SKU Analysis:**
 ```bash
 # Analyze a specific SKU (recommended method)
@@ -227,25 +281,52 @@ mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber
 
 ## ⚡ Emergency Quick Fix
 
-If inventory issues are urgent:
+### 🔧 Development/Testing Emergency
+If inventory issues are urgent in development:
 
 ```bash
 # 1. Quick check
 mvn test -Dtest=InventoryFixTest#scanInventoryIssues | grep "Total products with issues"
 
 # 2. If issues found, apply fixes immediately:
+# All products:
 mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false
+# Specific item:
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false -DwebTagNumber=YOUR_SKU
+```
+
+### 🚨 Production Emergency (keystone-prod)
+If inventory issues are urgent in production:
+
+```bash
+# 1. Quick check
+mvn test -Dtest=InventoryFixTest#scanInventoryIssues -Dspring.profiles.active=keystone-prod | grep "Total products with issues"
+
+# 2. If issues found, apply fixes immediately:
+# All products:
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false -Dspring.profiles.active=keystone-prod
+# Specific item:
+mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false -DwebTagNumber=YOUR_SKU -Dspring.profiles.active=keystone-prod
 ```
 
 ### 🆕 Quick Location Analysis
-For location-specific issues:
 
+**Development/Testing:**
 ```bash
 # Check inventory distribution
 mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview | grep "TOP 5"
 
-# Analyze specific SKU (parameter method)
+# Analyze specific SKU
 mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=YOUR_SKU
+```
+
+**Production (keystone-prod):**
+```bash
+# Check inventory distribution
+mvn test -Dtest=InventoryFixTest#showInventoryByLocationOverview -Dspring.profiles.active=keystone-prod | grep "TOP 5"
+
+# Analyze specific SKU
+mvn test -Dtest=InventoryFixTest#scanSpecificInventoryByWebTagNumber -DwebTagNumber=YOUR_SKU -Dspring.profiles.active=keystone-prod
 ```
 
 ---
