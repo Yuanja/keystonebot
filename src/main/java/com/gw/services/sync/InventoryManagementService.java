@@ -88,11 +88,11 @@ public class InventoryManagementService {
             inventoryLevelService.mergeInventoryLevels(levels, 
                 updatedProduct.getVariants().get(0).getInventoryLevels());
             
-            // Update inventory levels on Shopify
+            // Update inventory levels on Shopify using absolute value setting
             List<InventoryLevel> inventoryLevelsToUpdate = updatedProduct.getVariants().get(0).getInventoryLevels().get();
             if (validateInventoryLevels(inventoryLevelsToUpdate)) {
-                shopifyGraphQLService.updateInventoryLevels(inventoryLevelsToUpdate);
-                logger.debug("Successfully updated inventory levels for {} locations", inventoryLevelsToUpdate.size());
+                shopifyGraphQLService.setInventoryLevelsAbsolute(inventoryLevelsToUpdate);
+                logger.debug("Successfully updated inventory levels for {} locations using absolute values", inventoryLevelsToUpdate.size());
             } else {
                 logger.warn("Skipping inventory update due to invalid inventory level data");
             }
@@ -256,10 +256,10 @@ public class InventoryManagementService {
             levelsToUpdate.add(level);
         }
         
-        // Update on Shopify
+        // Update on Shopify using absolute value setting
         if (validateInventoryLevels(levelsToUpdate)) {
-            shopifyGraphQLService.updateInventoryLevels(levelsToUpdate);
-            logger.info("✅ Updated inventory levels to {} for {} locations", 
+            shopifyGraphQLService.setInventoryLevelsAbsolute(levelsToUpdate);
+            logger.info("✅ Updated inventory levels to {} for {} locations using absolute values", 
                 newQuantity, levelsToUpdate.size());
         } else {
             logger.warn("⚠️ Skipping inventory update due to invalid inventory level data");

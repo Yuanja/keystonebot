@@ -7,8 +7,6 @@ import com.gw.services.product.ProductCreationService;
 import com.gw.services.ImageService;
 import com.gw.services.LogService;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
-import com.gw.services.shopifyapi.objects.InventoryLevel;
-import com.gw.services.shopifyapi.objects.InventoryLevels;
 import com.gw.services.shopifyapi.objects.Product;
 import com.gw.services.shopifyapi.objects.Image;
 import com.gw.services.inventory.InventoryLevelService;
@@ -71,12 +69,12 @@ public class ProductPublishPipeline {
     
     @Autowired
     private LogService logService;
-    
-    @Autowired
-    private InventoryLevelService inventoryLevelService;
-    
+ 
     @Autowired
     private CollectionManagementService collectionManagementService;
+    
+    @Autowired
+    private InventoryManagementService inventoryManagementService;
     
     /**
      * Execute the complete product publish pipeline
@@ -97,11 +95,11 @@ public class ProductPublishPipeline {
             // Add images to product using FeedItem image URLs
             handleImageUpload(item, newlyAddedProduct.getId());
             
-            // Setup inventory levels
-            setupInventoryLevels(newlyAddedProduct);
+            // Use inventory management service to handle the status change
+            inventoryManagementService.handleInventoryStatusChange(item, newlyAddedProduct);
             
             // Setup collection associations
-            setupCollectionAssociations(item, newlyAddedProduct);
+            collectionManagementService.updateProductCollectionsForPipeline(item, newlyAddedProduct.getId());
             
             // Publish product to all channels
             publishToAllChannels(newlyAddedProduct);
@@ -151,74 +149,6 @@ public class ProductPublishPipeline {
         return newlyAddedProduct;
     }
     
-    /**
-     * Setup inventory levels for the new product
-     */
-    private void setupInventoryLevels(Product newlyAddedProduct) throws Exception {
-        logger.debug("📦 Setting up inventory levels for product: {}", newlyAddedProduct.getId());
-        
-        if (newlyAddedProduct.getVariants() == null || newlyAddedProduct.getVariants().isEmpty()) {
-            logger.warn("No variants found for inventory setup");
-            return;
-        }
-        
-        String inventoryItemId = newlyAddedProduct.getVariants().get(0).getInventoryItemId();
-        if (inventoryItemId == null) {
-            logger.warn("No inventory item ID found for inventory setup");
-            return;
-        }
-        
-        // Get current inventory levels from Shopify
-        List<InventoryLevel> levelsList = shopifyGraphQLService.getInventoryLevelByInventoryItemId(inventoryItemId);
-        
-        // Convert to wrapper for compatibility
-        InventoryLevels levels = new InventoryLevels();
-        for (InventoryLevel level : levelsList) {
-            levels.addInventoryLevel(level);
-        }
-        
-        // Merge with product inventory data
-        inventoryLevelService.mergeInventoryLevels(levels, newlyAddedProduct.getVariants().get(0).getInventoryLevels());
-        
-        // Update inventory levels
-        List<InventoryLevel> inventoryLevelsToUpdate = newlyAddedProduct.getVariants().get(0).getInventoryLevels().get();
-        if (validateInventoryLevels(inventoryLevelsToUpdate)) {
-            shopifyGraphQLService.updateInventoryLevels(inventoryLevelsToUpdate);
-            logger.debug("✅ Inventory levels updated for {} locations", inventoryLevelsToUpdate.size());
-        } else {
-            logger.warn("⚠️ Skipping inventory update due to invalid inventory level data");
-        }
-    }
-    
-    /**
-     * Validate inventory levels before update
-     */
-    private boolean validateInventoryLevels(List<InventoryLevel> inventoryLevels) {
-        if (inventoryLevels == null || inventoryLevels.isEmpty()) {
-            return false;
-        }
-        
-        for (InventoryLevel level : inventoryLevels) {
-            if (level.getInventoryItemId() == null || level.getLocationId() == null || level.getAvailable() == null) {
-                logger.error("Invalid inventory level detected - InventoryItemId: {}, LocationId: {}, Available: {}", 
-                    level.getInventoryItemId(), level.getLocationId(), level.getAvailable());
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Setup collection associations for the new product
-     */
-    private void setupCollectionAssociations(FeedItem item, Product newlyAddedProduct) throws Exception {
-        logger.debug("🏷️ Setting up collection associations for product: {}", newlyAddedProduct.getId());
-        
-        // Use the overloaded method that takes productId directly
-        collectionManagementService.updateProductCollections(newlyAddedProduct.getId(), item);
-        logger.debug("✅ Collection associations setup successfully");
-    }
-
     /**
      * Publish product to all sales channels
      */

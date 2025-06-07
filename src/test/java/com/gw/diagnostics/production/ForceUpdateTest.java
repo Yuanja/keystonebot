@@ -1,4 +1,4 @@
-package com.gw.service;
+package com.gw.diagnostics.production;
 
 import com.gw.domain.FeedItem;
 import com.gw.domain.FeedItemChange;

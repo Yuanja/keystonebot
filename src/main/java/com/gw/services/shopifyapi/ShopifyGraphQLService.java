@@ -803,17 +803,7 @@ public class ShopifyGraphQLService {
         return allLevels;
     }
     
-    /**
-     * Update inventory levels using GraphQL (delta-based adjustment)
-     * 
-     * @deprecated Use setInventoryLevelsAbsolute() for absolute value setting
-     */
-    @Deprecated
-    public void updateInventoryLevels(List<InventoryLevel> inventoryLevels) throws Exception {
-        for (InventoryLevel level : inventoryLevels) {
-            updateInventoryLevel(level);
-        }
-    }
+
     
     /**
      * Set inventory levels to absolute values using inventorySetQuantities mutation
@@ -942,63 +932,7 @@ public class ShopifyGraphQLService {
         }
     }
     
-    /**
-     * Update single inventory level using GraphQL (delta-based adjustment)
-     * 
-     * @deprecated Use setInventoryLevelsAbsolute() for absolute value setting
-     */
-    @Deprecated
-    private void updateInventoryLevel(InventoryLevel level) throws Exception {
-        String mutation = """
-            mutation inventoryAdjustQuantities($input: InventoryAdjustQuantitiesInput!) {
-                inventoryAdjustQuantities(input: $input) {
-                    inventoryAdjustmentGroup {
-                        reason
-                        changes {
-                            name
-                            delta
-                        }
-                    }
-                    userErrors {
-                        field
-                        message
-                    }
-                }
-            }
-            """;
-        
-        Map<String, Object> input = new HashMap<>();
-        input.put("reason", "correction");
-        input.put("name", "available");
-        
-        List<Map<String, Object>> changes = new ArrayList<>();
-        Map<String, Object> change = new HashMap<>();
-        change.put("delta", Integer.valueOf(level.getAvailable()));
-        change.put("inventoryItemId", "gid://shopify/InventoryItem/" + level.getInventoryItemId());
-        change.put("locationId", "gid://shopify/Location/" + level.getLocationId());
-        changes.add(change);
-        
-        input.put("changes", changes);
-        
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("input", input);
-        
-        try {
-            JsonNode data = executeGraphQLQuery(mutation, variables);
-            JsonNode inventoryAdjust = data.get("inventoryAdjustQuantities");
-            
-            // Check for user errors
-            JsonNode userErrors = inventoryAdjust.get("userErrors");
-            if (userErrors != null && userErrors.size() > 0) {
-                logger.error("Inventory update failed with user errors: " + userErrors.toString());
-                throw new RuntimeException("Inventory update failed: " + userErrors.toString());
-            }
-            
-        } catch (Exception e) {
-            logger.error("Error updating inventory level", e);
-            throw e;
-        }
-    }
+
     
     /**
      * Get all custom collections using GraphQL

@@ -98,65 +98,6 @@ public class CollectionManagementService {
         }
     }
     
-    /**
-     * Update product collection associations with explicit product ID
-     * This is useful during publish pipeline when FeedItem doesn't have Shopify ID set yet
-     */
-    public void updateProductCollections(String productId, FeedItem item) throws Exception {
-        try {
-            Map<PredefinedCollection, CustomCollection> collectionMappings = 
-                syncConfigurationService.getCollectionMappings();
-            
-            // Get current managed collections for this product
-            List<Collect> currentManagedCollections = getCurrentManagedCollections(productId, collectionMappings);
-            
-            // Determine which collections the product should be in
-            List<Collect> collectsToAdd = CollectionUtility.getCollectionForProduct(
-                productId, item, collectionMappings);
-            
-            // Step 3: Compare current vs desired collections
-            if (collectionsMatch(currentManagedCollections, collectsToAdd, collectionMappings)) {
-                logger.debug("✅ Product {} (SKU: {}) collections already match desired state - no changes needed", 
-                    productId, item.getWebTagNumber());
-                logCurrentCollections(currentManagedCollections, collectionMappings, "Current collections");
-                return; // No changes needed
-            }
-            
-            // Step 4: Collections don't match - perform remove and re-add
-            logger.debug("🔄 Product {} (SKU: {}) collections differ from desired state - updating", 
-                productId, item.getWebTagNumber());
-            logCurrentCollections(currentManagedCollections, collectionMappings, "Current collections");
-            logDesiredCollections(collectsToAdd, collectionMappings, "Desired collections");
-            
-            // Remove from ALL managed collections first (clean state)
-            removeProductFromManagedCollections(productId, item.getWebTagNumber(), collectionMappings);
-            
-            // Add to desired collections using bulk API
-            if (!collectsToAdd.isEmpty()) {
-                logger.debug("🏷️ Adding product {} (SKU: {}) to {} collections using bulk API", 
-                    productId, item.getWebTagNumber(), collectsToAdd.size());
-                
-                try {
-                    // Use bulk API for better performance
-                    shopifyGraphQLService.addProductAndCollectionsAssociations(collectsToAdd);
-                    logger.debug("✅ Successfully added product {} to {} collections using bulk API", productId, collectsToAdd.size());
-                    
-                } catch (Exception e) {
-                    logger.error("❌ Bulk collection addition failed for product {}, falling back to individual operations", productId, e);
-                    
-                    // Fallback to individual operations if bulk fails
-                    addCollectionsIndividually(collectsToAdd, collectionMappings);
-                }
-                
-            } else {
-                logger.debug("⚠️ No collections found for product SKU: {} (product will remain in no managed collections)", item.getWebTagNumber());
-            }
-            
-        } catch (Exception e) {
-            logger.error("❌ Failed to update collections for SKU: {} with product ID: {}", item.getWebTagNumber(), productId, e);
-            throw e;
-        }
-    }
     
     /**
      * Helper method to find collection name by ID from the mappings
@@ -374,6 +315,33 @@ public class CollectionManagementService {
             if (successCount == 0) {
                 throw new Exception("Failed to add product to any collections. Failed collections: " + failedCollections.toString());
             }
+        }
+    }
+    
+    /**
+     * Shared collection update method for pipelines
+     * 
+     * This method provides consistent collection update behavior with unified logging
+     * and error handling. Used by both ProductPublishPipeline and ProductUpdatePipeline.
+     * 
+     * @param item The feed item to update collections for
+     * @param context A description of the calling context (e.g., "Setting up", "Updating")
+     * @throws Exception if collection update fails
+     */
+    public void updateProductCollectionsForPipeline(FeedItem item, String productId) throws Exception {
+        logger.debug("🏷️ collection associations for SKU: {} (Product ID: {})", 
+            item.getWebTagNumber(), productId);
+        
+        try {
+            item.setShopifyItemId(productId);
+            updateProductCollections(item);
+            logger.debug("✅ Collection associations successfully for SKU: {}", 
+                item.getWebTagNumber());
+                
+        } catch (Exception e) {
+            logger.error("❌ Collection association failed for SKU: {} - {}", 
+                item.getWebTagNumber(), e.getMessage());
+            throw e; // Re-throw to maintain pipeline error handling
         }
     }
 }

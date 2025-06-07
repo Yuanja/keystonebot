@@ -1,4 +1,4 @@
-package com.gw.service;
+package com.gw.diagnostics.production;
 
 import com.gw.services.ReconciliationService;
 import com.gw.services.ReconciliationService.ReconciliationResult;

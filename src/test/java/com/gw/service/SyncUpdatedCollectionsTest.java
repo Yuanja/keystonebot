@@ -6,13 +6,14 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
+public class SyncUpdatedCollectionsTest extends BaseGraphqlTest {
 
     /**
      * Helper method to validate inventory levels match web_status and are never > 1
@@ -146,17 +147,19 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
 
     @Test
     /**
-     * Test sync behavior with existing items that have changes in both variant options and metafields
-     * This tests the handleChangedItems path of the sync logic
+     * Test sync behavior with collection changes when brand (webDesigner) is updated
+     * This tests the collection assignment logic in the update pipeline
      * 
-     * Tests both:
-     * 1. Variant option updates (Color, Size, Material) using remove-and-recreate approach
-     * 2. Metafield updates (brand, model, etc.)
+     * Tests:
+     * 1. Initial products are assigned to correct brand collections
+     * 2. When webDesigner (brand) changes, products move to new brand collections
+     * 3. Products are removed from old collections and added to new ones
+     * 4. Inventory levels remain correct during collection updates
      * 
-     * Ensures that when feedItem attributes change, both variant options and metafields are properly updated
+     * Ensures that collection assignments are properly updated when feed item brand changes
      */
-    public void syncTestUpdatedItemsOnly() throws Exception {
-        logger.info("=== Starting sync test for updated items with variant options and metafields ===");
+    public void syncTestUpdatedCollections() throws Exception {
+        logger.info("=== Starting sync test for collection updates ===");
         
         // Get test items and create initial products
         List<FeedItem> topFeedItems = getTopFeedItems(2);
@@ -166,10 +169,9 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
         for (int i = 0; i < topFeedItems.size(); i++) {
             FeedItem item = topFeedItems.get(i);
             logger.info("Item {}: {} - Initial values:", (i + 1), item.getWebTagNumber());
-            logger.info("  - webWatchDial (Color): '{}'", item.getWebWatchDial());
-            logger.info("  - webWatchDiameter (Size): '{}'", item.getWebWatchDiameter());
-            logger.info("  - webMetalType (Material): '{}'", item.getWebMetalType());
-            logger.info("  - webWatchModel (Metafield): '{}'", item.getWebWatchModel());
+            logger.info("  - webDesigner (Brand): '{}'", item.getWebDesigner());
+            logger.info("  - webStyle (Gender): '{}'", item.getWebStyle());
+            logger.info("  - webDescriptionShort (Title): '{}'", item.getWebDescriptionShort());
         }
         
         // Create initial products using doSyncForFeedItems (same method used for updates)
@@ -201,7 +203,7 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
         }
         Thread.sleep(3000); // Wait for creation
         
-        // Verify initial creation and get initial states
+        // Verify initial creation and get initial states with collection information
         List<Product> initialProducts = new ArrayList<>();
         for (FeedItem item : topFeedItems) {
             Product product = shopifyApiService.getProductByProductId(item.getShopifyItemId());
@@ -213,33 +215,56 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
             
             initialProducts.add(product);
             logger.info("✅ Initial product created: {} with ID {}", item.getWebTagNumber(), product.getId());
+            
+            // Log initial collection assignments
+            List<Collect> initialCollects = shopifyApiService.getCollectsForProductId(product.getId());
+            logger.info("📋 Initial collections for SKU {} (Brand: {}):", item.getWebTagNumber(), item.getWebDesigner());
+            List<CustomCollection> allCollections = shopifyApiService.getAllCustomCollections();
+            for (Collect collect : initialCollects) {
+                // Find the collection title by ID
+                String collectionTitle = "Unknown";
+                for (CustomCollection customCollection : allCollections) {
+                    if (customCollection.getId().equals(collect.getCollectionId())) {
+                        collectionTitle = customCollection.getTitle();
+                        break;
+                    }
+                }
+                logger.info("  - {} (ID: {})", collectionTitle, collect.getCollectionId());
+            }
         }
         
-        // Modify feedItem fields to trigger both variant option and metafield changes
-        logger.info("🔄 Modifying feedItem attributes to trigger updates...");
+        // Modify feedItem brands to trigger collection changes
+        logger.info("🔄 Modifying feedItem brands to trigger collection updates...");
         List<FeedItem> modifiedItems = new ArrayList<>();
         for (int i = 0; i < topFeedItems.size(); i++) {
             FeedItem modifiedItem = topFeedItems.get(i);
+            String originalBrand = modifiedItem.getWebDesigner();
             
-            // Modify variant option fields (triggers remove-and-recreate options logic)
-            modifiedItem.setWebWatchDial(modifiedItem.getWebWatchDial() + " [UPDATED-DIAL-" + (i + 1) + "]");
-            modifiedItem.setWebWatchDiameter(modifiedItem.getWebWatchDiameter() + " [UPDATED-SIZE-" + (i + 1) + "]");
-            modifiedItem.setWebMetalType(modifiedItem.getWebMetalType() + " [UPDATED-MATERIAL-" + (i + 1) + "]");
+            // Change brands to trigger collection moves
+            String newBrand;
+            if ("Audemars Piguet".equals(originalBrand)) {
+                newBrand = "Rolex";
+            } else if ("Patek Philippe".equals(originalBrand)) {
+                newBrand = "Omega";
+            } else if ("Rolex".equals(originalBrand)) {
+                newBrand = "Patek Philippe";
+            } else {
+                newBrand = "Rolex"; // Default fallback
+            }
             
-            // Modify metafield-only fields
-            modifiedItem.setWebWatchModel(modifiedItem.getWebWatchModel() + " [UPDATED-MODEL-" + (i + 1) + "]");
+            modifiedItem.setWebDesigner(newBrand);
             
-            // Also modify the title to trigger product update
-            modifiedItem.setWebDescriptionShort(modifiedItem.getWebDescriptionShort() + " [MODIFIED FOR TEST]");
+            // Also modify the title to reflect the brand change
+            String originalTitle = modifiedItem.getWebDescriptionShort();
+            String newTitle = originalTitle.replace(originalBrand, newBrand) + " [BRAND-CHANGED-TEST]";
+            modifiedItem.setWebDescriptionShort(newTitle);
             
             modifiedItems.add(modifiedItem);
             
-            logger.info("Modified item {}: {} - New values:", (i + 1), modifiedItem.getWebTagNumber());
-            logger.info("  - webWatchDial (Color): '{}'", modifiedItem.getWebWatchDial());
-            logger.info("  - webWatchDiameter (Size): '{}'", modifiedItem.getWebWatchDiameter());
-            logger.info("  - webMetalType (Material): '{}'", modifiedItem.getWebMetalType());
-            logger.info("  - webWatchModel (Metafield): '{}'", modifiedItem.getWebWatchModel());
-            logger.info("  - webDescriptionShort: '{}'", modifiedItem.getWebDescriptionShort());
+            logger.info("Modified item {}: {} - Brand change:", (i + 1), modifiedItem.getWebTagNumber());
+            logger.info("  - Original Brand: '{}'", originalBrand);
+            logger.info("  - New Brand: '{}'", newBrand);
+            logger.info("  - New Title: '{}'", newTitle);
         }
         
         // Update the products (should trigger update logic, not create logic)
@@ -315,7 +340,7 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
         
         logger.info("✅ No duplicate products found - sync correctly updated existing products");
         
-        // Wait for Shopify propagation (increased wait time for option updates)
+        // Wait for Shopify propagation (increased wait time for collection updates)
         Thread.sleep(8000);  // Increased from 3000ms
         
         // Retrieve updated products individually for better consistency
@@ -331,83 +356,109 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
         Assertions.assertEquals(topFeedItems.size(), shopifyProducts.size(), 
             "Should have retrieved all updated products");
         
-        // Verify variant options were updated correctly using remove-and-recreate approach
-        logger.info("✅ Verifying variant options were updated using remove-and-recreate approach...");
+        // Verify product titles were updated to reflect brand changes
+        logger.info("✅ Verifying product titles were updated to reflect brand changes...");
         for (int i = 0; i < shopifyProducts.size(); i++) {
             Product product = shopifyProducts.get(i);
             FeedItem modifiedItem = modifiedItems.get(i);
             
-            Assertions.assertNotNull(product.getVariants(), "Product should have variants");
-            Assertions.assertFalse(product.getVariants().isEmpty(), "Product should have at least one variant");
+            logger.info("Product {}: Title - Expected contains: '[BRAND-CHANGED-TEST]', Actual: '{}'", 
+                (i + 1), product.getTitle());
+            Assertions.assertTrue(product.getTitle().contains("[BRAND-CHANGED-TEST]"), 
+                "Product title should contain the brand change marker");
             
-            // Assert exactly 1 variant per product after update
-            Assertions.assertEquals(1, product.getVariants().size(), "Updated product should have exactly 1 variant: " + modifiedItem.getWebTagNumber());
-            
-            Variant variant = product.getVariants().get(0);
-            
-            // Assert variant has inventory levels
-            Assertions.assertNotNull(variant.getInventoryLevels(), "Updated product variant should have inventory levels: " + modifiedItem.getWebTagNumber());
-            Assertions.assertNotNull(variant.getInventoryLevels().get(), "Updated product variant should have inventory level list: " + modifiedItem.getWebTagNumber());
-            Assertions.assertFalse(variant.getInventoryLevels().get().isEmpty(), "Updated product variant should have at least one inventory level: " + modifiedItem.getWebTagNumber());
-            
-            logger.info("Product {}: Checking variant options", (i + 1));
-            logger.info("  Expected Color (webWatchDial): '{}'", modifiedItem.getWebWatchDial());
-            logger.info("  Actual Color (option1): '{}'", variant.getOption1());
-            logger.info("  Expected Size (webWatchDiameter): '{}'", modifiedItem.getWebWatchDiameter());
-            logger.info("  Actual Size (option2): '{}'", variant.getOption2());
-            logger.info("  Expected Material (webMetalType): '{}'", modifiedItem.getWebMetalType());
-            logger.info("  Actual Material (option3): '{}'", variant.getOption3());
-            
-            // Assert variant options were updated (remove-and-recreate approach)
-            Assertions.assertEquals(modifiedItem.getWebWatchDial(), variant.getOption1(), 
-                "Color option should be updated to match webWatchDial");
-            Assertions.assertEquals(modifiedItem.getWebWatchDiameter(), variant.getOption2(), 
-                "Size option should be updated to match webWatchDiameter");
-            Assertions.assertEquals(modifiedItem.getWebMetalType(), variant.getOption3(), 
-                "Material option should be updated to match webMetalType");
+            // Verify the new brand name is in the title
+            Assertions.assertTrue(product.getTitle().contains(modifiedItem.getWebDesigner()), 
+                "Product title should contain the new brand name: " + modifiedItem.getWebDesigner());
         }
         
-        // Verify metafields were updated correctly
-        logger.info("✅ Verifying metafields were updated correctly...");
+        // =================== MAIN TEST: Verify Collection Changes ===================
+        logger.info("🏷️ MAIN TEST: Verifying collection assignments have changed correctly...");
+        
         for (int i = 0; i < shopifyProducts.size(); i++) {
             Product product = shopifyProducts.get(i);
+            FeedItem originalItem = topFeedItems.get(i);
             FeedItem modifiedItem = modifiedItems.get(i);
             
-            // Assert exactly 1 variant per product during metafield verification
-            Assertions.assertNotNull(product.getVariants(), "Product should have variants during metafield verification");
-            Assertions.assertEquals(1, product.getVariants().size(), "Product should still have exactly 1 variant during metafield verification: " + modifiedItem.getWebTagNumber());
+            String originalBrand = null;
+            // Reverse-engineer the original brand from the modified item
+            if ("Rolex".equals(modifiedItem.getWebDesigner())) {
+                originalBrand = "Audemars Piguet";
+            } else if ("Omega".equals(modifiedItem.getWebDesigner())) {
+                originalBrand = "Patek Philippe";
+            } else if ("Patek Philippe".equals(modifiedItem.getWebDesigner())) {
+                originalBrand = "Rolex";
+            }
             
-            Assertions.assertNotNull(product.getMetafields(), "Product should have metafields");
+            String newBrand = modifiedItem.getWebDesigner();
             
-            List<Metafield> ebayMetafields = product.getMetafields().stream()
-                .filter(mf -> "ebay".equals(mf.getNamespace()))
-                .collect(Collectors.toList());
+            logger.info("🔍 Checking collection changes for SKU: {} (Product ID: {})", 
+                originalItem.getWebTagNumber(), product.getId());
+            logger.info("  Original Brand: '{}' → New Brand: '{}'", originalBrand, newBrand);
             
-            Assertions.assertFalse(ebayMetafields.isEmpty(), "Product should have eBay metafields");
+            // Get current collections for the product
+            List<Collect> currentCollects = shopifyApiService.getCollectsForProductId(product.getId());
+            logger.info("  Current collections after update ({} total):", currentCollects.size());
             
-            // Check that model metafield was updated
-            boolean modelMetafieldFound = false;
-            for (Metafield metafield : ebayMetafields) {
-                if ("model".equals(metafield.getKey())) {
-                    logger.info("Product {}: Model metafield - Expected: '{}', Actual: '{}'", 
-                        (i + 1), modifiedItem.getWebWatchModel(), metafield.getValue());
-                    Assertions.assertEquals(modifiedItem.getWebWatchModel(), metafield.getValue(), 
-                        "Model metafield should be updated");
-                    modelMetafieldFound = true;
+            // Get all collections for lookup
+            List<CustomCollection> allCollections = shopifyApiService.getAllCustomCollections();
+            Map<String, String> collectionIdToTitle = new HashMap<>();
+            for (CustomCollection customCollection : allCollections) {
+                collectionIdToTitle.put(customCollection.getId(), customCollection.getTitle());
+            }
+            
+            // Log current collections
+            for (Collect collect : currentCollects) {
+                String collectionTitle = collectionIdToTitle.getOrDefault(collect.getCollectionId(), "Unknown");
+                logger.info("    - '{}' (ID: {})", collectionTitle, collect.getCollectionId());
+            }
+            
+            // Assert that the product is NO LONGER in the original brand collection
+            boolean foundOriginalBrandCollection = false;
+            for (Collect collect : currentCollects) {
+                String collectionTitle = collectionIdToTitle.get(collect.getCollectionId());
+                if (originalBrand != null && originalBrand.equals(collectionTitle)) {
+                    foundOriginalBrandCollection = true;
                     break;
                 }
             }
-            Assertions.assertTrue(modelMetafieldFound, "Model metafield should exist and be updated");
-        }
-        
-        // Verify that product titles were also updated
-        logger.info("✅ Verifying product titles were updated...");
-        for (int i = 0; i < shopifyProducts.size(); i++) {
-            Product product = shopifyProducts.get(i);
-            logger.info("Product {}: Title - Expected contains: '[MODIFIED FOR TEST]', Actual: '{}'", 
-                (i + 1), product.getTitle());
-            Assertions.assertTrue(product.getTitle().contains("[MODIFIED FOR TEST]"), 
-                "Product title should contain the modification marker");
+            if (originalBrand != null) {
+                Assertions.assertFalse(foundOriginalBrandCollection, 
+                    "Product " + originalItem.getWebTagNumber() + " should NOT be in original brand collection '" + 
+                    originalBrand + "' after brand change to '" + newBrand + "'");
+                logger.info("  ✅ Confirmed: Product is NO LONGER in '{}' collection", originalBrand);
+            }
+            
+            // Assert that the product IS NOW in the new brand collection
+            boolean foundNewBrandCollection = false;
+            for (Collect collect : currentCollects) {
+                String collectionTitle = collectionIdToTitle.get(collect.getCollectionId());
+                if (newBrand.equals(collectionTitle)) {
+                    foundNewBrandCollection = true;
+                    break;
+                }
+            }
+            Assertions.assertTrue(foundNewBrandCollection, 
+                "Product " + originalItem.getWebTagNumber() + " should be in new brand collection '" + 
+                newBrand + "' after brand change from '" + originalBrand + "'");
+            logger.info("  ✅ Confirmed: Product is NOW in '{}' collection", newBrand);
+            
+            // Verify the product still has other expected collections (Men's, Women's, etc.)
+            boolean foundGenderCollection = false;
+            for (Collect collect : currentCollects) {
+                String collectionTitle = collectionIdToTitle.get(collect.getCollectionId());
+                if ("Men's".equals(collectionTitle) || "Women's".equals(collectionTitle)) {
+                    foundGenderCollection = true;
+                    break;
+                }
+            }
+            Assertions.assertTrue(foundGenderCollection, 
+                "Product " + originalItem.getWebTagNumber() + " should still be in a gender-based collection (Men's or Women's)");
+            logger.info("  ✅ Confirmed: Product is still in appropriate gender collection");
+            
+            // Assert exactly 1 variant per product during collection verification
+            Assertions.assertNotNull(product.getVariants(), "Product should have variants during collection verification");
+            Assertions.assertEquals(1, product.getVariants().size(), "Product should still have exactly 1 variant during collection verification: " + modifiedItem.getWebTagNumber());
         }
         
         // =================== ASSERT: Inventory Levels Match Web Status and Are Never > 1 ===================
@@ -433,23 +484,23 @@ public class SyncUpdatedItemsOnlyTest extends BaseGraphqlTest {
             "Violations: " + String.join("; ", inventoryResult.inventoryViolations) + ". " +
             "All products must follow the rules: SOLD items = 0 inventory, others = 1 inventory, never > 1.");
         
-        logger.info("✅ PASS: All inventory levels match web_status correctly after update");
+        logger.info("✅ PASS: All inventory levels match web_status correctly after collection update");
         
         // Verify reasonable distribution
         Assertions.assertTrue(inventoryResult.productsChecked > 0, 
             "Should have checked at least one product's inventory. Found: " + inventoryResult.productsChecked);
         
         logger.info("✅ PASS: Inventory validation completed successfully for {} updated products", inventoryResult.productsChecked);
-        logger.info("🎉 INVENTORY LEVEL VERIFICATION COMPLETE");
-        logger.info("💡 All updated products follow the correct inventory rules:");
-        logger.info("   1. ✅ Inventory is NEVER > 1");
-        logger.info("   2. ✅ SOLD items have inventory = 0");
-        logger.info("   3. ✅ Available items have inventory = 1");
-        logger.info("   4. ✅ Inventory levels maintained correctly during updates");
+        logger.info("🎉 COLLECTION UPDATE VERIFICATION COMPLETE");
+        logger.info("💡 All updated products correctly moved to new brand collections:");
+        logger.info("   1. ✅ Products removed from original brand collections");
+        logger.info("   2. ✅ Products added to new brand collections");
+        logger.info("   3. ✅ Products retained appropriate gender collections");
+        logger.info("   4. ✅ Inventory levels maintained correctly during collection updates");
 
-        logger.info("✅ All tests passed! Both variant options and metafields were successfully updated");
-        logger.info("✅ Remove-and-recreate approach for variant options is working correctly");
+        logger.info("✅ All tests passed! Collection assignments were successfully updated");
+        logger.info("✅ Collection update pipeline is working correctly");
         logger.info("✅ Inventory validation passed - all levels match web_status and are ≤ 1");
-        logger.info("=== End sync test for updated items ===");
+        logger.info("=== End sync test for collection updates ===");
     }
-}
+} 

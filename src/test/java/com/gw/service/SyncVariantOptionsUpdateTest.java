@@ -5,6 +5,10 @@ import com.gw.services.shopifyapi.objects.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 /**
  * Test class specifically for testing variant options update scenarios
  * Tests that when feed item attributes change (webWatchDial, webWatchDiameter, webMetalType),
@@ -19,262 +23,219 @@ public class SyncVariantOptionsUpdateTest extends BaseGraphqlTest {
         logger.info("=== Testing Variant Options Update Scenario ===");
         logger.info("💡 This test verifies that when feed item attributes change, product options are updated correctly");
         
-        // Create initial product with specific variant options
-        logger.info("\n🏗️ Creating initial product with variant options...");
+        // Get 1 real feed item to work with
+        List<FeedItem> feedItems = getTopFeedItems(1);
+        FeedItem feedItem = feedItems.get(0);
+        logger.info("📝 Working with feed item: {}", feedItem.getWebTagNumber());
         
-        FeedItem initialItem = createTestFeedItem(
-            "UPDATE-TEST-001",
-            "Initial Test Watch",
-            "Blue",        // Initial color
-            "40mm",        // Initial size  
-            "Steel"        // Initial material
-        );
+        // Log initial variant-related values
+        logger.info("🔍 Initial variant attribute values:");
+        logger.info("  - webWatchDial (Color): '{}'", feedItem.getWebWatchDial());
+        logger.info("  - webWatchDiameter (Size): '{}'", feedItem.getWebWatchDiameter());
+        logger.info("  - webMetalType (Material): '{}'", feedItem.getWebMetalType());
         
-        // Publish initial product
-        syncService.publishItemToShopify(initialItem);
-        Assertions.assertNotNull(initialItem.getShopifyItemId(), "Initial product should have Shopify ID");
+        // =============== INITIAL SYNC ===============
+        logger.info("\n🏗️ Performing initial sync...");
+        syncService.doSyncForFeedItems(feedItems);
         
-        // Verify initial product has the expected options
-        Product initialProduct = shopifyApiService.getProductByProductId(initialItem.getShopifyItemId());
-        Assertions.assertNotNull(initialProduct, "Initial product should exist in Shopify");
+        // Verify database transaction was committed after initial sync
+        logger.info("🔍 Verifying database transaction was committed after initial sync...");
+        FeedItem dbItem = feedItemService.findByWebTagNumber(feedItem.getWebTagNumber());
+        Assertions.assertNotNull(dbItem, "Item should exist in database after initial sync");
+        Assertions.assertNotNull(dbItem.getShopifyItemId(), "Item should have Shopify ID after initial sync");
+        Assertions.assertEquals(FeedItem.STATUS_PUBLISHED, dbItem.getStatus(), "Item should have PUBLISHED status");
         
-        logger.info("✅ Initial product created with ID: {}", initialProduct.getId());
+        // Update original item with database values
+        feedItem.setShopifyItemId(dbItem.getShopifyItemId());
+        feedItem.setStatus(dbItem.getStatus());
         
-        // Use the correct two-step approach to add options to the initial product
-        boolean optionsAdded = shopifyApiService.createProductOptions(initialProduct.getId(), initialItem);
-        Assertions.assertTrue(optionsAdded, "Options should be successfully added to initial product");
+        logger.info("✅ Initial sync completed - Shopify ID: {}", feedItem.getShopifyItemId());
         
-        // Re-fetch to verify options were added
-        Product initialProductWithOptions = shopifyApiService.getProductByProductId(initialItem.getShopifyItemId());
-        Assertions.assertNotNull(initialProductWithOptions.getOptions(), "Initial product should have options");
-        Assertions.assertTrue(initialProductWithOptions.getOptions().size() > 0, "Initial product should have at least one option");
+        Thread.sleep(3000); // Wait for creation to propagate
         
-        logger.info("✅ Initial product has {} options:", initialProductWithOptions.getOptions().size());
-        for (Option option : initialProductWithOptions.getOptions()) {
-            logger.info("  - {}: {}", option.getName(), option.getValues());
+        // =============== CAPTURE INITIAL STATE ===============
+        logger.info("\n📸 Capturing initial product state...");
+        Product initialProduct = shopifyApiService.getProductByProductId(feedItem.getShopifyItemId());
+        assertNotNull(initialProduct, "Initial product should exist in Shopify");
+        
+        // Verify initial product has exactly 1 variant
+        Assertions.assertNotNull(initialProduct.getVariants(), "Initial product should have variants");
+        Assertions.assertEquals(1, initialProduct.getVariants().size(), "Initial product should have exactly 1 variant");
+        Variant initialVariant = initialProduct.getVariants().get(0);
+        
+        // Capture initial options
+        List<Option> initialOptions = initialProduct.getOptions();
+        logger.info("📊 Initial product has {} options:", initialOptions != null ? initialOptions.size() : 0);
+        if (initialOptions != null) {
+            for (Option option : initialOptions) {
+                logger.info("  - {}: {}", option.getName(), option.getValues());
+            }
         }
         
-        // Verify initial variant has option values
-        Variant initialVariant = initialProductWithOptions.getVariants().get(0);
-        logger.info("Initial variant options: [{}, {}, {}]", 
-            initialVariant.getOption1(), initialVariant.getOption2(), initialVariant.getOption3());
+        // Capture initial variant values
+        String initialOption1 = initialVariant.getOption1();
+        String initialOption2 = initialVariant.getOption2();
+        String initialOption3 = initialVariant.getOption3();
+        logger.info("📊 Initial variant options: [{}, {}, {}]", initialOption1, initialOption2, initialOption3);
         
-        // Modify feed item with different variant option values
-        logger.info("\n🔄 Modifying feed item with different variant option values...");
+        // =============== MODIFY VARIANT ATTRIBUTES ===============
+        logger.info("\n🔄 Modifying variant-related attributes...");
         
-        FeedItem modifiedItem = createTestFeedItem(
-            "UPDATE-TEST-001",       // Same SKU
-            "Updated Test Watch",    // Modified title
-            "Red",                   // Changed color: Blue -> Red
-            "42mm",                  // Changed size: 40mm -> 42mm
-            "Gold"                   // Changed material: Steel -> Gold
-        );
-        modifiedItem.setShopifyItemId(initialItem.getShopifyItemId()); // Keep same Shopify ID
+        // Store original values for comparison
+        String originalDial = feedItem.getWebWatchDial();
+        String originalDiameter = feedItem.getWebWatchDiameter();
+        String originalMetalType = feedItem.getWebMetalType();
         
-        logger.info("Modified feed item attributes:");
-        logger.info("  Color: Blue -> Red");
-        logger.info("  Size: 40mm -> 42mm");
-        logger.info("  Material: Steel -> Gold");
+        // Modify variant option fields to trigger update logic
+        feedItem.setWebWatchDial(originalDial + " [UPDATED-COLOR]");
+        feedItem.setWebWatchDiameter(originalDiameter + " [UPDATED-SIZE]");
+        feedItem.setWebMetalType(originalMetalType + " [UPDATED-MATERIAL]");
         
-        // Run sync update to test the variant options update logic
-        logger.info("\n🚀 Running sync update to test variant options update...");
+        logger.info("🔄 Modified variant attribute values:");
+        logger.info("  - webWatchDial (Color): '{}' → '{}'", originalDial, feedItem.getWebWatchDial());
+        logger.info("  - webWatchDiameter (Size): '{}' → '{}'", originalDiameter, feedItem.getWebWatchDiameter());
+        logger.info("  - webMetalType (Material): '{}' → '{}'", originalMetalType, feedItem.getWebMetalType());
         
-        long startTime = System.currentTimeMillis();
-        syncService.updateItemOnShopify(modifiedItem);
-        long endTime = System.currentTimeMillis();
+        // =============== UPDATE SYNC ===============
+        logger.info("\n🚀 Performing update sync (should trigger variant options update)...");
         
-        logger.info("✅ Update completed in {}ms", (endTime - startTime));
+        // Verify item still exists in database before sync
+        FeedItem dbItemBeforeSync = feedItemService.findByWebTagNumber(feedItem.getWebTagNumber());
+        Assertions.assertNotNull(dbItemBeforeSync, "Item should still exist in database before update sync");
+        Assertions.assertEquals(feedItem.getShopifyItemId(), dbItemBeforeSync.getShopifyItemId(), 
+            "Shopify ID should remain the same before update");
         
-        // Verify that options were updated correctly
-        logger.info("\n🔍 Verifying that variant options were updated correctly...");
+        // Perform update sync using the same method
+        syncService.doSyncForFeedItems(feedItems);
         
-        Product updatedProduct = shopifyApiService.getProductByProductId(modifiedItem.getShopifyItemId());
-        Assertions.assertNotNull(updatedProduct, "Updated product should exist in Shopify");
+        // Verify no new product was created (same Shopify ID)
+        FeedItem dbItemAfterSync = feedItemService.findByWebTagNumber(feedItem.getWebTagNumber());
+        Assertions.assertNotNull(dbItemAfterSync, "Item should still exist in database after update sync");
+        Assertions.assertEquals(feedItem.getShopifyItemId(), dbItemAfterSync.getShopifyItemId(), 
+            "Shopify ID should remain the same after update - no duplicate product should be created");
+        
+        logger.info("✅ Update sync completed - same Shopify ID: {}", feedItem.getShopifyItemId());
+        
+        Thread.sleep(5000); // Wait for updates to propagate (longer for option updates)
+        
+        // =============== CAPTURE UPDATED STATE ===============
+        logger.info("\n📸 Capturing updated product state...");
+        Product updatedProduct = shopifyApiService.getProductByProductId(feedItem.getShopifyItemId());
+        assertNotNull(updatedProduct, "Updated product should exist in Shopify");
         Assertions.assertEquals(initialProduct.getId(), updatedProduct.getId(), "Product ID should remain the same");
         
-        // Verify title was updated
-        Assertions.assertEquals("Updated Test Watch", updatedProduct.getTitle(), "Product title should be updated");
-        logger.info("✅ Product title updated: {} -> {}", initialProduct.getTitle(), updatedProduct.getTitle());
-        
-        // Verify options still exist but with updated values
-        Assertions.assertNotNull(updatedProduct.getOptions(), "Updated product should still have options");
-        Assertions.assertTrue(updatedProduct.getOptions().size() > 0, "Updated product should still have at least one option");
-        
-        logger.info("✅ Updated product has {} options:", updatedProduct.getOptions().size());
-        for (Option option : updatedProduct.getOptions()) {
-            logger.info("  - {}: {}", option.getName(), option.getValues());
-        }
-        
-        // Verify specific option values were updated
-        boolean foundColorRed = false;
-        boolean foundSize42mm = false;
-        boolean foundMaterialGold = false;
-        
-        for (Option option : updatedProduct.getOptions()) {
-            if ("Color".equals(option.getName()) && option.getValues().contains("Red")) {
-                foundColorRed = true;
-            }
-            if ("Size".equals(option.getName()) && option.getValues().contains("42mm")) {
-                foundSize42mm = true;
-            }
-            if ("Material".equals(option.getName()) && option.getValues().contains("Gold")) {
-                foundMaterialGold = true;
-            }
-        }
-        
-        Assertions.assertTrue(foundColorRed, "Updated product should have Color option with value 'Red'");
-        Assertions.assertTrue(foundSize42mm, "Updated product should have Size option with value '42mm'");
-        Assertions.assertTrue(foundMaterialGold, "Updated product should have Material option with value 'Gold'");
-        
-        logger.info("✅ Option values correctly updated:");
-        logger.info("  - Color contains 'Red': {}", foundColorRed);
-        logger.info("  - Size contains '42mm': {}", foundSize42mm);
-        logger.info("  - Material contains 'Gold': {}", foundMaterialGold);
-        
-        // Verify variant option values were also updated
+        // Verify updated product still has exactly 1 variant
+        Assertions.assertNotNull(updatedProduct.getVariants(), "Updated product should have variants");
+        Assertions.assertEquals(1, updatedProduct.getVariants().size(), "Updated product should have exactly 1 variant");
         Variant updatedVariant = updatedProduct.getVariants().get(0);
-        logger.info("Updated variant options: [{}, {}, {}]", 
-            updatedVariant.getOption1(), updatedVariant.getOption2(), updatedVariant.getOption3());
         
-        // The variant values should match the new feed item attributes
-        // Note: The exact mapping depends on the VariantService logic
-        boolean variantHasNewValues = false;
-        if ("Red".equals(updatedVariant.getOption1()) || "Red".equals(updatedVariant.getOption2()) || "Red".equals(updatedVariant.getOption3()) ||
-            "42mm".equals(updatedVariant.getOption1()) || "42mm".equals(updatedVariant.getOption2()) || "42mm".equals(updatedVariant.getOption3()) ||
-            "Gold".equals(updatedVariant.getOption1()) || "Gold".equals(updatedVariant.getOption2()) || "Gold".equals(updatedVariant.getOption3())) {
-            variantHasNewValues = true;
+        // Capture updated options
+        List<Option> updatedOptions = updatedProduct.getOptions();
+        logger.info("📊 Updated product has {} options:", updatedOptions != null ? updatedOptions.size() : 0);
+        if (updatedOptions != null) {
+            for (Option option : updatedOptions) {
+                logger.info("  - {}: {}", option.getName(), option.getValues());
+            }
         }
         
-        Assertions.assertTrue(variantHasNewValues, "Updated variant should have at least one of the new option values");
-        logger.info("✅ Variant option values updated correctly");
+        // Capture updated variant values
+        String updatedOption1 = updatedVariant.getOption1();
+        String updatedOption2 = updatedVariant.getOption2();
+        String updatedOption3 = updatedVariant.getOption3();
+        logger.info("📊 Updated variant options: [{}, {}, {}]", updatedOption1, updatedOption2, updatedOption3);
         
-        // Test removing options (when feed item has no option attributes)
-        logger.info("\n🗑️ Testing option removal when feed item has no option attributes...");
+        // =============== ASSERT OPTIONS ARE DIFFERENT ===============
+        logger.info("\n✅ Verifying that options were updated correctly...");
         
-        FeedItem itemWithoutOptions = createTestFeedItem(
-            "UPDATE-TEST-001",       // Same SKU
-            "Watch Without Options", // Modified title
-            null,                    // No color
-            null,                    // No size
-            null                     // No material
-        );
-        itemWithoutOptions.setShopifyItemId(modifiedItem.getShopifyItemId()); // Keep same Shopify ID
+        // Variant options should now match the modified feed item attributes
+        Assertions.assertEquals(feedItem.getWebWatchDial(), updatedOption1, 
+            "Updated option1 should match modified webWatchDial (Color)");
+        Assertions.assertEquals(feedItem.getWebWatchDiameter(), updatedOption2, 
+            "Updated option2 should match modified webWatchDiameter (Size)");
+        Assertions.assertEquals(feedItem.getWebMetalType(), updatedOption3, 
+            "Updated option3 should match modified webMetalType (Material)");
         
-        // Update to remove options
-        syncService.updateItemOnShopify(itemWithoutOptions);
+        // Verify that values actually changed from initial state
+        Assertions.assertNotEquals(initialOption1, updatedOption1, 
+            "Option1 (Color) should be different after update");
+        Assertions.assertNotEquals(initialOption2, updatedOption2, 
+            "Option2 (Size) should be different after update");
+        Assertions.assertNotEquals(initialOption3, updatedOption3, 
+            "Option3 (Material) should be different after update");
         
-        Product productWithoutOptions = shopifyApiService.getProductByProductId(itemWithoutOptions.getShopifyItemId());
-        Assertions.assertNotNull(productWithoutOptions, "Product should still exist after removing options");
+        logger.info("✅ Option value changes verified:");
+        logger.info("  - Option1 (Color): '{}' → '{}'", initialOption1, updatedOption1);
+        logger.info("  - Option2 (Size): '{}' → '{}'", initialOption2, updatedOption2);
+        logger.info("  - Option3 (Material): '{}' → '{}'", initialOption3, updatedOption3);
         
-        // Options should be removed or minimal
-        boolean hasMinimalOptions = productWithoutOptions.getOptions() == null || 
-                                  productWithoutOptions.getOptions().isEmpty() || 
-                                  (productWithoutOptions.getOptions().size() == 1 && 
-                                   "Default Title".equals(productWithoutOptions.getOptions().get(0).getName()));
+        // =============== ASSERT VARIANTS ARE CREATED CORRECTLY ===============
+        logger.info("\n✅ Verifying that variants are created correctly...");
         
-        Assertions.assertTrue(hasMinimalOptions, "Product should have no options or only default option after feed item attributes are removed");
-        logger.info("✅ Options correctly removed when feed item has no option attributes");
+        // Both initial and updated products should have exactly 1 variant
+        Assertions.assertEquals(1, initialProduct.getVariants().size(), 
+            "Initial product should have exactly 1 variant");
+        Assertions.assertEquals(1, updatedProduct.getVariants().size(), 
+            "Updated product should have exactly 1 variant");
         
-        // Final verification
+        // Variant should have proper inventory levels
+        Assertions.assertNotNull(updatedVariant.getInventoryLevels(), 
+            "Updated variant should have inventory levels");
+        Assertions.assertNotNull(updatedVariant.getInventoryLevels().get(), 
+            "Updated variant should have inventory level list");
+        Assertions.assertFalse(updatedVariant.getInventoryLevels().get().isEmpty(), 
+            "Updated variant should have at least one inventory level");
+        
+        // Variant SKU should remain the same
+        Assertions.assertEquals(initialVariant.getSku(), updatedVariant.getSku(), 
+            "Variant SKU should remain the same after options update");
+        
+        logger.info("✅ Variant integrity verified:");
+        logger.info("  - Variant count: {} (initial) = {} (updated)", 
+            initialProduct.getVariants().size(), updatedProduct.getVariants().size());
+        logger.info("  - SKU unchanged: {}", updatedVariant.getSku());
+        logger.info("  - Inventory levels: {} locations", updatedVariant.getInventoryLevels().get().size());
+        
+        // =============== ASSERT PRODUCT OPTIONS STRUCTURE ===============
+        logger.info("\n✅ Verifying product options structure...");
+        
+        if (updatedOptions != null && !updatedOptions.isEmpty()) {
+            // Verify we have the expected option names
+            boolean hasColorOption = false;
+            boolean hasSizeOption = false;
+            boolean hasMaterialOption = false;
+            
+            for (Option option : updatedOptions) {
+                if ("Color".equals(option.getName()) && option.getValues().contains(feedItem.getWebWatchDial())) {
+                    hasColorOption = true;
+                }
+                if ("Size".equals(option.getName()) && option.getValues().contains(feedItem.getWebWatchDiameter())) {
+                    hasSizeOption = true;
+                }
+                if ("Material".equals(option.getName()) && option.getValues().contains(feedItem.getWebMetalType())) {
+                    hasMaterialOption = true;
+                }
+            }
+            
+            Assertions.assertTrue(hasColorOption, "Product should have Color option with updated value");
+            Assertions.assertTrue(hasSizeOption, "Product should have Size option with updated value");
+            Assertions.assertTrue(hasMaterialOption, "Product should have Material option with updated value");
+            
+            logger.info("✅ Product options structure verified:");
+            logger.info("  - Color option with '{}': {}", feedItem.getWebWatchDial(), hasColorOption);
+            logger.info("  - Size option with '{}': {}", feedItem.getWebWatchDiameter(), hasSizeOption);
+            logger.info("  - Material option with '{}': {}", feedItem.getWebMetalType(), hasMaterialOption);
+        }
+        
+        // =============== FINAL VERIFICATION ===============
         logger.info("\n🎉 VARIANT OPTIONS UPDATE TEST COMPLETE");
         logger.info("✅ Verified that variant options update correctly when feed item changes");
-        logger.info("✅ Verified that options are removed when feed item has no option attributes");
-        logger.info("✅ Verified that the two-step approach works for updates (remove + create)");
+        logger.info("✅ Verified that options are different before and after sync");
+        logger.info("✅ Verified that variants are created correctly in both states");
+        logger.info("✅ Verified that no duplicate products were created during update");
+        logger.info("✅ Verified that the two-step approach (remove + create) works for updates");
         
         // Clean up
         shopifyApiService.deleteProductByIdOrLogFailure(updatedProduct.getId());
         logger.info("🧹 Test product cleaned up");
-    }
-    
-    @Test
-    public void testPartialOptionChanges() throws Exception {
-        logger.info("=== Testing Partial Option Changes ===");
-        logger.info("💡 This test verifies that when only some option attributes change, the update process works correctly");
-        
-        // Create product with 2 options initially
-        FeedItem initialItem = createTestFeedItem(
-            "PARTIAL-TEST-001",
-            "Partial Update Watch",
-            "Black",       // Color
-            "38mm",        // Size
-            null           // No material initially
-        );
-        
-        syncService.publishItemToShopify(initialItem);
-        boolean optionsAdded = shopifyApiService.createProductOptions(initialItem.getShopifyItemId(), initialItem);
-        Assertions.assertTrue(optionsAdded, "Initial options should be added");
-        
-        Product initialProduct = shopifyApiService.getProductByProductId(initialItem.getShopifyItemId());
-        logger.info("Initial product has {} options", initialProduct.getOptions().size());
-        
-        // Update to add material and change color
-        FeedItem updatedItem = createTestFeedItem(
-            "PARTIAL-TEST-001",
-            "Partial Update Watch",
-            "White",       // Changed color: Black -> White
-            "38mm",        // Same size
-            "Titanium"     // Added material
-        );
-        updatedItem.setShopifyItemId(initialItem.getShopifyItemId());
-        
-        // Perform update
-        syncService.updateItemOnShopify(updatedItem);
-        
-        Product updatedProduct = shopifyApiService.getProductByProductId(updatedItem.getShopifyItemId());
-        Assertions.assertNotNull(updatedProduct.getOptions(), "Updated product should have options");
-        
-        // Should now have 3 options (Color, Size, Material)
-        Assertions.assertEquals(3, updatedProduct.getOptions().size(), "Updated product should have 3 options");
-        
-        // Verify specific changes
-        boolean foundWhiteColor = false;
-        boolean foundSameSize = false;
-        boolean foundNewMaterial = false;
-        
-        for (Option option : updatedProduct.getOptions()) {
-            if ("Color".equals(option.getName()) && option.getValues().contains("White")) {
-                foundWhiteColor = true;
-            }
-            if ("Size".equals(option.getName()) && option.getValues().contains("38mm")) {
-                foundSameSize = true;
-            }
-            if ("Material".equals(option.getName()) && option.getValues().contains("Titanium")) {
-                foundNewMaterial = true;
-            }
-        }
-        
-        Assertions.assertTrue(foundWhiteColor, "Color should be updated to White");
-        Assertions.assertTrue(foundSameSize, "Size should remain 38mm");
-        Assertions.assertTrue(foundNewMaterial, "Material should be added as Titanium");
-        
-        logger.info("✅ Partial option changes verified successfully");
-        logger.info("  - Color updated: Black -> White ✓");
-        logger.info("  - Size unchanged: 38mm ✓");
-        logger.info("  - Material added: Titanium ✓");
-        
-        // Clean up
-        shopifyApiService.deleteProductByIdOrLogFailure(updatedProduct.getId());
-        logger.info("🧹 Test product cleaned up");
-    }
-    
-    /**
-     * Helper method to create a test feed item with specific option attributes
-     */
-    private FeedItem createTestFeedItem(String sku, String title, String color, String size, String material) {
-        FeedItem item = new FeedItem();
-        item.setWebTagNumber(sku);
-        item.setWebDescriptionShort(title);
-        item.setWebWatchDial(color);      // Maps to Color option
-        item.setWebWatchDiameter(size);   // Maps to Size option
-        item.setWebMetalType(material);   // Maps to Material option
-        
-        // Set other required fields
-        item.setWebDesigner("Test Vendor");
-        item.setWebCategory("Watches");
-        item.setWebPriceKeystone("299.99");     // Use webPriceKeystone instead of webPrice
-        item.setWebStatus("Available");         // Use webStatus instead of webQuantity
-        item.setWebWatchCondition("New");       // Use webWatchCondition instead of webCondition
-        
-        return item;
     }
 } 

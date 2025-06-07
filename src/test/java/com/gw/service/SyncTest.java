@@ -11,6 +11,136 @@ import java.util.ArrayList;
 
 public class SyncTest extends BaseGraphqlTest {
 
+    /**
+     * Helper method to validate inventory levels match web_status and are never > 1
+     * 
+     * @param products List of Shopify products to validate
+     * @param feedItems List of feed items with web_status information
+     * @return InventoryValidationResult with statistics and violations
+     */
+    private InventoryValidationResult validateInventoryLevels(List<Product> products, List<FeedItem> feedItems) {
+        logger.info("📦 Validating inventory levels match web_status and are never > 1...");
+        logger.info("💡 Business rules: SOLD items → inventory = 0, all others → inventory = 1, never > 1");
+        
+        int productsChecked = 0;
+        int soldItemsWithZeroInventory = 0;
+        int availableItemsWithOneInventory = 0;
+        int violationsFound = 0;
+        List<String> inventoryViolations = new ArrayList<>();
+        boolean loggedInventorySample = false;
+        
+        for (Product product : products) {
+            // Get the corresponding feed item to check web_status
+            FeedItem matchingFeedItem = null;
+            String productSku = null;
+            
+            if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+                productSku = product.getVariants().get(0).getSku();
+                
+                // Find matching feed item by SKU
+                for (FeedItem feedItem : feedItems) {
+                    if (feedItem.getWebTagNumber().equals(productSku)) {
+                        matchingFeedItem = feedItem;
+                        break;
+                    }
+                }
+            }
+            
+            if (matchingFeedItem != null && product.getVariants() != null && !product.getVariants().isEmpty()) {
+                productsChecked++;
+                
+                Variant variant = product.getVariants().get(0);
+                String webStatus = matchingFeedItem.getWebStatus();
+                
+                // Calculate total inventory across all locations
+                int totalInventory = 0;
+                if (variant.getInventoryLevels() != null && variant.getInventoryLevels().get() != null) {
+                    for (InventoryLevel level : variant.getInventoryLevels().get()) {
+                        try {
+                            totalInventory += Integer.parseInt(level.getAvailable());
+                        } catch (NumberFormatException e) {
+                            logger.warn("Invalid inventory quantity for SKU {}: {}", productSku, level.getAvailable());
+                        }
+                    }
+                }
+                
+                // Log sample for debugging
+                if (!loggedInventorySample) {
+                    logger.info("📊 Sample Inventory Validation (SKU: {}):", productSku);
+                    logger.info("  Feed item web_status: '{}'", webStatus);
+                    logger.info("  Total inventory: {}", totalInventory);
+                    if (variant.getInventoryLevels() != null && variant.getInventoryLevels().get() != null) {
+                        logger.info("  Inventory breakdown across {} locations:", variant.getInventoryLevels().get().size());
+                        for (int i = 0; i < variant.getInventoryLevels().get().size(); i++) {
+                            InventoryLevel level = variant.getInventoryLevels().get().get(i);
+                            logger.info("    Location[{}]: {} units", i, level.getAvailable());
+                        }
+                    }
+                    loggedInventorySample = true;
+                }
+                
+                // Rule 1: Inventory should NEVER be > 1
+                if (totalInventory > 1) {
+                    violationsFound++;
+                    String violation = String.format("SKU %s has inventory %d > 1 (web_status: %s)", 
+                        productSku, totalInventory, webStatus);
+                    inventoryViolations.add(violation);
+                    logger.error("❌ INVENTORY VIOLATION: {}", violation);
+                }
+                
+                // Rule 2: SOLD items should have inventory = 0
+                if ("SOLD".equalsIgnoreCase(webStatus)) {
+                    if (totalInventory == 0) {
+                        soldItemsWithZeroInventory++;
+                    } else {
+                        violationsFound++;
+                        String violation = String.format("SKU %s is SOLD but has inventory %d (should be 0)", 
+                            productSku, totalInventory);
+                        inventoryViolations.add(violation);
+                        logger.error("❌ INVENTORY VIOLATION: {}", violation);
+                    }
+                }
+                
+                // Rule 3: Non-SOLD items should have inventory = 1
+                else {
+                    if (totalInventory == 1) {
+                        availableItemsWithOneInventory++;
+                    } else {
+                        violationsFound++;
+                        String violation = String.format("SKU %s is %s but has inventory %d (should be 1)", 
+                            productSku, webStatus, totalInventory);
+                        inventoryViolations.add(violation);
+                        logger.error("❌ INVENTORY VIOLATION: {}", violation);
+                    }
+                }
+            }
+        }
+        
+        return new InventoryValidationResult(productsChecked, soldItemsWithZeroInventory, 
+            availableItemsWithOneInventory, violationsFound, inventoryViolations);
+    }
+    
+    /**
+     * Result class for inventory validation
+     */
+    private static class InventoryValidationResult {
+        final int productsChecked;
+        final int soldItemsWithZeroInventory;
+        final int availableItemsWithOneInventory;
+        final int violationsFound;
+        final List<String> inventoryViolations;
+        
+        InventoryValidationResult(int productsChecked, int soldItemsWithZeroInventory, 
+                                int availableItemsWithOneInventory, int violationsFound, 
+                                List<String> inventoryViolations) {
+            this.productsChecked = productsChecked;
+            this.soldItemsWithZeroInventory = soldItemsWithZeroInventory;
+            this.availableItemsWithOneInventory = availableItemsWithOneInventory;
+            this.violationsFound = violationsFound;
+            this.inventoryViolations = inventoryViolations;
+        }
+    }
+
     @Test
     /**
      * Live feed sync test - processes the highest 5 webTagNumber feed items
@@ -364,6 +494,43 @@ public class SyncTest extends BaseGraphqlTest {
             logger.info("   3. ✅ Variant option values are properly set from feed item attributes");
             logger.info("   4. ✅ Products are visible in Shopify UI with working variant options");
             
+            // =================== ASSERT: Inventory Levels Match Web Status and Are Never > 1 ===================
+            InventoryValidationResult inventoryResult = validateInventoryLevels(allProductsAfterSync, topFeedItems);
+            
+            // Summary logging
+            logger.info("📈 Inventory Validation Results:");
+            logger.info("  Products checked: {}/{}", inventoryResult.productsChecked, topFeedItems.size());
+            logger.info("  SOLD items with correct inventory (0): {}", inventoryResult.soldItemsWithZeroInventory);
+            logger.info("  Available items with correct inventory (1): {}", inventoryResult.availableItemsWithOneInventory);
+            logger.info("  Total violations found: {}", inventoryResult.violationsFound);
+            
+            if (!inventoryResult.inventoryViolations.isEmpty()) {
+                logger.error("❌ Inventory violations details:");
+                for (String violation : inventoryResult.inventoryViolations) {
+                    logger.error("  - {}", violation);
+                }
+            }
+            
+            // CRITICAL ASSERTIONS
+            Assertions.assertEquals(0, inventoryResult.violationsFound, 
+                "Inventory violations found! " + inventoryResult.violationsFound + " products have incorrect inventory levels. " +
+                "Violations: " + String.join("; ", inventoryResult.inventoryViolations) + ". " +
+                "All products must follow the rules: SOLD items = 0 inventory, others = 1 inventory, never > 1.");
+            
+            logger.info("✅ PASS: All inventory levels match web_status correctly");
+            
+            // Verify reasonable distribution
+            Assertions.assertTrue(inventoryResult.productsChecked > 0, 
+                "Should have checked at least one product's inventory. Found: " + inventoryResult.productsChecked);
+            
+            logger.info("✅ PASS: Inventory validation completed successfully for {} products", inventoryResult.productsChecked);
+            logger.info("🎉 INVENTORY LEVEL VERIFICATION COMPLETE");
+            logger.info("💡 All products follow the correct inventory rules:");
+            logger.info("   1. ✅ Inventory is NEVER > 1");
+            logger.info("   2. ✅ SOLD items have inventory = 0");
+            logger.info("   3. ✅ Available items have inventory = 1");
+            logger.info("   4. ✅ Inventory levels are set using absolute values (not delta adjustment)");
+            
             // Final summary
             logger.info("=== Live Feed Sync Test Summary ===");
             logger.info("Total items processed: " + topFeedItems.size());
@@ -373,6 +540,8 @@ public class SyncTest extends BaseGraphqlTest {
             logger.info("Products with eBay metafields: " + totalEbayMetafields);
             logger.info("Products with variant options: " + productsWithVariantOptions + " (" + String.format("%.1f", variantOptionCoverage) + "%)");
             logger.info("Variant options breakdown - Color: " + productsWithColorOption + ", Size: " + productsWithSizeOption + ", Material: " + productsWithMaterialOption);
+            logger.info("Inventory validation: " + inventoryResult.productsChecked + " products checked, " + inventoryResult.violationsFound + " violations found");
+            logger.info("Inventory breakdown - SOLD items (0 inventory): " + inventoryResult.soldItemsWithZeroInventory + ", Available items (1 inventory): " + inventoryResult.availableItemsWithOneInventory);
             logger.info("=== Live Feed Sync Test Complete ===");
             
         } catch (Exception e) {

@@ -1,13 +1,9 @@
 package com.gw.services.product;
 
-
-import com.gw.services.shopifyapi.objects.Option;
 import com.gw.services.shopifyapi.objects.Product;
-import com.gw.services.shopifyapi.objects.Variant;
 import com.gw.services.shopifyapi.objects.Metafield;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,294 +13,145 @@ import java.util.ArrayList;
 import java.util.Objects;
 
 /**
- * Reusable Product Merge Service
+ * Simple Product Merge Service
  * 
- * Handles all product merging operations with clean separation of concerns:
- * - Variant merging with ID preservation
- * - Option merging with change detection
- * - Image merging with deduplication
- * - Metafield preservation strategies
+ * Focused operations:
+ * - Basic field merging (metafields only - other components handled separately)
+ * - Metafield preservation with ID handling
+ * - Clean product creation for API updates
  * 
  * Benefits:
- * - Reusable across different sync scenarios
- * - Testable individual merge operations  
- * - Consistent merge logic
- * - Clear change detection and logging
+ * - Simple and focused
+ * - Only handles what's actually needed
+ * - Easy to understand and maintain
  */
 @Service
 public class ProductMergeService {
     
     private static final Logger logger = LoggerFactory.getLogger(ProductMergeService.class);
     
-    @Autowired
-    private VariantService variantService;
-    
-    @Autowired
-    private ProductImageService imageService;
-    
     /**
-     * Complete product merge operation
+     * Merge basic fields (currently just metafields since other components are handled separately)
      * 
      * @param existing The existing product from Shopify
      * @param updated The updated product data
-     * @return MergeResult with details of what changed
+     * @return Simple result indicating if changes were made
      */
-    public ProductMergeResult mergeProducts(Product existing, Product updated) {
-        logger.info("🔄 Starting product merge for ID: {}", existing.getId());
-        
-        ProductMergeResult result = new ProductMergeResult();
+    public boolean mergeBasicFields(Product existing, Product updated) {
+        logger.debug("🔄 Merging basic fields for product ID: {}", existing.getId());
         
         // Set the existing ID on updated product
         updated.setId(existing.getId());
         
-        // Merge each component and track changes
-        result.variantChanges = mergeVariants(existing.getVariants(), updated.getVariants());
-        result.optionChanges = mergeOptions(existing.getOptions(), updated.getOptions());
-        result.imageChanges = mergeImages(existing, updated);
-        result.metafieldChanges = mergeMetafields(existing, updated);
+        // Only merge metafields since variants/options/images are handled separately
+        boolean metafieldsChanged = mergeMetafields(existing, updated);
         
-        logger.info("✅ Product merge completed - {} total changes detected", result.getTotalChanges());
-        return result;
+        logger.debug("✅ Basic field merge completed - metafields changed: {}", metafieldsChanged);
+        return metafieldsChanged;
     }
     
     /**
-     * Merge variants using the specialized service
+     * Create a product for basic API updates (excludes variants/options)
+     * 
+     * @param source The source product with all data
+     * @return Product with only basic fields for safe API updates
      */
-    private int mergeVariants(List<Variant> existing, List<Variant> updated) {
-        if (existing == null || updated == null) {
-            return 0;
-        }
+    public Product createBasicUpdateProduct(Product source) {
+        logger.debug("🔧 Creating basic update product for ID: {}", source.getId());
         
-        logger.debug("🔧 Merging {} existing variants with {} updated variants", 
-            existing.size(), updated.size());
+        Product basic = new Product();
         
-        variantService.mergeVariants(existing, updated);
+        // Copy basic fields
+        basic.setId(source.getId());
+        basic.setTitle(source.getTitle());
+        basic.setBodyHtml(source.getBodyHtml());
+        basic.setVendor(source.getVendor());
+        basic.setProductType(source.getProductType());
+        basic.setHandle(source.getHandle());
+        basic.setTags(source.getTags());
+        basic.setStatus(source.getStatus());
+        basic.setMetafields(source.getMetafields());
         
-        // Simple change detection - could be enhanced
-        return updated.size() > 0 ? 1 : 0;
+        // Explicitly exclude variants and options
+        basic.setVariants(null);
+        basic.setOptions(null);
+        
+        logger.debug("✅ Basic update product created");
+        return basic;
     }
     
     /**
-     * Merge product options with detailed change detection
+     * Smart metafield merging with ID preservation
      */
-    private int mergeOptions(List<Option> existing, List<Option> updated) {
-        if (existing == null || updated == null) {
-            logger.debug("Skipping option merge - null options list");
-            return 0;
-        }
+    private boolean mergeMetafields(Product existing, Product updated) {
+        logger.debug("📋 Merging metafields");
         
-        logger.debug("🎛️ Merging {} existing options with {} updated options", 
-            existing.size(), updated.size());
-        
-        Map<String, Option> existingByName = existing.stream()
-            .collect(Collectors.toMap(Option::getName, option -> option));
-        
-        int changeCount = 0;
-        
-        for (Option updatedOption : updated) {
-            Option existingOption = existingByName.get(updatedOption.getName());
-            
-            if (existingOption != null) {
-                // Preserve existing option ID
-                updatedOption.setId(existingOption.getId());
-                
-                // Check for value changes
-                if (hasOptionValuesChanged(existingOption, updatedOption)) {
-                    logger.info("📝 Option '{}' values changed: {} → {}", 
-                        updatedOption.getName(),
-                        existingOption.getValues(),
-                        updatedOption.getValues());
-                    changeCount++;
-                }
-            } else {
-                logger.info("✨ New option added: {} with values: {}", 
-                    updatedOption.getName(), updatedOption.getValues());
-                changeCount++;
-            }
-        }
-        
-        return changeCount;
-    }
-    
-    /**
-     * Merge images using the specialized service
-     */
-    private int mergeImages(Product existing, Product updated) {
-        logger.debug("🖼️ Merging product images");
-        
-        imageService.mergeImages(
-            existing.getId(), 
-            existing.getImages(), 
-            updated.getImages()
-        );
-        
-        // Return simple change indicator
-        return (updated.getImages() != null && !updated.getImages().isEmpty()) ? 1 : 0;
-    }
-    
-    /**
-     * Smart metafield merging with preservation strategy and type migration support
-     */
-    private int mergeMetafields(Product existing, Product updated) {
-        logger.debug("📋 Merging product metafields");
-        
-        // Strategy: Merge metafields intelligently with type migration support
+        // If no new metafields, preserve existing ones
         if (updated.getMetafields() == null || updated.getMetafields().isEmpty()) {
             updated.setMetafields(existing.getMetafields());
-            
-            int preservedCount = existing.getMetafields() != null ? existing.getMetafields().size() : 0;
-            logger.debug("💾 Preserved {} existing metafields during merge", preservedCount);
-            return 0; // No changes, just preservation
+            logger.debug("💾 Preserved existing metafields");
+            return false; // No changes
         }
         
-        // Enhanced merge: Handle type conflicts for existing metafields
-        if (existing.getMetafields() != null && !existing.getMetafields().isEmpty()) {
-            return mergeMetafieldsWithTypeUpdate(existing.getMetafields(), updated.getMetafields(), updated);
-        } else {
-            int newCount = updated.getMetafields().size();
-            logger.debug("🆕 Using {} new metafields from updated product", newCount);
-            return 1; // Indicate metafields changed
+        // If no existing metafields, use new ones
+        if (existing.getMetafields() == null || existing.getMetafields().isEmpty()) {
+            logger.debug("🆕 Using new metafields");
+            return true; // Changes made
         }
+        
+        // Merge existing and updated metafields
+        return mergeMetafieldsWithIdPreservation(existing.getMetafields(), updated.getMetafields(), updated);
     }
     
     /**
-     * Merge metafields with intelligent type migration support
-     * This handles the case where existing metafields have different types than new ones
+     * Merge metafields while preserving existing IDs
      */
-    private int mergeMetafieldsWithTypeUpdate(List<Metafield> existing, List<Metafield> updated, Product updatedProduct) {
+    private boolean mergeMetafieldsWithIdPreservation(List<Metafield> existing, List<Metafield> updated, Product updatedProduct) {
         Map<String, Metafield> existingByKey = existing.stream()
             .collect(Collectors.toMap(
                 mf -> mf.getNamespace() + "." + mf.getKey(), 
                 mf -> mf
             ));
         
-        int changeCount = 0;
+        boolean hasChanges = false;
         List<Metafield> mergedMetafields = new ArrayList<>();
         
         // Process updated metafields
         for (Metafield updatedMetafield : updated) {
-            String metafieldKey = updatedMetafield.getNamespace() + "." + updatedMetafield.getKey();
-            Metafield existingMetafield = existingByKey.get(metafieldKey);
+            String key = updatedMetafield.getNamespace() + "." + updatedMetafield.getKey();
+            Metafield existingMetafield = existingByKey.get(key);
             
             if (existingMetafield != null) {
-                // Preserve the existing metafield ID
+                // Preserve existing ID
                 updatedMetafield.setId(existingMetafield.getId());
                 
-                // Check for type conflicts and log them
-                if (!Objects.equals(existingMetafield.getType(), updatedMetafield.getType())) {
-                    logger.info("🔄 Metafield type migration detected for {}: {} → {}", 
-                        metafieldKey, 
-                        existingMetafield.getType(), 
-                        updatedMetafield.getType());
-                    changeCount++;
-                }
-                
-                // Check for value changes
-                if (!Objects.equals(existingMetafield.getValue(), updatedMetafield.getValue())) {
-                    logger.debug("📝 Metafield value changed for {}: {} → {}", 
-                        metafieldKey, 
-                        existingMetafield.getValue(), 
-                        updatedMetafield.getValue());
-                    changeCount++;
+                // Check for changes
+                if (!Objects.equals(existingMetafield.getValue(), updatedMetafield.getValue()) ||
+                    !Objects.equals(existingMetafield.getType(), updatedMetafield.getType())) {
+                    logger.debug("📝 Metafield changed: {}", key);
+                    hasChanges = true;
                 }
                 
                 mergedMetafields.add(updatedMetafield);
-                existingByKey.remove(metafieldKey); // Mark as processed
+                existingByKey.remove(key); // Mark as processed
             } else {
                 // New metafield
-                logger.debug("✨ New metafield added: {}", metafieldKey);
+                logger.debug("✨ New metafield: {}", key);
                 mergedMetafields.add(updatedMetafield);
-                changeCount++;
+                hasChanges = true;
             }
         }
         
-        // Add any remaining existing metafields that weren't in the updated list
-        for (Metafield remainingMetafield : existingByKey.values()) {
-            logger.debug("💾 Preserving existing metafield: {}.{}", 
-                remainingMetafield.getNamespace(), remainingMetafield.getKey());
-            mergedMetafields.add(remainingMetafield);
+        // Add remaining existing metafields
+        for (Metafield remaining : existingByKey.values()) {
+            logger.debug("💾 Preserving metafield: {}.{}", remaining.getNamespace(), remaining.getKey());
+            mergedMetafields.add(remaining);
         }
         
-        // Update the updated product with merged metafields
+        // Update the product with merged metafields
         updatedProduct.setMetafields(mergedMetafields);
         
-        logger.debug("🔄 Metafield merge completed: {} changes, {} total metafields", 
-            changeCount, mergedMetafields.size());
-        return changeCount;
-    }
-    
-    /**
-     * Check if option values have changed between existing and updated options
-     */
-    private boolean hasOptionValuesChanged(Option existing, Option updated) {
-        List<String> existingValues = existing.getValues();
-        List<String> updatedValues = updated.getValues();
-        
-        return !OptionComparator.areValuesEqual(existingValues, updatedValues);
-    }
-    
-    /**
-     * Helper class for comparing option values
-     */
-    private static class OptionComparator {
-        
-        /**
-         * Compare two lists of option values for equality
-         */
-        public static boolean areValuesEqual(List<String> existing, List<String> updated) {
-            // Handle null cases
-            if (existing == null && updated == null) return true;
-            if (existing == null || updated == null) return false;
-            
-            // Compare sizes
-            if (existing.size() != updated.size()) return false;
-            
-            // Compare individual values
-            for (int i = 0; i < existing.size(); i++) {
-                if (!areStringValuesEqual(existing.get(i), updated.get(i))) {
-                    return false;
-                }
-            }
-            
-            return true;
-        }
-        
-        /**
-         * Compare two string values with null safety and trimming
-         */
-        private static boolean areStringValuesEqual(String existing, String updated) {
-            if (existing == null && updated == null) return true;
-            if (existing == null || updated == null) return false;
-            return existing.trim().equals(updated.trim());
-        }
-    }
-    
-    /**
-     * Result of a product merge operation
-     */
-    public static class ProductMergeResult {
-        private int variantChanges = 0;
-        private int optionChanges = 0;
-        private int imageChanges = 0;
-        private int metafieldChanges = 0;
-        
-        public int getTotalChanges() {
-            return variantChanges + optionChanges + imageChanges + metafieldChanges;
-        }
-        
-        public boolean hasChanges() {
-            return getTotalChanges() > 0;
-        }
-        
-        public void logSummary() {
-            logger.info("📊 Merge Summary - Variants: {}, Options: {}, Images: {}, Metafields: {} (Total: {})",
-                variantChanges, optionChanges, imageChanges, metafieldChanges, getTotalChanges());
-        }
-        
-        // Getters
-        public int getVariantChanges() { return variantChanges; }
-        public int getOptionChanges() { return optionChanges; }
-        public int getImageChanges() { return imageChanges; }
-        public int getMetafieldChanges() { return metafieldChanges; }
+        logger.debug("🔄 Metafield merge completed: {} total, changes: {}", mergedMetafields.size(), hasChanges);
+        return hasChanges;
     }
 } 

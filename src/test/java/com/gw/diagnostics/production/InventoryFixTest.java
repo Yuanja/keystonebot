@@ -1,4 +1,4 @@
-package com.gw.service;
+package com.gw.diagnostics.production;
 
 import com.gw.domain.FeedItem;
 import com.gw.services.shopifyapi.objects.Product;
@@ -806,9 +806,9 @@ public class InventoryFixTest {
             logger.info("    " + "=".repeat(110));
             
             // Log the API call details
-            logger.info("🚀 CALLING SHOPIFY API: updateInventoryLevels()");
+            logger.info("🚀 CALLING SHOPIFY API: setInventoryLevelsAbsolute()");
             logger.info("  Number of inventory levels to update: {}", inventoryLevels.size());
-            logger.info("  API Method: shopifyApiService.updateInventoryLevels(inventoryLevels)");
+            logger.info("  API Method: shopifyApiService.setInventoryLevelsAbsolute(inventoryLevels)");
             
             // Before API call - log all values being sent
             for (int i = 0; i < inventoryLevels.size(); i++) {
