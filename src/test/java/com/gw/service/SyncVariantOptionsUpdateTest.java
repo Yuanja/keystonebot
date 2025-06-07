@@ -235,7 +235,7 @@ public class SyncVariantOptionsUpdateTest extends BaseGraphqlTest {
         logger.info("✅ Verified that the two-step approach (remove + create) works for updates");
         
         // Clean up
-        shopifyApiService.deleteProductByIdOrLogFailure(updatedProduct.getId());
-        logger.info("🧹 Test product cleaned up");
+        //shopifyApiService.deleteProductByIdOrLogFailure(updatedProduct.getId());
+        //logger.info("🧹 Test product cleaned up");
     }
 } 

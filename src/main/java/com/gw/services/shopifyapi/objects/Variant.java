@@ -1,6 +1,6 @@
 package com.gw.services.shopifyapi.objects;
 
-import java.util.Map;
+
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -41,8 +41,7 @@ public class Variant {
     @JsonProperty("inventory_item_id")
     private String inventoryItemId;
 
-    @JsonProperty("metafield")
-    private Map<String, String> metafield;
+
     
     @JsonProperty("position")
     private String position;
@@ -166,13 +165,7 @@ public class Variant {
 		this.inventoryItemId = inventoryItemId;
 	}
 
-	public Map<String, String> getMetafield() {
-        return metafield;
-    }
 
-    public void setMetafield(Map<String, String> metafield) {
-        this.metafield = metafield;
-    }
 
     public String getPosition() {
         return position;
