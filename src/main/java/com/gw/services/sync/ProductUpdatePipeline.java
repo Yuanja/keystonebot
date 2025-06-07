@@ -121,16 +121,26 @@ public class ProductUpdatePipeline {
     }
     
     /**
-     * Step 2: Create updated template for comparison
+     * Step 2: Create basic template for field comparison (no images/variants/metadata)
      */
     private Product createUpdatedTemplate(FeedItem item) throws Exception {
-        logger.debug("🔧 Step 2: Creating updated template for SKU: {}", item.getWebTagNumber());
+        logger.debug("🔧 Step 2: Creating basic template for field comparison for SKU: {}", item.getWebTagNumber());
         
-        Product template = productCreationService.createProductForUpdate(item);
+        // Create basic product structure only (no images, variants, or metadata)
+        Product template = createBasicProductFromFeedItem(item);
         template.setId(item.getShopifyItemId());
         
-        logger.debug("✅ Updated template created");
+        logger.debug("✅ Basic template created for comparison");
         return template;
+    }
+    
+    /**
+     * Create basic product from feed item (for comparison only)
+     */
+    private Product createBasicProductFromFeedItem(FeedItem feedItem) {
+        Product product = new Product();
+        productCreationService.setBasicProductInfo(product, feedItem);
+        return product;
     }
     
     /**
@@ -246,13 +256,6 @@ public class ProductUpdatePipeline {
         return basic;
     }
     
-    private Product createMetafieldProduct(Product source) {
-        Product metafields = new Product();
-        metafields.setId(source.getId());
-        metafields.setMetafields(source.getMetafields());
-        return metafields;
-    }
-    
     private List<Image> createImages(String[] urls, FeedItem item) {
         // Implementation similar to existing createImagesFromUrls
         // Simplified for clarity
@@ -270,30 +273,6 @@ public class ProductUpdatePipeline {
     private boolean isValidImageUrl(String url) {
         return url != null && !url.trim().isEmpty() && 
                (url.startsWith("http://") || url.startsWith("https://"));
-    }
-    
-    private boolean areMetafieldsEqual(List<?> existing, List<?> updated) {
-        if (existing == null && updated == null) return true;
-        if (existing == null || updated == null) return false;
-        if (existing.size() != updated.size()) return false;
-        
-        // Simple size-based comparison for now
-        // More sophisticated comparison can be added if needed
-        return existing.size() == updated.size();
-    }
-    
-    private boolean areSeoFieldsEqual(Product existing, Product updated) {
-        String existingTitle = existing.getMetafieldsGlobalTitleTag();
-        String updatedTitle = updated.getMetafieldsGlobalTitleTag();
-        String existingDescription = existing.getMetafieldsGlobalDescriptionTag();
-        String updatedDescription = updated.getMetafieldsGlobalDescriptionTag();
-        
-        boolean titleEqual = (existingTitle == null && updatedTitle == null) ||
-                           (existingTitle != null && existingTitle.equals(updatedTitle));
-        boolean descriptionEqual = (existingDescription == null && updatedDescription == null) ||
-                                 (existingDescription != null && existingDescription.equals(updatedDescription));
-        
-        return titleEqual && descriptionEqual;
     }
     
     /**

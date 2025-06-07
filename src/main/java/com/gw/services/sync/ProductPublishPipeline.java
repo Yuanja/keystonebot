@@ -3,13 +3,14 @@ package com.gw.services.sync;
 import com.gw.domain.FeedItem;
 import com.gw.services.EmailService;
 import com.gw.services.FeedItemService;
+import com.gw.services.product.MetadataService;
 import com.gw.services.product.ProductCreationService;
+import com.gw.services.product.VariantService;
 import com.gw.services.ImageService;
 import com.gw.services.LogService;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.Product;
 import com.gw.services.shopifyapi.objects.Image;
-import com.gw.services.inventory.InventoryLevelService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +61,12 @@ public class ProductPublishPipeline {
     @Autowired
     @Qualifier("keyStoneShopifyProductFactoryService")
     private ProductCreationService shopifyProductFactoryService;
+    
+    @Autowired
+    private MetadataService metadataService;
+    
+    @Autowired
+    private VariantService variantService;
     
     @Autowired
     private FeedItemService feedItemService;
@@ -131,22 +138,51 @@ public class ProductPublishPipeline {
             // Continue without failing the whole publish - images are not critical for publishing
         }
     }
+
+      /**
+     * Create product on Shopify with options and variants
+     * Simple 3-step process: basic product → options → variants
+     * 
+     * @param feedItem The feed item with source data
+     * @return The created product with Shopify ID
+     * @throws Exception if creation fails
+     */
+    private Product createProductOnShopify(FeedItem feedItem) throws Exception {
+        String sku = feedItem.getWebTagNumber();
+        logger.info("🚀 Creating product on Shopify for SKU: {}", sku);
+        
+        // Step 1: Create basic product structure (no images/variants - they're added separately by pipeline)
+        Product basicProduct = new Product();
+        shopifyProductFactoryService.setBasicProductInfo(basicProduct, feedItem);
+        metadataService.setProductMetadata(basicProduct, feedItem);
+        Product addedProduct = shopifyGraphQLService.addProduct(basicProduct);
+
+        // Step 2: Add options and variants
+        addOptionsAndVariants(addedProduct.getId(), feedItem);
+        
+        // Step 3: Return complete product
+        Product completeProduct = shopifyGraphQLService.getProductByProductId(addedProduct.getId());
+        logger.info("✅ Product created on Shopify - ID: {}", completeProduct.getId());
+        
+        return completeProduct;
+    }
     
     /**
-     * Create product on Shopify using the product factory
+     * Add options and variants to existing product (without template - builds variants directly)
      */
-    private Product createProductOnShopify(FeedItem item) throws Exception {
-        logger.debug("🔧 Creating product on Shopify for SKU: {}", item.getWebTagNumber());
+    private void addOptionsAndVariants(String productId, FeedItem feedItem) throws Exception {
+        // Add options first (required before variants)
+        shopifyGraphQLService.createProductOptions(productId, feedItem);
         
-        // Use the two-step approach for creating products with variant options
-        Product newlyAddedProduct = shopifyProductFactoryService.createProductWithOptions(item);
+        // Build variants directly without full template
+        Product tempProduct = new Product();
+        variantService.createDefaultVariant(tempProduct, feedItem, shopifyGraphQLService.getAllLocations());
         
-        if (newlyAddedProduct == null || newlyAddedProduct.getId() == null) {
-            throw new RuntimeException("Failed to create product - no product ID returned");
+        // Then create variants
+        boolean variantsCreated = shopifyGraphQLService.createProductVariants(productId, tempProduct.getVariants());
+        if (!variantsCreated) {
+            throw new RuntimeException("Failed to create product variants for product ID: " + productId);
         }
-        
-        logger.debug("✅ Product created on Shopify with ID: {}", newlyAddedProduct.getId());
-        return newlyAddedProduct;
     }
     
     /**

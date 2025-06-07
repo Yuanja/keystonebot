@@ -1,16 +1,12 @@
 package com.gw.services.keystone;
 
 import com.gw.domain.FeedItem;
-import com.gw.domain.EbayMetafieldDefinition;
 import com.gw.services.product.ProductCreationService;
-import com.gw.services.shopifyapi.objects.Metafield;
 import com.gw.services.shopifyapi.objects.Product;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Component
@@ -18,14 +14,7 @@ import java.util.Map;
 public class KeyStoneShopifyProductFactoryService extends ProductCreationService {
 
     @Override
-    public Product createProduct(FeedItem feedItem) throws Exception {
-        Product product = super.createProduct(feedItem);
-        addTags(feedItem, product);
-        addEbayMetafields(feedItem, product);
-        return product;
-    }
-    
-    private void addTags(FeedItem feedItem, Product product) {
+    public void addTags(FeedItem feedItem, Product product) {
         StringBuffer tagString = new StringBuffer();
         
         if (feedItem.getWebDesigner() != null) {
@@ -63,100 +52,7 @@ public class KeyStoneShopifyProductFactoryService extends ProductCreationService
         product.setTags(tagString.toString());
     }
     
-    /**
-     * Add comprehensive eBay metafields with namespace "ebay" for all relevant watch fields
-     * These metafields will be associated with the product and available for eBay listings
-     * Now uses EbayMetafieldDefinition enum for consistent types
-     */
-    private void addEbayMetafields(FeedItem feedItem, Product product) {
-        List<Metafield> ebayMetafields = new ArrayList<>();
-        
-        // Watch Brand/Manufacturer
-        if (feedItem.getWebDesigner() != null) {
-            ebayMetafields.add(createEbayMetafieldFromEnum(EbayMetafieldDefinition.BRAND, feedItem.getWebDesigner()));
-        }
-        
-        // Watch Model
-        if (feedItem.getWebWatchModel() != null) {
-            ebayMetafields.add(createEbayMetafieldFromEnum(EbayMetafieldDefinition.MODEL, feedItem.getWebWatchModel()));
-        }
-        
-        // Reference Number
-        if (feedItem.getWebWatchManufacturerReferenceNumber() != null) {
-            ebayMetafields.add(createEbayMetafieldFromEnum(EbayMetafieldDefinition.REFERENCE_NUMBER, feedItem.getWebWatchManufacturerReferenceNumber()));
-        }
-        
-        // Year of Manufacture
-        if (feedItem.getWebWatchYear() != null) {
-            ebayMetafields.add(createEbayMetafieldFromEnum(EbayMetafieldDefinition.YEAR, feedItem.getWebWatchYear()));
-        }
-        
-        // Case Material
-        if (feedItem.getWebMetalType() != null) {
-            ebayMetafields.add(createEbayMetafieldFromEnum(EbayMetafieldDefinition.CASE_MATERIAL, feedItem.getWebMetalType()));
-        }
-        
-        // Movement Type
-        if (feedItem.getWebWatchMovement() != null) {
-            ebayMetafields.add(createEbayMetafieldFromEnum(EbayMetafieldDefinition.MOVEMENT, feedItem.getWebWatchMovement()));
-        }
-        
-        // Dial Information
-        if (feedItem.getWebWatchDial() != null) {
-            ebayMetafields.add(createEbayMetafieldFromEnum(EbayMetafieldDefinition.DIAL, feedItem.getWebWatchDial()));
-        }
-        
-        // Strap/Bracelet Information
-        if (feedItem.getWebWatchStrap() != null) {
-            ebayMetafields.add(createEbayMetafieldFromEnum(EbayMetafieldDefinition.STRAP, feedItem.getWebWatchStrap()));
-        }
-        
-        // Condition
-        if (feedItem.getWebWatchCondition() != null) {
-            ebayMetafields.add(createEbayMetafieldFromEnum(EbayMetafieldDefinition.CONDITION, feedItem.getWebWatchCondition()));
-        }
-        
-        // Case Diameter
-        if (feedItem.getWebWatchDiameter() != null) {
-            ebayMetafields.add(createEbayMetafieldFromEnum(EbayMetafieldDefinition.DIAMETER, feedItem.getWebWatchDiameter()));
-        }
-        
-        // Box and Papers
-        if (feedItem.getWebWatchBoxPapers() != null) {
-            ebayMetafields.add(createEbayMetafieldFromEnum(EbayMetafieldDefinition.BOX_PAPERS, feedItem.getWebWatchBoxPapers()));
-        }
-        
-        // Category
-        if (feedItem.getWebCategory() != null) {
-            ebayMetafields.add(createEbayMetafieldFromEnum(EbayMetafieldDefinition.CATEGORY, feedItem.getWebCategory()));
-        }
-        
-        // Style
-        if (feedItem.getWebStyle() != null) {
-            ebayMetafields.add(createEbayMetafieldFromEnum(EbayMetafieldDefinition.STYLE, feedItem.getWebStyle()));
-        }
-        
-        // Set metafields on product
-        if (!ebayMetafields.isEmpty()) {
-            if (product.getMetafields() == null) {
-                product.setMetafields(new ArrayList<>());
-            }
-            product.getMetafields().addAll(ebayMetafields);
-        }
-    }
-    
-    /**
-     * Create an eBay metafield using the enum definition for consistent types
-     */
-    private Metafield createEbayMetafieldFromEnum(EbayMetafieldDefinition definition, String value) {
-        Metafield metafield = new Metafield();
-        metafield.setNamespace("ebay");
-        metafield.setKey(definition.getKey());
-        metafield.setValue(value);
-        metafield.setType(definition.getType()); // Use enum type instead of hardcoded
-        metafield.setDescription(definition.getDescription());
-        return metafield;
-    }
+
   
     
     private Map<String, String> getMaterialMap(){

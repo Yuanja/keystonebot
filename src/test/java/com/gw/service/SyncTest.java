@@ -494,6 +494,132 @@ public class SyncTest extends BaseGraphqlTest {
             logger.info("   3. ✅ Variant option values are properly set from feed item attributes");
             logger.info("   4. ✅ Products are visible in Shopify UI with working variant options");
             
+            // =================== ASSERT: Product Descriptions Are Set ===================
+            logger.info("📝 Asserting that sync process sets meaningful product descriptions...");
+            
+            int productsWithDescriptions = 0;
+            int productsWithMeaningfulDescriptions = 0;
+            int totalDescriptionLength = 0;
+            boolean loggedDescriptionSample = false;
+            
+            for (Product product : allProductsAfterSync) {
+                String description = product.getBodyHtml();
+                
+                // Log sample description for debugging
+                if (!loggedDescriptionSample && description != null && !description.trim().isEmpty()) {
+                    logger.info("📋 Sample product description created by sync:");
+                    String sampleDesc = description.length() > 200 ? description.substring(0, 200) + "..." : description;
+                    logger.info("  Product: {} (SKU: {})", product.getTitle(), 
+                        product.getVariants() != null && !product.getVariants().isEmpty() ? 
+                        product.getVariants().get(0).getSku() : "unknown");
+                    logger.info("  Description: {}", sampleDesc);
+                    logger.info("  Description length: {} characters", description.length());
+                    loggedDescriptionSample = true;
+                }
+                
+                // Count products with any description
+                if (description != null && !description.trim().isEmpty()) {
+                    productsWithDescriptions++;
+                    totalDescriptionLength += description.length();
+                    
+                    // Count products with meaningful descriptions (more than just basic text)
+                    String cleanDescription = description.replaceAll("<[^>]*>", "").trim(); // Remove HTML tags
+                    if (cleanDescription.length() > 50) { // Meaningful description should be more than 50 characters
+                        productsWithMeaningfulDescriptions++;
+                    }
+                }
+            }
+            
+            double descriptionCoverage = allProductsAfterSync.size() > 0 ? 
+                (double) productsWithDescriptions / allProductsAfterSync.size() * 100.0 : 0.0;
+            
+            double meaningfulDescriptionCoverage = allProductsAfterSync.size() > 0 ? 
+                (double) productsWithMeaningfulDescriptions / allProductsAfterSync.size() * 100.0 : 0.0;
+            
+            int averageDescriptionLength = productsWithDescriptions > 0 ? 
+                totalDescriptionLength / productsWithDescriptions : 0;
+            
+            logger.info("📈 Product Description Statistics:");
+            logger.info("  Products with descriptions: {}/{} ({:.1f}%)", 
+                productsWithDescriptions, allProductsAfterSync.size(), descriptionCoverage);
+            logger.info("  Products with meaningful descriptions (>50 chars): {}/{} ({:.1f}%)", 
+                productsWithMeaningfulDescriptions, allProductsAfterSync.size(), meaningfulDescriptionCoverage);
+            logger.info("  Average description length: {} characters", averageDescriptionLength);
+            
+            // ASSERTIONS FOR PRODUCT DESCRIPTIONS
+            
+            // Assert that sync process creates products with descriptions
+            Assertions.assertTrue(productsWithDescriptions > 0, 
+                "Sync should have created at least one product with a description. " +
+                "Found: " + productsWithDescriptions + " products with descriptions out of " + allProductsAfterSync.size());
+            
+            logger.info("✅ PASS: Sync successfully created {} products with descriptions", productsWithDescriptions);
+            
+            // Assert reasonable description coverage (at least 80% should have descriptions)
+            Assertions.assertTrue(descriptionCoverage >= 80.0, 
+                "At least 80% of products should have descriptions. " +
+                "Found coverage: " + String.format("%.1f", descriptionCoverage) + "%. " +
+                "If this fails, check if feed items are missing description-related attributes or if the description building logic is working correctly.");
+            
+            logger.info("✅ PASS: Description coverage ({:.1f}%) meets minimum threshold", descriptionCoverage);
+            
+            // Assert that descriptions contain meaningful content (at least 60% should have >50 characters)
+            Assertions.assertTrue(meaningfulDescriptionCoverage >= 60.0, 
+                "At least 60% of products should have meaningful descriptions (>50 characters). " +
+                "Found coverage: " + String.format("%.1f", meaningfulDescriptionCoverage) + "%. " +
+                "This indicates that the description building process is creating substantive content from feed items.");
+            
+            logger.info("✅ PASS: Meaningful description coverage ({:.1f}%) meets minimum threshold", meaningfulDescriptionCoverage);
+            
+            // Assert reasonable average description length (should be at least 100 characters on average)
+            Assertions.assertTrue(averageDescriptionLength >= 100, 
+                "Average description length should be at least 100 characters to provide useful product information. " +
+                "Found: " + averageDescriptionLength + " characters. " +
+                "Short descriptions may indicate missing feed item attributes or incomplete description templates.");
+            
+            logger.info("✅ PASS: Average description length ({} characters) meets minimum requirement", averageDescriptionLength);
+            
+            // Verify descriptions don't contain placeholder text or common error indicators
+            boolean hasValidDescriptions = true;
+            String descriptionIssues = "";
+            int issueCount = 0;
+            
+            for (Product product : allProductsAfterSync) {
+                String description = product.getBodyHtml();
+                if (description != null && !description.trim().isEmpty()) {
+                    String lowerDesc = description.toLowerCase();
+                    
+                    // Check for common placeholder/error text
+                    if (lowerDesc.contains("todo") || lowerDesc.contains("placeholder") || 
+                        lowerDesc.contains("test description") || lowerDesc.contains("[description]") ||
+                        lowerDesc.contains("lorem ipsum") || lowerDesc.equals("null")) {
+                        hasValidDescriptions = false;
+                        issueCount++;
+                        if (issueCount <= 3) { // Limit logging to first 3 issues
+                            descriptionIssues += "Product " + product.getId() + " has placeholder/invalid description; ";
+                        }
+                    }
+                }
+            }
+            
+            if (issueCount > 3) {
+                descriptionIssues += "... and " + (issueCount - 3) + " more products with similar issues";
+            }
+            
+            Assertions.assertTrue(hasValidDescriptions, 
+                "Product descriptions should not contain placeholder or invalid text. " +
+                "Issues found: " + descriptionIssues + 
+                "This indicates problems with the description generation logic or feed item data quality.");
+            
+            logger.info("✅ PASS: All product descriptions contain valid content (no placeholders or error text)");
+            
+            logger.info("🎉 PRODUCT DESCRIPTION VERIFICATION COMPLETE");
+            logger.info("💡 The sync process successfully creates meaningful product descriptions:");
+            logger.info("   1. ✅ Products have descriptions set from feed item data");
+            logger.info("   2. ✅ Descriptions meet minimum length requirements");
+            logger.info("   3. ✅ Descriptions contain meaningful content (not placeholders)");
+            logger.info("   4. ✅ Description coverage meets business requirements");
+            
             // =================== ASSERT: Inventory Levels Match Web Status and Are Never > 1 ===================
             InventoryValidationResult inventoryResult = validateInventoryLevels(allProductsAfterSync, topFeedItems);
             
@@ -540,6 +666,9 @@ public class SyncTest extends BaseGraphqlTest {
             logger.info("Products with eBay metafields: " + totalEbayMetafields);
             logger.info("Products with variant options: " + productsWithVariantOptions + " (" + String.format("%.1f", variantOptionCoverage) + "%)");
             logger.info("Variant options breakdown - Color: " + productsWithColorOption + ", Size: " + productsWithSizeOption + ", Material: " + productsWithMaterialOption);
+            logger.info("Products with descriptions: " + productsWithDescriptions + " (" + String.format("%.1f", descriptionCoverage) + "%)");
+            logger.info("Products with meaningful descriptions: " + productsWithMeaningfulDescriptions + " (" + String.format("%.1f", meaningfulDescriptionCoverage) + "%)");
+            logger.info("Average description length: " + averageDescriptionLength + " characters");
             logger.info("Inventory validation: " + inventoryResult.productsChecked + " products checked, " + inventoryResult.violationsFound + " violations found");
             logger.info("Inventory breakdown - SOLD items (0 inventory): " + inventoryResult.soldItemsWithZeroInventory + ", Available items (1 inventory): " + inventoryResult.availableItemsWithOneInventory);
             logger.info("=== Live Feed Sync Test Complete ===");

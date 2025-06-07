@@ -1,12 +1,17 @@
 package com.gw.services.product;
 
 import com.gw.domain.FeedItem;
+import com.gw.domain.EbayMetafieldDefinition;
 import com.gw.services.constants.ShopifyConstants;
 import com.gw.services.shopifyapi.objects.GoogleMetafield;
+import com.gw.services.shopifyapi.objects.Metafield;
 import com.gw.services.shopifyapi.objects.Product;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Service responsible for creating and managing product metadata
@@ -27,6 +32,7 @@ public class MetadataService {
         logger.debug("Setting metadata for product: {}", feedItem.getWebTagNumber());
         
         setGoogleMerchantMetafields(product, feedItem);
+        setEbayMetafields(product, feedItem);
         setSeoMetadata(product, feedItem);
         
         logger.debug("Completed metadata setup for SKU: {}", feedItem.getWebTagNumber());
@@ -198,6 +204,112 @@ public class MetadataService {
         return description;
     }
     
+    /**
+     * Sets eBay metafields with namespace "ebay" for all relevant watch fields
+     * These metafields are used for eBay listing integration
+     * 
+     * @param product The product to add eBay metafields to
+     * @param feedItem The feed item with eBay metadata source data
+     */
+    private void setEbayMetafields(Product product, FeedItem feedItem) {
+        logger.debug("Setting eBay metafields for SKU: {}", feedItem.getWebTagNumber());
+        
+        List<Metafield> ebayMetafields = new ArrayList<>();
+        
+        // Watch Brand/Manufacturer
+        if (feedItem.getWebDesigner() != null) {
+            ebayMetafields.add(createEbayMetafield(EbayMetafieldDefinition.BRAND, feedItem.getWebDesigner()));
+        }
+        
+        // Watch Model
+        if (feedItem.getWebWatchModel() != null) {
+            ebayMetafields.add(createEbayMetafield(EbayMetafieldDefinition.MODEL, feedItem.getWebWatchModel()));
+        }
+        
+        // Reference Number
+        if (feedItem.getWebWatchManufacturerReferenceNumber() != null) {
+            ebayMetafields.add(createEbayMetafield(EbayMetafieldDefinition.REFERENCE_NUMBER, feedItem.getWebWatchManufacturerReferenceNumber()));
+        }
+        
+        // Year of Manufacture
+        if (feedItem.getWebWatchYear() != null) {
+            ebayMetafields.add(createEbayMetafield(EbayMetafieldDefinition.YEAR, feedItem.getWebWatchYear()));
+        }
+        
+        // Case Material
+        if (feedItem.getWebMetalType() != null) {
+            ebayMetafields.add(createEbayMetafield(EbayMetafieldDefinition.CASE_MATERIAL, feedItem.getWebMetalType()));
+        }
+        
+        // Movement Type
+        if (feedItem.getWebWatchMovement() != null) {
+            ebayMetafields.add(createEbayMetafield(EbayMetafieldDefinition.MOVEMENT, feedItem.getWebWatchMovement()));
+        }
+        
+        // Dial Information
+        if (feedItem.getWebWatchDial() != null) {
+            ebayMetafields.add(createEbayMetafield(EbayMetafieldDefinition.DIAL, feedItem.getWebWatchDial()));
+        }
+        
+        // Strap/Bracelet Information
+        if (feedItem.getWebWatchStrap() != null) {
+            ebayMetafields.add(createEbayMetafield(EbayMetafieldDefinition.STRAP, feedItem.getWebWatchStrap()));
+        }
+        
+        // Condition
+        if (feedItem.getWebWatchCondition() != null) {
+            ebayMetafields.add(createEbayMetafield(EbayMetafieldDefinition.CONDITION, feedItem.getWebWatchCondition()));
+        }
+        
+        // Case Diameter
+        if (feedItem.getWebWatchDiameter() != null) {
+            ebayMetafields.add(createEbayMetafield(EbayMetafieldDefinition.DIAMETER, feedItem.getWebWatchDiameter()));
+        }
+        
+        // Box and Papers
+        if (feedItem.getWebWatchBoxPapers() != null) {
+            ebayMetafields.add(createEbayMetafield(EbayMetafieldDefinition.BOX_PAPERS, feedItem.getWebWatchBoxPapers()));
+        }
+        
+        // Category
+        if (feedItem.getWebCategory() != null) {
+            ebayMetafields.add(createEbayMetafield(EbayMetafieldDefinition.CATEGORY, feedItem.getWebCategory()));
+        }
+        
+        // Style
+        if (feedItem.getWebStyle() != null) {
+            ebayMetafields.add(createEbayMetafield(EbayMetafieldDefinition.STYLE, feedItem.getWebStyle()));
+        }
+        
+        // Add eBay metafields to product
+        if (!ebayMetafields.isEmpty()) {
+            if (product.getMetafields() == null) {
+                product.setMetafields(new ArrayList<>());
+            }
+            product.getMetafields().addAll(ebayMetafields);
+            
+            logger.debug("Added {} eBay metafields for SKU: {}", 
+                ebayMetafields.size(), feedItem.getWebTagNumber());
+        }
+    }
+    
+    /**
+     * Create an eBay metafield using the enum definition for consistent types
+     * 
+     * @param definition The eBay metafield definition enum
+     * @param value The metafield value
+     * @return Configured eBay metafield
+     */
+    private Metafield createEbayMetafield(EbayMetafieldDefinition definition, String value) {
+        Metafield metafield = new Metafield();
+        metafield.setNamespace("ebay");
+        metafield.setKey(definition.getKey());
+        metafield.setValue(value);
+        metafield.setType(definition.getType());
+        metafield.setDescription(definition.getDescription());
+        return metafield;
+    }
+
     /**
      * Helper method to append non-null strings to a StringBuilder
      * 

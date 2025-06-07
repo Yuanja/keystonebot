@@ -2,13 +2,15 @@ package com.gw.services.product;
 
 import com.gw.domain.FeedItem;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
+import com.gw.services.shopifyapi.objects.Metafield;
 import com.gw.services.shopifyapi.objects.Product;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Consolidated Metadata Update Service
@@ -106,19 +108,101 @@ public class MetadataUpdateService {
     
     /**
      * Check if regular metafields have changed
-     * Uses simple size-based comparison for now - can be enhanced for detailed comparison
+     * Performs detailed comparison of Google and eBay metafields
      */
     public boolean areRegularMetafieldsChanged(Product existing, Product updated) {
-        int existingSize = existing.getMetafields() != null ? existing.getMetafields().size() : 0;
-        int updatedSize = updated.getMetafields() != null ? updated.getMetafields().size() : 0;
+        Map<String, String> existingMetafields = extractMetafieldsAsMap(existing.getMetafields());
+        Map<String, String> updatedMetafields = extractMetafieldsAsMap(updated.getMetafields());
         
-        boolean changed = existingSize != updatedSize;
+        boolean googleChanged = areGoogleMetafieldsChanged(existingMetafields, updatedMetafields);
+        boolean ebayChanged = areEbayMetafieldsChanged(existingMetafields, updatedMetafields);
         
-        if (changed) {
-            logger.debug("📊 Regular metafields size changed: {} → {}", existingSize, updatedSize);
+        if (googleChanged || ebayChanged) {
+            logger.debug("📊 Metafield changes detected - Google: {}, eBay: {}", googleChanged, ebayChanged);
+            return true;
         }
         
-        return changed;
+        return false;
+    }
+    
+    /**
+     * Check if Google metafields have changed
+     */
+    private boolean areGoogleMetafieldsChanged(Map<String, String> existing, Map<String, String> updated) {
+        List<String> changedFields = new ArrayList<>();
+        
+        // Check each Google metafield
+        String[] googleKeys = {"google.custom_product", "google.age_group", "google.google_product_type", 
+                              "google.gender", "google.condition", "google.adwords_grouping", "google.adwords_labels"};
+        
+        for (String key : googleKeys) {
+            String existingValue = existing.get(key);
+            String updatedValue = updated.get(key);
+            
+            if (!Objects.equals(existingValue, updatedValue)) {
+                changedFields.add(key);
+                logger.debug("  - Google {}: '{}' → '{}'", 
+                    key.substring(7), existingValue, updatedValue); // Remove "google." prefix
+            }
+        }
+        
+        return !changedFields.isEmpty();
+    }
+    
+    /**
+     * Check if eBay metafields have changed
+     */
+    private boolean areEbayMetafieldsChanged(Map<String, String> existing, Map<String, String> updated) {
+        List<String> changedFields = new ArrayList<>();
+        
+        // Get all eBay metafield keys from both existing and updated
+        Set<String> allEbayKeys = new HashSet<>();
+        allEbayKeys.addAll(getEbayKeys(existing));
+        allEbayKeys.addAll(getEbayKeys(updated));
+        
+        for (String key : allEbayKeys) {
+            String existingValue = existing.get(key);
+            String updatedValue = updated.get(key);
+            
+            if (!Objects.equals(existingValue, updatedValue)) {
+                changedFields.add(key);
+                logger.debug("  - eBay {}: '{}' → '{}'", 
+                    key.substring(5), existingValue, updatedValue); // Remove "ebay." prefix
+            }
+        }
+        
+        if (!changedFields.isEmpty()) {
+            logger.debug("📦 eBay metafield changes: {} fields changed", changedFields.size());
+        }
+        
+        return !changedFields.isEmpty();
+    }
+    
+    /**
+     * Extract metafields as a map for easier comparison
+     * Key format: "namespace.key" -> value
+     */
+    private Map<String, String> extractMetafieldsAsMap(List<Metafield> metafields) {
+        if (metafields == null) {
+            return new HashMap<>();
+        }
+        
+        return metafields.stream()
+            .filter(m -> m.getNamespace() != null && m.getKey() != null)
+            .collect(Collectors.toMap(
+                m -> m.getNamespace() + "." + m.getKey(),
+                m -> m.getValue() != null ? m.getValue() : "",
+                (existing, replacement) -> replacement // Handle duplicates by keeping the new value
+            ));
+    }
+    
+    /**
+     * Get all eBay metafield keys from a metafield map
+     */
+    private Set<String> getEbayKeys(Map<String, String> metafieldMap) {
+        return metafieldMap.keySet().stream()
+            .filter(key -> key.startsWith("ebay."))
+            .collect(Collectors.toSet());
     }
     
     /**
@@ -163,8 +247,20 @@ public class MetadataUpdateService {
             logger.warn("⚠️ SEO description is null for SKU: {}", sku);
         }
         
-        // Check regular metafields
-        int metafieldCount = product.getMetafields() != null ? product.getMetafields().size() : 0;
-        logger.debug("📋 Regular metafields created: {} fields", metafieldCount);
+        // Check metafields breakdown
+        Map<String, String> metafieldMap = extractMetafieldsAsMap(product.getMetafields());
+        long googleCount = metafieldMap.keySet().stream().filter(k -> k.startsWith("google.")).count();
+        long ebayCount = metafieldMap.keySet().stream().filter(k -> k.startsWith("ebay.")).count();
+        
+        logger.debug("📋 Metafields created - Google: {}, eBay: {}, Total: {}", 
+            googleCount, ebayCount, metafieldMap.size());
+        
+        if (googleCount == 0) {
+            logger.warn("⚠️ No Google metafields created for SKU: {}", sku);
+        }
+        
+        if (ebayCount == 0) {
+            logger.warn("⚠️ No eBay metafields created for SKU: {}", sku);
+        }
     }
 } 

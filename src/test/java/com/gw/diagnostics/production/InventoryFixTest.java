@@ -8,7 +8,6 @@ import com.gw.services.shopifyapi.objects.Option;
 import com.gw.services.shopifyapi.objects.Image;
 import com.gw.services.shopifyapi.objects.Metafield;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
-import com.gw.services.BaseShopifySyncService;
 import com.gw.services.FeedItemService;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -329,9 +328,6 @@ public class InventoryFixTest {
     @Autowired
     private FeedItemService feedItemService;
     
-    @Autowired
-    private BaseShopifySyncService syncService;
-    
     /**
      * 🚨 COMPREHENSIVE INVENTORY ENFORCER 🚨
      * 
@@ -491,10 +487,8 @@ public class InventoryFixTest {
                     issue.sku = sku;
                     issue.currentInventory = totalInventory;
                     issue.correctInventory = correctInventory;
-                    issue.excessInventory = Math.abs(totalInventory - correctInventory);
-                    issue.feedItem = feedItem;
+                    Math.abs(totalInventory - correctInventory);
                     issue.feedItemStatus = feedItemStatus;
-                    issue.violationType = violationType;
                     issue.needsFix = true;
                     
                     inventoryIssues.add(issue);
@@ -544,7 +538,6 @@ public class InventoryFixTest {
                 
                 if (feedItem != null) {
                     feedItemsFound++;
-                    issue.feedItem = feedItem;
                     issue.feedItemStatus = feedItem.getWebStatus();
                     
                     // Determine correct inventory based on status
@@ -560,7 +553,6 @@ public class InventoryFixTest {
                     
                 } else {
                     feedItemsNotFound++;
-                    issue.feedItem = null;
                     issue.feedItemStatus = "NOT_FOUND";
                     issue.correctInventory = 1; // Default to available if not found
                     issue.needsFix = true;
@@ -953,10 +945,7 @@ public class InventoryFixTest {
         String sku;
         int currentInventory;
         int correctInventory;
-        int excessInventory;
-        FeedItem feedItem;
         String feedItemStatus;
-        String violationType;
         boolean needsFix;
     }
     

@@ -583,6 +583,52 @@ public class ShopifyGraphQLService {
     }
     
     /**
+     * Update product description (bodyHtml) using a separate mutation
+     * This is required because bodyHtml is not supported in ProductInput in API version 2025-04+
+     */
+    public void updateProductDescription(String productId, String description) throws Exception {
+        String mutation = """
+            mutation productUpdate($input: ProductInput!) {
+                productUpdate(input: $input) {
+                    product {
+                        id
+                        description
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+            """;
+        
+        Map<String, Object> input = new HashMap<>();
+        input.put("id", "gid://shopify/Product/" + productId);
+        input.put("descriptionHtml", description);
+        
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("input", input);
+        
+        try {
+            JsonNode data = executeGraphQLQuery(mutation, variables);
+            JsonNode productUpdate = data.get("productUpdate");
+            
+            // Check for user errors
+            JsonNode userErrors = productUpdate.get("userErrors");
+            if (userErrors != null && userErrors.size() > 0) {
+                logger.error("Product description update failed with user errors: " + userErrors.toString());
+                throw new RuntimeException("Product description update failed: " + userErrors.toString());
+            }
+            
+            logger.debug("Successfully updated description for product ID: {}", productId);
+            
+        } catch (Exception e) {
+            logger.error("Error updating product description for ID: " + productId, e);
+            throw e;
+        }
+    }
+    
+    /**
      * Update product using GraphQL
      */
     public void updateProduct(Product product) throws Exception {
@@ -643,7 +689,7 @@ public class ShopifyGraphQLService {
             """;
         
         Map<String, Object> variables = new HashMap<>();
-        variables.put("input", createProductInput(product, true)); // true = isUpdate
+        variables.put("input", createProductInput(product));
         
         logger.info("Updating product with ID: {}", product.getId());
         logger.debug("Update mutation variables: {}", variables);
@@ -1458,7 +1504,7 @@ public class ShopifyGraphQLService {
      * For create operations, variant option values are excluded (will be set via productOptionsCreate)
      * For update operations, variant option values are excluded (handled separately via remove/recreate options)
      */
-    private Map<String, Object> createProductInput(Product product, boolean isUpdate) {
+    private Map<String, Object> createProductInput(Product product) {
         Map<String, Object> input = new HashMap<>();
         
         if (product.getTitle() != null) {
@@ -1467,9 +1513,9 @@ public class ShopifyGraphQLService {
         if (product.getHandle() != null) {
             input.put("handle", product.getHandle());
         }
-        // NOTE: bodyHtml is NOT supported in ProductInput in API version 2025-04+
-        // It must be set using a separate update operation after product creation
-        // We'll handle this in the addProduct method
+        if (product.getDescription() != null) {
+            input.put("descriptionHtml", product.getDescription());
+        }
         
         if (product.getVendor() != null) {
             input.put("vendor", product.getVendor());
@@ -1533,12 +1579,7 @@ public class ShopifyGraphQLService {
         return input;
     }
     
-    /**
-     * Backward compatibility: createProductInput without isUpdate parameter (defaults to create mode)
-     */
-    private Map<String, Object> createProductInput(Product product) {
-        return createProductInput(product, false);
-    }
+
     
     /**
      * Extract numeric ID from Shopify GraphQL Global ID (GID)
