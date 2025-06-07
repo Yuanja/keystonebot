@@ -333,17 +333,23 @@ public class InventoryFixTest {
     private BaseShopifySyncService syncService;
     
     /**
-     * 🚨 MAIN PRODUCTION FIX METHOD 🚨
+     * 🚨 COMPREHENSIVE INVENTORY ENFORCER 🚨
      * 
-     * This is the primary method for fixing inventory issues in production.
+     * This is the primary method for enforcing strict inventory rules in production.
+     * 
+     * STRICT RULES ENFORCED:
+     * 1. Inventory can NEVER be above 1
+     * 2. SOLD items → inventory = 0
+     * 3. All other items → inventory = 1
+     * 4. Checks ALL products (not just those with inventory > 1)
      * 
      * SAFETY: Respects dryRun parameter - defaults to safe dry run mode
      * 
      * PROCESS:
-     * 1. Scans all Shopify products (or specific item) for inventory > 1
-     * 2. Looks up feed_items in database
-     * 3. Determines correct inventory based on status
-     * 4. Generates detailed fix plan
+     * 1. Scans ALL Shopify products (or specific item) for rule violations
+     * 2. Looks up feed_items in database to determine correct inventory
+     * 3. Enforces strict inventory rules based on status
+     * 4. Generates detailed fix plan with violation analysis
      * 5. Applies fixes (if -DdryRun=false specified)
      * 
      * USAGE:
@@ -352,21 +358,26 @@ public class InventoryFixTest {
      * Specific item dry run: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DwebTagNumber=YOUR_SKU
      * Specific item live: mvn test -Dtest=InventoryFixTest#fixInflatedInventoryLevels -DdryRun=false -DwebTagNumber=YOUR_SKU
      * 
-     * IMPORTANT: Always run scanInventoryIssues() first to understand scope!
+     * ENHANCED: Now checks ALL products and enforces strict rules (not just inflated inventory)
      */
     @Test
     public void fixInflatedInventoryLevels() throws Exception {
-        logger.info("=== Starting Inventory Fix Test - Production Data Cleanup ===");
+        logger.info("=== Comprehensive Inventory Rules Enforcer ===");
+        logger.info("🎯 Enforcing strict inventory rules for all products");
+        logger.info("📋 STRICT RULES:");
+        logger.info("  1. Inventory can NEVER be above 1");
+        logger.info("  2. SOLD items → inventory = 0");
+        logger.info("  3. All other items → inventory = 1");
         
         // Check for specific web tag number parameter
         String specificWebTagNumber = System.getProperty("webTagNumber");
         
         if (specificWebTagNumber != null && !specificWebTagNumber.trim().isEmpty()) {
-            logger.info("🎯 TARGETED FIX MODE - Processing specific item: {}", specificWebTagNumber);
+            logger.info("🎯 TARGETED MODE - Processing specific item: {}", specificWebTagNumber);
             logger.info("💡 Using web tag number from parameter: -DwebTagNumber={}", specificWebTagNumber);
         } else {
-            logger.info("🔍 BULK FIX MODE - Scanning all products with inflated inventory levels (total > 1)");
-            logger.info("💡 To fix specific item, add: -DwebTagNumber=YOUR_SKU");
+            logger.info("🔍 COMPREHENSIVE MODE - Processing ALL products in Shopify");
+            logger.info("💡 To process specific item, add: -DwebTagNumber=YOUR_SKU");
         }
         
         boolean dryRun = getDryRunMode();
@@ -401,13 +412,16 @@ public class InventoryFixTest {
             logger.info("📊 Found {} total products in Shopify", allProducts.size());
         }
         
-        // STEP 2: Analyze inventory levels
-        logger.info("🔍 Analyzing inventory levels for all products...");
+        // STEP 2: Analyze ALL products for rule violations
+        logger.info("🔍 Analyzing ALL products for inventory rule violations...");
         
         List<InventoryIssue> inventoryIssues = new ArrayList<>();
         int totalProducts = allProducts.size();
-        int productsWithIssues = 0;
-        int totalExcessInventory = 0;
+        int productsAnalyzed = 0;
+        int perfectProducts = 0;
+        int soldItemsFound = 0;
+        int availableItemsFound = 0;
+        int unknownItemsFound = 0;
         
         for (int i = 0; i < allProducts.size(); i++) {
             Product product = allProducts.get(i);
@@ -417,41 +431,102 @@ public class InventoryFixTest {
             }
             
             try {
+                productsAnalyzed++;
+                
                 // Calculate total inventory for this product
                 int totalInventory = calculateTotalInventory(product);
+                String sku = extractSKUFromProduct(product);
+                
+                if (sku == null) {
+                    logger.warn("⚠️ Product {} has no SKU, skipping", product.getId());
+                    continue;
+                }
+                
+                // Look up feed item in database
+                FeedItem feedItem = null;
+                String feedItemStatus = "NOT_FOUND";
+                int correctInventory = 1; // Default for unknown items
+                
+                try {
+                    feedItem = feedItemService.findByWebTagNumber(sku);
+                    if (feedItem != null) {
+                        feedItemStatus = feedItem.getWebStatus();
+                        
+                        // Apply strict inventory rules
+                        if ("SOLD".equalsIgnoreCase(feedItemStatus)) {
+                            correctInventory = 0;
+                            soldItemsFound++;
+                        } else {
+                            correctInventory = 1;
+                            availableItemsFound++;
+                        }
+                    } else {
+                        unknownItemsFound++;
+                        logger.debug("⚠️ Feed item not found for SKU: {} (defaulting to inventory = 1)", sku);
+                    }
+                } catch (Exception e) {
+                    logger.warn("⚠️ Error looking up feed item for SKU {}: {}", sku, e.getMessage());
+                    unknownItemsFound++;
+                }
+                
+                // Check if inventory violates strict rules
+                boolean violatesRules = false;
+                String violationType = "";
                 
                 if (totalInventory > 1) {
-                    // This product has inflated inventory
-                    String sku = extractSKUFromProduct(product);
-                    if (sku != null) {
-                        InventoryIssue issue = new InventoryIssue();
-                        issue.product = product;
-                        issue.sku = sku;
-                        issue.currentInventory = totalInventory;
-                        issue.excessInventory = totalInventory - 1; // Assuming max should be 1
-                        
-                        inventoryIssues.add(issue);
-                        productsWithIssues++;
-                        totalExcessInventory += issue.excessInventory;
-                        
-                        logger.debug("🐛 Found inventory issue - SKU: {}, Current: {}, Excess: {}", 
-                            sku, totalInventory, issue.excessInventory);
+                    violatesRules = true;
+                    violationType = "EXCEEDS_MAXIMUM";
+                } else if (totalInventory != correctInventory) {
+                    violatesRules = true;
+                    if (totalInventory < correctInventory) {
+                        violationType = "INSUFFICIENT";
+                    } else {
+                        violationType = "INCORRECT_LEVEL";
                     }
                 }
+                
+                if (violatesRules) {
+                    InventoryIssue issue = new InventoryIssue();
+                    issue.product = product;
+                    issue.sku = sku;
+                    issue.currentInventory = totalInventory;
+                    issue.correctInventory = correctInventory;
+                    issue.excessInventory = Math.abs(totalInventory - correctInventory);
+                    issue.feedItem = feedItem;
+                    issue.feedItemStatus = feedItemStatus;
+                    issue.violationType = violationType;
+                    issue.needsFix = true;
+                    
+                    inventoryIssues.add(issue);
+                    
+                    logger.debug("🚨 Rule violation - SKU: {}, Current: {}, Correct: {}, Status: {}, Type: {}", 
+                        sku, totalInventory, correctInventory, feedItemStatus, violationType);
+                } else {
+                    perfectProducts++;
+                    logger.debug("✅ Perfect inventory - SKU: {}, Inventory: {}, Status: {}", 
+                        sku, totalInventory, feedItemStatus);
+                }
+                
             } catch (Exception e) {
                 logger.warn("⚠️ Error analyzing product {}: {}", product.getId(), e.getMessage());
             }
         }
         
-        logger.info("📊 Inventory Analysis Complete:");
-        logger.info("  - Total products scanned: {}", totalProducts);
-        logger.info("  - Products with inventory issues: {}", productsWithIssues);
-        logger.info("  - Total excess inventory: {}", totalExcessInventory);
-        logger.info("  - Percentage affected: {:.2f}%", 
-            totalProducts > 0 ? (double) productsWithIssues / totalProducts * 100 : 0);
+        logger.info("📊 Comprehensive Analysis Complete:");
+        logger.info("  - Total products analyzed: {}", productsAnalyzed);
+        logger.info("  - Products with perfect inventory: {}", perfectProducts);
+        logger.info("  - Products with rule violations: {}", inventoryIssues.size());
+        logger.info("  - Success rate: {:.2f}%", 
+            productsAnalyzed > 0 ? (double) perfectProducts / productsAnalyzed * 100 : 0);
+        
+        logger.info("📋 Feed Item Status Breakdown:");
+        logger.info("  - SOLD items found: {}", soldItemsFound);
+        logger.info("  - Available items found: {}", availableItemsFound);
+        logger.info("  - Unknown items (not in DB): {}", unknownItemsFound);
         
         if (inventoryIssues.isEmpty()) {
-            logger.info("✅ No inventory issues found - all products have correct inventory levels");
+            logger.info("✅ 🎉 ALL PRODUCTS HAVE PERFECT INVENTORY LEVELS!");
+            logger.info("✅ No rule violations found - inventory system is working correctly");
             return;
         }
         
@@ -881,6 +956,7 @@ public class InventoryFixTest {
         int excessInventory;
         FeedItem feedItem;
         String feedItemStatus;
+        String violationType;
         boolean needsFix;
     }
     
@@ -1937,4 +2013,6 @@ public class InventoryFixTest {
             logger.info("  💡 This item cannot be used for inventory testing");
         }
     }
+    
+        // Removed redundant enforceInventoryRules() method - functionality merged into fixInflatedInventoryLevels()
 } 
