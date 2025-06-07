@@ -6,6 +6,7 @@ import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.Product;
 import com.gw.services.shopifyapi.objects.Image;
 import com.gw.services.ImageService;
+import com.gw.services.product.MetadataUpdateService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +56,9 @@ public class ProductUpdatePipeline {
     @Autowired
     private InventoryManagementService inventoryManagementService;
     
+    @Autowired
+    private MetadataUpdateService metadataUpdateService;
+    
 
     
     /**
@@ -79,8 +83,8 @@ public class ProductUpdatePipeline {
             // Step 5: Update options/variants if changed
             updateOptionsIfChanged(item, existingProduct);
             
-            // Step 6: Update metafields if changed
-            updateMetafieldsIfChanged(existingProduct, updatedTemplate);
+            // Step 6: Update metafields and SEO metadata if changed
+            updateMetafieldsIfChanged(existingProduct, item);
             
             // Step 7: Handle images (always recreate)
             updateImages(item);
@@ -169,22 +173,14 @@ public class ProductUpdatePipeline {
         }
     }
     
-    /**
-     * Step 6: Update metafields if they have changed
+        /**
+     * Step 6: Update metafields and SEO metadata if they have changed (using consolidated service)
      */
-    private void updateMetafieldsIfChanged(Product existing, Product updated) throws Exception {
-        logger.debug("📋 Step 6: Checking metafields for changes");
+    private void updateMetafieldsIfChanged(Product existing, FeedItem feedItem) throws Exception {
+        logger.debug("📋 Step 6: Checking metafields and SEO metadata for changes");
         
-        // Simple comparison: if metafields are different, replace them entirely
-        if (!areMetafieldsEqual(existing.getMetafields(), updated.getMetafields())) {
-            logger.info("🔄 Updating metafields");
-            
-            // Replace all metafields with updated ones
-            shopifyGraphQLService.updateProduct(createMetafieldProduct(updated));
-            logger.debug("✅ Metafields updated");
-        } else {
-            logger.debug("⏭️ Metafields unchanged - skipping");
-        }
+        // Use consolidated metadata update service
+        metadataUpdateService.updateMetadataIfChanged(existing, feedItem);
     }
     
     /**
@@ -284,6 +280,20 @@ public class ProductUpdatePipeline {
         // Simple size-based comparison for now
         // More sophisticated comparison can be added if needed
         return existing.size() == updated.size();
+    }
+    
+    private boolean areSeoFieldsEqual(Product existing, Product updated) {
+        String existingTitle = existing.getMetafieldsGlobalTitleTag();
+        String updatedTitle = updated.getMetafieldsGlobalTitleTag();
+        String existingDescription = existing.getMetafieldsGlobalDescriptionTag();
+        String updatedDescription = updated.getMetafieldsGlobalDescriptionTag();
+        
+        boolean titleEqual = (existingTitle == null && updatedTitle == null) ||
+                           (existingTitle != null && existingTitle.equals(updatedTitle));
+        boolean descriptionEqual = (existingDescription == null && updatedDescription == null) ||
+                                 (existingDescription != null && existingDescription.equals(updatedDescription));
+        
+        return titleEqual && descriptionEqual;
     }
     
     /**

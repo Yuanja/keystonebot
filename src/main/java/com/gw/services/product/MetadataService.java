@@ -68,13 +68,20 @@ public class MetadataService {
             return;
         }
         
+        String webStyle = feedItem.getWebStyle().toLowerCase();
         String googleGender;
+        
         if (ShopifyConstants.FEED_GENDER_UNISEX.equalsIgnoreCase(feedItem.getWebStyle())) {
             googleGender = ShopifyConstants.GOOGLE_GENDER_UNISEX;
-        } else if (ShopifyConstants.FEED_GENDER_GENTS.equalsIgnoreCase(feedItem.getWebStyle())) {
+        } else if (webStyle.contains("men") || webStyle.contains("male") || webStyle.contains("gent")) {
+            // Handle variations: "Men's", "Men", "Male", "Gents", "Gent", etc.
             googleGender = ShopifyConstants.GOOGLE_GENDER_MALE;
-        } else {
+        } else if (webStyle.contains("women") || webStyle.contains("female") || webStyle.contains("ladies")) {
+            // Handle variations: "Women's", "Women", "Female", "Ladies", etc.
             googleGender = ShopifyConstants.GOOGLE_GENDER_FEMALE;
+        } else {
+            // Default fallback for unknown gender styles
+            googleGender = ShopifyConstants.GOOGLE_GENDER_UNISEX;
         }
         
         product.addMetafield(new GoogleMetafield("gender", googleGender));

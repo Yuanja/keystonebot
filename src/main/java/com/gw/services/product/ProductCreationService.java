@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import com.gw.domain.FeedItem;
 import com.gw.services.FreeMakerService;
 import com.gw.services.constants.ShopifyConstants;
+import com.gw.services.product.MetadataUpdateService;
 import com.gw.services.shopifyapi.ShopifyGraphQLService;
 import com.gw.services.shopifyapi.objects.Product;
 import com.gw.services.shopifyapi.objects.Variant;
@@ -50,6 +51,9 @@ public class ProductCreationService {
     
     @Autowired
     private ShopifyGraphQLService shopifyGraphQLService;
+    
+    @Autowired
+    private MetadataUpdateService metadataUpdateService;
     
     /**
      * Create a product template with all metadata, variants, and images
@@ -117,6 +121,9 @@ public class ProductCreationService {
         
         // Build product template (calls createProduct which can be overridden)
         Product productTemplate = this.createProduct(feedItem);
+        
+        // Validate metadata was created properly
+        metadataUpdateService.validateMetadataCreation(productTemplate, feedItem.getWebTagNumber());
         
         // Execute the clean creation pipeline (structure only)
         ProductCreationResult result = executeCreation(productTemplate, feedItem);
@@ -272,6 +279,10 @@ public class ProductCreationService {
         clean.setPublishedScope(template.getPublishedScope());
         clean.setTags(template.getTags());
         clean.setMetafields(template.getMetafields());
+        
+        // CRITICAL FIX: Include SEO metadata fields 
+        clean.setMetafieldsGlobalTitleTag(template.getMetafieldsGlobalTitleTag());
+        clean.setMetafieldsGlobalDescriptionTag(template.getMetafieldsGlobalDescriptionTag());
         
         // CRITICAL: Exclude variants, options, and images (must be created separately in API 2025-04+)
         // - Variants must be created using productVariantsBulkCreate mutation

@@ -179,6 +179,10 @@ public class ShopifyGraphQLService {
                     createdAt
                     updatedAt
                     publishedAt
+                    seo {
+                        title
+                        description
+                    }
                     options {
                         id
                         name
@@ -279,6 +283,10 @@ public class ShopifyGraphQLService {
                                 createdAt
                                 updatedAt
                                 publishedAt
+                                seo {
+                                    title
+                                    description
+                                }
                                 options {
                                     id
                                     name
@@ -503,6 +511,10 @@ public class ShopifyGraphQLService {
                         productType
                         tags
                         updatedAt
+                        seo {
+                            title
+                            description
+                        }
                         metafields(first: 50) {
                             edges {
                                 node {
@@ -585,6 +597,10 @@ public class ShopifyGraphQLService {
                         id
                         title
                         updatedAt
+                        seo {
+                            title
+                            description
+                        }
                         images(first: 10) {
                             edges {
                                 node {
@@ -1096,6 +1112,17 @@ public class ShopifyGraphQLService {
             product.setStatus(productNode.get("status").asText());
         }
         
+        // Parse SEO metadata
+        if (productNode.has("seo") && !productNode.get("seo").isNull()) {
+            JsonNode seoNode = productNode.get("seo");
+            if (seoNode.has("title") && !seoNode.get("title").isNull()) {
+                product.setMetafieldsGlobalTitleTag(seoNode.get("title").asText());
+            }
+            if (seoNode.has("description") && !seoNode.get("description").isNull()) {
+                product.setMetafieldsGlobalDescriptionTag(seoNode.get("description").asText());
+            }
+        }
+        
         // Convert metafields (including eBay metafields)
         if (productNode.has("metafields")) {
             JsonNode metafieldsNode = productNode.get("metafields").get("edges");
@@ -1455,6 +1482,23 @@ public class ShopifyGraphQLService {
         }
         if (product.getStatus() != null) {
             input.put("status", product.getStatus());
+        }
+        
+        // Add SEO metadata fields (Global metafields)
+        Map<String, Object> seo = new HashMap<>();
+        boolean hasSeo = false;
+        
+        if (product.getMetafieldsGlobalTitleTag() != null) {
+            seo.put("title", product.getMetafieldsGlobalTitleTag());
+            hasSeo = true;
+        }
+        if (product.getMetafieldsGlobalDescriptionTag() != null) {
+            seo.put("description", product.getMetafieldsGlobalDescriptionTag());
+            hasSeo = true;
+        }
+        
+        if (hasSeo) {
+            input.put("seo", seo);
         }
         
         if (product.getId() != null) {
