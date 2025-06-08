@@ -9,8 +9,9 @@ The Force Update Test provides comprehensive force update capabilities for produ
 3. **Sync database only** without making any Shopify API calls
 4. **Retry failed items** that have STATUS_UPDATE_FAILED status
 5. **Validate and fix eBay metafields** to ensure proper configuration and pinning
-6. **Analyze impact** before making changes (read-only dry run)
-7. **Production-safe batch processing** with detailed logging
+6. **Fix empty product descriptions** by updating from FeedItem data
+7. **Analyze impact** before making changes (read-only dry run)
+8. **Production-safe batch processing** with detailed logging
 
 ## ⚠️ Important Safety Notes
 
@@ -229,7 +230,71 @@ mvn test -Dtest=ForceUpdateTest#retryUpdateFailedItems -Dspring.profiles.active=
   - Success rate: 90.00%
 ```
 
-### 7. 🔧 VALIDATE AND FIX EBAY METAFIELDS
+### 7. 📝 FIX EMPTY PRODUCT DESCRIPTIONS
+
+Identify products with empty descriptions in Shopify and fix them using data from corresponding FeedItems.
+
+#### Development:
+```bash
+mvn test -Dtest=ForceUpdateTest#fixEmptyDescriptions -Dspring.profiles.active=keystone-dev
+```
+
+#### Production:
+```bash
+mvn test -Dtest=ForceUpdateTest#fixEmptyDescriptions -Dspring.profiles.active=keystone-prod
+```
+
+**What this does:**
+- 🛍️ **Gets all products from Shopify** and checks if they have descriptions
+- 🔍 **Matches products with FeedItems** by SKU (product.variants[0].sku = feedItem.webTagNumber)
+- 📝 **Identifies empty descriptions** (null or empty bodyHtml)
+- 🔧 **Force updates empty descriptions** using feedItem.webDescriptionShort as source data
+- 📦 **Processes in controlled batches** (25 items) with 2-second delays
+- ✅ **Validates results** to ensure descriptions were properly updated
+
+**Features:**
+- ✅ Uses existing database data (no feed refresh)
+- ✅ Only updates products that actually need fixing
+- ✅ Matches products to FeedItems by SKU for data source
+- ✅ Comprehensive validation before and after updates
+- ✅ Safe batch processing with detailed logging
+- ✅ Graceful error handling for individual items
+
+**Output Example:**
+```
+📊 Description Validation Results:
+  - Total products checked: 1,247
+  - Products with descriptions: 1,180
+  - Products with empty descriptions: 67
+  - Products without matching feed items: 15
+  - Products ready for description fix: 52
+
+📋 Sample products with empty descriptions:
+  - SKU: 12345
+  - SKU: 12378
+  - SKU: 12401
+  ...
+
+📦 Processing description fix batch 1/3 (items 0-24)
+🔢 Batch web_tag_numbers: 12345, 12378, 12401, ...
+🔧 Fixing description for SKU: 12345
+✅ Fixed description for: 12345
+...
+
+📊 Description Fix Results:
+  - Total items processed: 52
+  - Total descriptions fixed: 50
+  - Total errors: 2
+  - Success rate: 96.15%
+
+📊 Post-Fix Validation Results:
+  - Total products checked: 1,247
+  - Products with descriptions: 1,230
+  - Products still missing descriptions: 17
+  - Description completion rate: 98.64%
+```
+
+### 8. 🔧 VALIDATE AND FIX EBAY METAFIELDS
 
 Ensure eBay metafield definitions are properly configured and pinned in Shopify admin.
 
@@ -288,13 +353,19 @@ If metafields are causing issues or not properly pinned:
 mvn test -P fix-ebay-metafields-prod
 ```
 
-**Option B: Specific Item Fix**
+**Option B: Fix Empty Descriptions**
+If products have empty descriptions that need to be populated:
+```bash
+mvn test -Dtest=ForceUpdateTest#fixEmptyDescriptions -Dspring.profiles.active=keystone-prod
+```
+
+**Option C: Specific Item Fix**
 If you need to fix a specific item:
 ```bash
 mvn test -P force-update-item-prod -Dforce.update.web_tag_number=200376
 ```
 
-**Option C: Full Force Update (High Risk)**
+**Option D: Full Force Update (High Risk)**
 Only if you need to force update everything:
 ```bash
 mvn test -P force-update-all-prod
@@ -322,6 +393,8 @@ Watch the logs carefully for:
 | `sync-database-only-prod` | Production | Database sync | ✅ Safe | Yes | No |
 | `retryUpdateFailedItems` (dev) | Dev | Retry failed items | ⚠️ Medium | No | Yes |
 | `retryUpdateFailedItems` (prod) | Production | Retry failed items | ⚠️ Medium | No | Yes |
+| `fixEmptyDescriptions` (dev) | Dev | Fix empty descriptions | ⚠️ Medium | No | Yes |
+| `fixEmptyDescriptions` (prod) | Production | Fix empty descriptions | ⚠️ Medium | No | Yes |
 | `force-update-all-dev` | Dev | All items | 🚨 High | Yes | Yes |
 | `force-update-all-prod` | Production | All items | 🚨 EXTREME | Yes | Yes |
 

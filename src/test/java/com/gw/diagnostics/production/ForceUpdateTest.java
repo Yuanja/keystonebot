@@ -62,6 +62,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * 5. Retry items with STATUS_UPDATE_FAILED:
  *    mvn test -Dtest=ForceUpdateTest#retryUpdateFailedItems -Dspring.profiles.active=keystone-prod
  * 
+ * 6. Fix empty product descriptions:
+ *    mvn test -Dtest=ForceUpdateTest#fixEmptyDescriptions -Dspring.profiles.active=keystone-prod
+ * 
  * Safety Features:
  * - Processes items in controlled batches
  * - Detailed logging of every action
@@ -622,6 +625,308 @@ public class ForceUpdateTest {
         
         if (totalErrors > 0) {
             logger.warn("⚠️ " + totalErrors + " errors occurred during database sync - check logs for details");
+        }
+    }
+    
+    /**
+     * Fix empty product descriptions by updating from feed items
+     * Gets all products from Shopify, checks if they have descriptions, and force updates empty ones
+     */
+    @Test
+    public void fixEmptyDescriptions() throws Exception {
+        logger.info("=== Fix Empty Product Descriptions ===");
+        logger.info("🔍 This will identify products with empty descriptions and fix them");
+        logger.info("📝 Will force update descriptions from corresponding FeedItems");
+        logger.info("🗄️ Using existing database data (not refreshing feed)");
+        
+        if (DRY_RUN) {
+            logger.warn("🧪 DRY RUN MODE - No actual changes will be made");
+        }
+        
+        try {
+            // Get all products from Shopify
+            logger.info("🛍️ Getting all products from Shopify...");
+            List<Product> shopifyProducts = shopifyApiService.getAllProducts();
+            logger.info("📊 Found " + shopifyProducts.size() + " products in Shopify");
+            
+            // Get all feed items from database for comparison
+            logger.info("🗄️ Getting all feed items from database...");
+            List<FeedItem> dbItems = feedItemService.findAll();
+            logger.info("📊 Found " + dbItems.size() + " items in database");
+            
+            // Validate descriptions and find products needing fixes
+            DescriptionValidationResult validationResult = validateProductDescriptions(shopifyProducts, dbItems);
+            
+            logger.info("📊 Description Validation Results:");
+            logger.info("  - Total products checked: " + validationResult.productsChecked);
+            logger.info("  - Products with descriptions: " + validationResult.productsWithDescriptions);
+            logger.info("  - Products with empty descriptions: " + validationResult.emptyDescriptions.size());
+            logger.info("  - Products without matching feed items: " + validationResult.noMatchingFeedItem);
+            logger.info("  - Products ready for description fix: " + validationResult.productsReadyForFix.size());
+            
+            if (validationResult.emptyDescriptions.isEmpty()) {
+                logger.info("🎉 All products already have descriptions - no fixes needed!");
+                return;
+            }
+            
+            // Show sample of products with empty descriptions
+            if (!validationResult.emptyDescriptions.isEmpty()) {
+                logger.info("📋 Sample products with empty descriptions:");
+                validationResult.emptyDescriptions.stream()
+                    .limit(10)
+                    .forEach(sku -> logger.info("  - SKU: " + sku));
+                
+                if (validationResult.emptyDescriptions.size() > 10) {
+                    logger.info("  ... and " + (validationResult.emptyDescriptions.size() - 10) + " more");
+                }
+            }
+            
+            if (validationResult.productsReadyForFix.isEmpty()) {
+                logger.warn("⚠️ No products can be fixed - all empty descriptions lack matching feed items");
+                return;
+            }
+            
+            if (DRY_RUN) {
+                logger.info("🧪 DRY RUN: Would fix descriptions for " + validationResult.productsReadyForFix.size() + " products");
+                return;
+            }
+            
+            // Fix empty descriptions in batches
+            fixEmptyDescriptionsInBatches(validationResult.productsReadyForFix);
+            
+            // Final validation
+            validateDescriptionFixResults();
+            
+            logger.info("🎉 Description fix completed successfully!");
+            
+        } catch (Exception e) {
+            logger.error("❌ Error during description fix: " + e.getMessage(), e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Helper method to validate product descriptions and identify products needing fixes
+     * 
+     * @param products List of Shopify products to validate
+     * @param feedItems List of feed items with description information
+     * @return DescriptionValidationResult with statistics and products ready for fixing
+     */
+    private DescriptionValidationResult validateProductDescriptions(List<Product> products, List<FeedItem> feedItems) {
+        logger.info("📝 Validating product descriptions...");
+        logger.info("💡 Business rules: Products should have descriptions from feed items");
+        
+        int productsChecked = 0;
+        int productsWithDescriptions = 0;
+        int noMatchingFeedItem = 0;
+        List<String> emptyDescriptions = new ArrayList<>();
+        List<FeedItem> productsReadyForFix = new ArrayList<>();
+        boolean loggedDescriptionSample = false;
+        
+        for (Product product : products) {
+            // Get the SKU to match with feed items
+            String productSku = null;
+            if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+                productSku = product.getVariants().get(0).getSku();
+            }
+            
+            if (productSku != null) {
+                productsChecked++;
+                
+                // Find matching feed item by SKU
+                FeedItem matchingFeedItem = null;
+                for (FeedItem feedItem : feedItems) {
+                    if (feedItem.getWebTagNumber() != null && feedItem.getWebTagNumber().equals(productSku)) {
+                        matchingFeedItem = feedItem;
+                        break;
+                    }
+                }
+                
+                if (matchingFeedItem == null) {
+                    noMatchingFeedItem++;
+                    logger.debug("⚠️ No matching feed item found for SKU: " + productSku);
+                    continue;
+                }
+                
+                // Check if product description is empty or null
+                String productDescription = product.getBodyHtml();
+                boolean hasDescription = productDescription != null && !productDescription.trim().isEmpty();
+                
+                // Log sample for debugging
+                if (!loggedDescriptionSample) {
+                    logger.info("📊 Sample Description Validation (SKU: {}):", productSku);
+                    logger.info("  Shopify description: '{}'", 
+                        productDescription != null ? productDescription.substring(0, Math.min(100, productDescription.length())) + "..." : "NULL");
+                    logger.info("  Feed item description: '{}'", 
+                        matchingFeedItem.getWebDescriptionShort() != null ? 
+                        matchingFeedItem.getWebDescriptionShort().substring(0, Math.min(100, matchingFeedItem.getWebDescriptionShort().length())) + "..." : "NULL");
+                    logger.info("  Has description: {}", hasDescription);
+                    loggedDescriptionSample = true;
+                }
+                
+                if (hasDescription) {
+                    productsWithDescriptions++;
+                } else {
+                    emptyDescriptions.add(productSku);
+                    
+                    // Check if feed item has description data to fix with
+                    String feedDescription = matchingFeedItem.getWebDescriptionShort();
+                    if (feedDescription != null && !feedDescription.trim().isEmpty()) {
+                        productsReadyForFix.add(matchingFeedItem);
+                        logger.debug("✅ Product ready for description fix: " + productSku);
+                    } else {
+                        logger.debug("⚠️ Product has empty description but feed item also lacks description: " + productSku);
+                    }
+                }
+            }
+        }
+        
+        return new DescriptionValidationResult(productsChecked, productsWithDescriptions, 
+            noMatchingFeedItem, emptyDescriptions, productsReadyForFix);
+    }
+    
+    /**
+     * Fix empty descriptions by updating products in batches
+     */
+    private void fixEmptyDescriptionsInBatches(List<FeedItem> feedItemsToFix) throws Exception {
+        logger.info("🔧 Fixing empty descriptions in batches of " + BATCH_SIZE + "...");
+        
+        // Sort by web_tag_number for predictable processing order
+        List<FeedItem> sortedItems = feedItemsToFix.stream()
+            .sorted(Comparator.comparing(FeedItem::getWebTagNumber, 
+                Comparator.nullsLast(Comparator.naturalOrder())))
+            .collect(Collectors.toList());
+        
+        int totalBatches = (int) Math.ceil((double) sortedItems.size() / BATCH_SIZE);
+        int totalProcessed = 0;
+        int totalFixed = 0;
+        int totalErrors = 0;
+        
+        for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+            int startIndex = batchIndex * BATCH_SIZE;
+            int endIndex = Math.min(startIndex + BATCH_SIZE, sortedItems.size());
+            
+            List<FeedItem> batch = sortedItems.subList(startIndex, endIndex);
+            
+            logger.info("📦 Processing description fix batch " + (batchIndex + 1) + "/" + totalBatches + 
+                       " (items " + startIndex + "-" + (endIndex - 1) + ")");
+            
+            // Log the web_tag_numbers in this batch
+            String batchWebTags = batch.stream()
+                .map(FeedItem::getWebTagNumber)
+                .collect(Collectors.joining(", "));
+            logger.info("🔢 Batch web_tag_numbers: " + batchWebTags);
+            
+            // Process this batch
+            for (FeedItem feedItem : batch) {
+                try {
+                    logger.info("🔧 Fixing description for SKU: " + feedItem.getWebTagNumber());
+                    
+                    // Use the sync service to update the item (which will update description)
+                    syncService.updateItemOnShopify(feedItem);
+                    
+                    totalProcessed++;
+                    totalFixed++;
+                    
+                    logger.debug("✅ Fixed description for: " + feedItem.getWebTagNumber());
+                    
+                } catch (Exception e) {
+                    totalProcessed++;
+                    totalErrors++;
+                    logger.error("❌ Failed to fix description for SKU: " + feedItem.getWebTagNumber() + " - " + e.getMessage());
+                }
+            }
+            
+            logger.info("✅ Batch " + (batchIndex + 1) + " completed: " + batch.size() + " items processed");
+            
+            // Small delay between batches to be gentle on APIs
+            if (batchIndex < totalBatches - 1) {
+                Thread.sleep(2000); // 2 second delay between batches
+            }
+        }
+        
+        logger.info("📊 Description Fix Results:");
+        logger.info("  - Total items processed: " + totalProcessed);
+        logger.info("  - Total descriptions fixed: " + totalFixed);
+        logger.info("  - Total errors: " + totalErrors);
+        logger.info("  - Success rate: " + String.format("%.2f%%", 
+                    totalProcessed > 0 ? (double) (totalProcessed - totalErrors) / totalProcessed * 100 : 100.0));
+        
+        if (totalErrors > 0) {
+            logger.warn("⚠️ " + totalErrors + " errors occurred during description fixes - check logs for details");
+        }
+    }
+    
+    /**
+     * Validate that description fixes were successful
+     */
+    private void validateDescriptionFixResults() throws Exception {
+        logger.info("🔍 Validating description fix results...");
+        
+        try {
+            // Get updated products from Shopify
+            List<Product> updatedProducts = shopifyApiService.getAllProducts();
+            List<FeedItem> dbItems = feedItemService.findAll();
+            
+            // Re-validate descriptions
+            DescriptionValidationResult result = validateProductDescriptions(updatedProducts, dbItems);
+            
+            logger.info("📊 Post-Fix Validation Results:");
+            logger.info("  - Total products checked: " + result.productsChecked);
+            logger.info("  - Products with descriptions: " + result.productsWithDescriptions);
+            logger.info("  - Products still missing descriptions: " + result.emptyDescriptions.size());
+            logger.info("  - Description completion rate: " + String.format("%.2f%%", 
+                        result.productsChecked > 0 ? (double) result.productsWithDescriptions / result.productsChecked * 100 : 100.0));
+            
+            // Show any remaining products with empty descriptions
+            if (!result.emptyDescriptions.isEmpty()) {
+                logger.warn("⚠️ Products still missing descriptions:");
+                result.emptyDescriptions.stream()
+                    .limit(10)
+                    .forEach(sku -> logger.warn("  - SKU: " + sku));
+                
+                if (result.emptyDescriptions.size() > 10) {
+                    logger.warn("  ... and " + (result.emptyDescriptions.size() - 10) + " more");
+                }
+            }
+            
+            // Assertions for test validation
+            if (!DRY_RUN) {
+                // Allow some tolerance - not all products may have description data in feed
+                double descriptionRate = result.productsChecked > 0 ? 
+                    (double) result.productsWithDescriptions / result.productsChecked * 100 : 100.0;
+                
+                assertTrue(descriptionRate >= 50.0, 
+                          "Description completion rate too low: " + String.format("%.2f%%", descriptionRate) + 
+                          " (expected at least 50%)");
+            }
+            
+            logger.info("✅ Description fix validation complete");
+            
+        } catch (Exception e) {
+            logger.error("❌ Error validating description fix results: " + e.getMessage(), e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Result class for description validation
+     */
+    private static class DescriptionValidationResult {
+        final int productsChecked;
+        final int productsWithDescriptions;
+        final int noMatchingFeedItem;
+        final List<String> emptyDescriptions;
+        final List<FeedItem> productsReadyForFix;
+        
+        DescriptionValidationResult(int productsChecked, int productsWithDescriptions, 
+                                  int noMatchingFeedItem, List<String> emptyDescriptions, 
+                                  List<FeedItem> productsReadyForFix) {
+            this.productsChecked = productsChecked;
+            this.productsWithDescriptions = productsWithDescriptions;
+            this.noMatchingFeedItem = noMatchingFeedItem;
+            this.emptyDescriptions = emptyDescriptions;
+            this.productsReadyForFix = productsReadyForFix;
         }
     }
     
