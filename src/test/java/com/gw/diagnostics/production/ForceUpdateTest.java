@@ -634,13 +634,18 @@ public class ForceUpdateTest {
      */
     @Test
     public void fixEmptyDescriptions() throws Exception {
+        // Check for DRY_RUN parameter
+        String dryRunParam = System.getProperty("dry.run");
+        boolean isDryRun = dryRunParam != null && ("true".equalsIgnoreCase(dryRunParam) || "1".equals(dryRunParam));
+        
         logger.info("=== Fix Empty Product Descriptions ===");
         logger.info("🔍 This will identify products with empty descriptions and fix them");
         logger.info("📝 Will force update descriptions from corresponding FeedItems");
         logger.info("🗄️ Using existing database data (not refreshing feed)");
         
-        if (DRY_RUN) {
+        if (isDryRun) {
             logger.warn("🧪 DRY RUN MODE - No actual changes will be made");
+            logger.warn("🧪 Set -Ddry.run=false to perform actual updates");
         }
         
         try {
@@ -686,16 +691,16 @@ public class ForceUpdateTest {
                 return;
             }
             
-            if (DRY_RUN) {
+            if (isDryRun) {
                 logger.info("🧪 DRY RUN: Would fix descriptions for " + validationResult.productsReadyForFix.size() + " products");
                 return;
             }
             
             // Fix empty descriptions in batches
-            fixEmptyDescriptionsInBatches(validationResult.productsReadyForFix);
+            fixEmptyDescriptionsInBatches(validationResult.productsReadyForFix, isDryRun);
             
             // Final validation
-            validateDescriptionFixResults();
+            validateDescriptionFixResults(isDryRun);
             
             logger.info("🎉 Description fix completed successfully!");
             
@@ -788,7 +793,7 @@ public class ForceUpdateTest {
     /**
      * Fix empty descriptions by updating products in batches
      */
-    private void fixEmptyDescriptionsInBatches(List<FeedItem> feedItemsToFix) throws Exception {
+    private void fixEmptyDescriptionsInBatches(List<FeedItem> feedItemsToFix, boolean isDryRun) throws Exception {
         logger.info("🔧 Fixing empty descriptions in batches of " + BATCH_SIZE + "...");
         
         // Sort by web_tag_number for predictable processing order
@@ -822,13 +827,16 @@ public class ForceUpdateTest {
                 try {
                     logger.info("🔧 Fixing description for SKU: " + feedItem.getWebTagNumber());
                     
-                    // Use the sync service to update the item (which will update description)
-                    syncService.updateItemOnShopify(feedItem);
+                    if (!isDryRun) {
+                        // Use the sync service to update the item (which will update description)
+                        syncService.updateItemOnShopify(feedItem);
+                        totalFixed++;
+                        logger.debug("✅ Fixed description for: " + feedItem.getWebTagNumber());
+                    } else {
+                        logger.debug("🧪 DRY RUN: Would fix description for: " + feedItem.getWebTagNumber());
+                    }
                     
                     totalProcessed++;
-                    totalFixed++;
-                    
-                    logger.debug("✅ Fixed description for: " + feedItem.getWebTagNumber());
                     
                 } catch (Exception e) {
                     totalProcessed++;
@@ -860,7 +868,7 @@ public class ForceUpdateTest {
     /**
      * Validate that description fixes were successful
      */
-    private void validateDescriptionFixResults() throws Exception {
+    private void validateDescriptionFixResults(boolean isDryRun) throws Exception {
         logger.info("🔍 Validating description fix results...");
         
         try {
@@ -891,7 +899,7 @@ public class ForceUpdateTest {
             }
             
             // Assertions for test validation
-            if (!DRY_RUN) {
+            if (!isDryRun) {
                 // Allow some tolerance - not all products may have description data in feed
                 double descriptionRate = result.productsChecked > 0 ? 
                     (double) result.productsWithDescriptions / result.productsChecked * 100 : 100.0;
@@ -899,6 +907,8 @@ public class ForceUpdateTest {
                 assertTrue(descriptionRate >= 50.0, 
                           "Description completion rate too low: " + String.format("%.2f%%", descriptionRate) + 
                           " (expected at least 50%)");
+            } else {
+                logger.info("🧪 DRY RUN: Skipping validation assertions");
             }
             
             logger.info("✅ Description fix validation complete");

@@ -1414,10 +1414,6 @@ public class ShopifyGraphQLService {
         }
         
         option.setValues(values);
-        
-        logger.debug("Converted option: {} with {} values: {}", 
-            option.getName(), values.size(), values);
-        
         return option;
     }
     
@@ -1870,7 +1866,6 @@ public class ShopifyGraphQLService {
      * Get inventory level by inventory item ID using GraphQL
      */
     public List<InventoryLevel> getInventoryLevelByInventoryItemId(String id) {
-        logger.debug("Getting inventory levels for inventory item ID: " + id);
         
         String query = """
             query getInventoryLevels($inventoryItemId: ID!) {
@@ -1932,13 +1927,9 @@ public class ShopifyGraphQLService {
                 level.setInventoryItemId(id);
                 
                 levels.add(level);
-                
-                logger.debug("✅ Retrieved inventory level - LocationId: " + level.getLocationId() + 
-                           ", InventoryItemId: " + level.getInventoryItemId() + 
-                           ", Available: " + level.getAvailable());
+
             }
             
-            logger.debug("Successfully retrieved " + levels.size() + " inventory levels for inventory item: " + id);
             return levels;
         } catch (Exception e) {
             logger.error("❌ Error getting inventory levels for inventory item: " + id, e);

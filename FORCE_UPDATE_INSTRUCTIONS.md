@@ -234,14 +234,24 @@ mvn test -Dtest=ForceUpdateTest#retryUpdateFailedItems -Dspring.profiles.active=
 
 Identify products with empty descriptions in Shopify and fix them using data from corresponding FeedItems.
 
-#### Development:
+#### Development (DRY RUN):
 ```bash
-mvn test -Dtest=ForceUpdateTest#fixEmptyDescriptions -Dspring.profiles.active=keystone-dev
+mvn test -Dtest=ForceUpdateTest#fixEmptyDescriptions -Dspring.profiles.active=keystone-dev -Ddry.run=true
 ```
 
-#### Production:
+#### Development (REAL RUN):
 ```bash
-mvn test -Dtest=ForceUpdateTest#fixEmptyDescriptions -Dspring.profiles.active=keystone-prod
+mvn test -Dtest=ForceUpdateTest#fixEmptyDescriptions -Dspring.profiles.active=keystone-dev -Ddry.run=false
+```
+
+#### Production (DRY RUN):
+```bash
+mvn test -Dtest=ForceUpdateTest#fixEmptyDescriptions -Dspring.profiles.active=keystone-prod -Ddry.run=true
+```
+
+#### Production (REAL RUN):
+```bash
+mvn test -Dtest=ForceUpdateTest#fixEmptyDescriptions -Dspring.profiles.active=keystone-prod -Ddry.run=false
 ```
 
 **What this does:**
@@ -259,6 +269,7 @@ mvn test -Dtest=ForceUpdateTest#fixEmptyDescriptions -Dspring.profiles.active=ke
 - ✅ Comprehensive validation before and after updates
 - ✅ Safe batch processing with detailed logging
 - ✅ Graceful error handling for individual items
+- ✅ **Configurable DRY RUN mode** via `-Ddry.run=true/false` parameter
 
 **Output Example:**
 ```
@@ -356,7 +367,11 @@ mvn test -P fix-ebay-metafields-prod
 **Option B: Fix Empty Descriptions**
 If products have empty descriptions that need to be populated:
 ```bash
-mvn test -Dtest=ForceUpdateTest#fixEmptyDescriptions -Dspring.profiles.active=keystone-prod
+# First, analyze what would be fixed (DRY RUN)
+mvn test -Dtest=ForceUpdateTest#fixEmptyDescriptions -Dspring.profiles.active=keystone-prod -Ddry.run=true
+
+# Then, apply the fixes (REAL RUN)
+mvn test -Dtest=ForceUpdateTest#fixEmptyDescriptions -Dspring.profiles.active=keystone-prod -Ddry.run=false
 ```
 
 **Option C: Specific Item Fix**
