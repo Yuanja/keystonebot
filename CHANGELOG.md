@@ -1,6 +1,6 @@
 # Changelog
 
-## [3.0.0] - 2025-05-30
+## [3.0.0] - 2025-06-01
 
 ### 🔄 MAJOR MIGRATION: Complete REST API Removal
 

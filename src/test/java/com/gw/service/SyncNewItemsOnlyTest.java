@@ -351,4 +351,173 @@ public class SyncNewItemsOnlyTest extends BaseGraphqlTest {
         logger.info("✅ Inventory validation passed - all levels match web_status and are ≤ 1");
         logger.info("=== New Items Only Sync Test Complete ===");
     }
+    
+    @Test
+    /**
+     * Publish a specific NEW item by web_tag_number
+     * This test allows you to specify a specific web_tag_number to publish as a new item
+     * 
+     * Usage:
+     * mvn test -Dtest=SyncNewItemsOnlyTest#publishSpecificNewItem -Dspring.profiles.active=keystone-dev -Dweb_tag_number=YOUR_WEB_TAG_NUMBER
+     * 
+     * Example:
+     * mvn test -Dtest=SyncNewItemsOnlyTest#publishSpecificNewItem -Dspring.profiles.active=keystone-dev -Dweb_tag_number=12345
+     */
+    public void publishSpecificNewItem() throws Exception {
+        String targetWebTagNumber = System.getProperty("web_tag_number");
+        
+        if (targetWebTagNumber == null || targetWebTagNumber.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                "❌ Missing required parameter: web_tag_number\n" +
+                "Usage: mvn test -Dtest=SyncNewItemsOnlyTest#publishSpecificNewItem " +
+                "-Dspring.profiles.active=keystone-dev -Dweb_tag_number=YOUR_WEB_TAG_NUMBER");
+        }
+        
+        logger.info("=== Starting Publish Specific New Item Test ===");
+        logger.info("🎯 Target web_tag_number: " + targetWebTagNumber);
+        logger.info("📡 Loading from feed...");
+        
+        try {
+            // Load all items from feed (bypass dev mode truncation by refreshing cache)
+            logger.info("🔄 Loading ALL items from feed (bypassing dev mode truncation)...");
+            List<FeedItem> allFeedItems = keyStoneFeedService.getItemsFromFeed();
+            logger.info("📊 Loaded {} total items from feed", allFeedItems.size());
+            
+            // Find the specific item by web_tag_number
+            Optional<FeedItem> targetItemOpt = allFeedItems.stream()
+                .filter(item -> targetWebTagNumber.equals(item.getWebTagNumber()))
+                .findFirst();
+            
+            if (!targetItemOpt.isPresent()) {
+                throw new IllegalArgumentException(
+                    "❌ Item not found in feed: " + targetWebTagNumber + "\n" +
+                    "Please verify the web_tag_number exists in your feed.");
+            }
+            
+            FeedItem targetItem = targetItemOpt.get();
+            logger.info("✅ Found item: " + targetItem.getWebTagNumber());
+            logger.info("📝 Item title: " + (targetItem.getWebDescriptionShort() != null ? 
+                        targetItem.getWebDescriptionShort().substring(0, Math.min(50, targetItem.getWebDescriptionShort().length())) + "..." : "N/A"));
+            logger.info("📊 Web status: " + targetItem.getWebStatus());
+            
+            // Check if item already exists in database
+            FeedItem existingDbItem = feedItemService.findByWebTagNumber(targetWebTagNumber);
+            if (existingDbItem != null && existingDbItem.getShopifyItemId() != null) {
+                logger.warn("⚠️ WARNING: Item already exists in Shopify!");
+                logger.warn("  - Database record exists: YES");
+                logger.warn("  - Shopify ID: " + existingDbItem.getShopifyItemId());
+                logger.warn("  - Current status: " + existingDbItem.getStatus());
+                logger.warn("  - This will UPDATE the existing item, not create a new one");
+            } else {
+                logger.info("✅ Item not yet published - will create as NEW");
+            }
+            
+            // Verify Shopify is clean for this test (item doesn't exist)
+            List<Product> existingProducts = shopifyApiService.getAllProducts();
+            boolean alreadyInShopify = existingProducts.stream()
+                .anyMatch(p -> p.getVariants() != null && !p.getVariants().isEmpty() && 
+                             targetWebTagNumber.equals(p.getVariants().get(0).getSku()));
+            
+            if (alreadyInShopify) {
+                logger.warn("⚠️ Item already exists in Shopify - will be updated instead of created");
+            }
+            
+            // Publish the specific item
+            logger.info("🚀 Publishing item to Shopify...");
+            long startTime = System.currentTimeMillis();
+            
+            List<FeedItem> itemList = new ArrayList<>();
+            itemList.add(targetItem);
+            syncService.doSyncForFeedItems(itemList);
+            
+            long endTime = System.currentTimeMillis();
+            logger.info("✅ Publish completed in " + (endTime - startTime) + "ms");
+            
+            // Verify the item was published
+            logger.info("🔍 Verifying item was published...");
+            List<Product> allProducts = shopifyApiService.getAllProducts();
+            
+            Optional<Product> publishedProduct = allProducts.stream()
+                .filter(p -> p.getVariants() != null && !p.getVariants().isEmpty())
+                .filter(p -> targetWebTagNumber.equals(p.getVariants().get(0).getSku()))
+                .findFirst();
+            
+            Assertions.assertTrue(publishedProduct.isPresent(), 
+                "Product should exist in Shopify for SKU: " + targetWebTagNumber);
+            
+            Product product = publishedProduct.get();
+            logger.info("✅ Product found in Shopify:");
+            logger.info("  - Shopify ID: " + product.getId());
+            logger.info("  - Title: " + product.getTitle());
+            logger.info("  - Status: " + product.getStatus());
+            logger.info("  - Product Type: " + product.getProductType());
+            
+            // Verify status
+            Assertions.assertEquals("ACTIVE", product.getStatus(), 
+                "Product should have ACTIVE status");
+            
+            // Verify variants
+            Assertions.assertNotNull(product.getVariants(), "Product should have variants");
+            Assertions.assertEquals(1, product.getVariants().size(), 
+                "Product should have exactly 1 variant");
+            
+            Variant variant = product.getVariants().get(0);
+            Assertions.assertEquals(targetWebTagNumber, variant.getSku(), 
+                "Variant SKU should match web_tag_number");
+            
+            // Verify collection associations
+            List<Collect> collects = shopifyApiService.getCollectsForProductId(product.getId());
+            logger.info("  - Collections: " + collects.size());
+            Assertions.assertTrue(collects.size() > 0, 
+                "Product should be associated with at least one collection");
+            
+            // Verify images
+            int imageCount = product.getImages() != null ? product.getImages().size() : 0;
+            logger.info("  - Images: " + imageCount);
+            
+            // Verify inventory
+            int totalInventory = 0;
+            if (variant.getInventoryLevels() != null && variant.getInventoryLevels().get() != null) {
+                for (InventoryLevel level : variant.getInventoryLevels().get()) {
+                    try {
+                        totalInventory += Integer.parseInt(level.getAvailable());
+                    } catch (NumberFormatException e) {
+                        // Skip
+                    }
+                }
+            }
+            logger.info("  - Total inventory: " + totalInventory);
+            
+            // Validate inventory based on web_status
+            String webStatus = targetItem.getWebStatus();
+            if ("SOLD".equalsIgnoreCase(webStatus)) {
+                Assertions.assertEquals(0, totalInventory, 
+                    "SOLD item should have inventory = 0");
+            } else {
+                Assertions.assertEquals(1, totalInventory, 
+                    "Available item should have inventory = 1");
+            }
+            
+            // Verify database record
+            FeedItem dbItem = feedItemService.findByWebTagNumber(targetWebTagNumber);
+            Assertions.assertNotNull(dbItem, "Item should exist in database");
+            Assertions.assertNotNull(dbItem.getShopifyItemId(), "Database item should have Shopify ID");
+            logger.info("  - Database status: " + dbItem.getStatus());
+            
+            logger.info("=== Publish Specific New Item Test Summary ===");
+            logger.info("✅ Target web_tag_number: " + targetWebTagNumber);
+            logger.info("✅ Publish duration: " + (endTime - startTime) + "ms");
+            logger.info("✅ Shopify ID: " + product.getId());
+            logger.info("✅ Product status: " + product.getStatus());
+            logger.info("✅ Collections: " + collects.size());
+            logger.info("✅ Images: " + imageCount);
+            logger.info("✅ Inventory: " + totalInventory + " (matches web_status: " + webStatus + ")");
+            logger.info("✅ Database record created with Shopify ID");
+            logger.info("=== Publish Specific New Item Test Complete ===");
+            
+        } catch (Exception e) {
+            logger.error("❌ Failed to publish item: " + targetWebTagNumber, e);
+            throw e;
+        }
+    }
 } 

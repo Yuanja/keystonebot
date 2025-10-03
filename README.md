@@ -2,7 +2,16 @@
 
 ## Overview
 
-This project implements a Shopify bot for Keystone watches using **Shopify's GraphQL Admin API**. The bot automatically synchronizes product data from the Keystone feed to Shopify, managing products, collections, inventory, and publishing.
+This project implements a Shopify bot for Keystone watches using **Shopify's GraphQL Admin API**. The bot automatically synchronizes product data from a remote XML feed to a database, then publishes the synchronized results to Shopify. The application runs as a scheduled Spring Boot service that periodically wakes up via cron job to check for new items to publish, update, or delete on the Shopify store.
+
+### Technology Stack
+
+- **Java**: 1.8
+- **Spring Boot**: 3.3.4
+- **Database**: MySQL with HikariCP connection pooling
+- **Shopify API**: GraphQL Admin API (version 2025-04)
+- **Build Tool**: Maven 
+- **Main Class**: `com.gw.FeedSync`
 
 ## Architecture
 
@@ -102,16 +111,61 @@ This project has been **completely migrated** from Shopify's REST API to the mod
 - ❌ Link header pagination
 - ❌ REST API test files
 
+## How It Works
+
+### Workflow
+
+1. **Download Feed**: Application downloads XML feed from remote URL configured in properties
+2. **Parse XML**: Feed is parsed and converted into `FeedItem` objects
+3. **Database Sync**: Feed items are compared with database to detect:
+   - New items to publish
+   - Changed items to update  
+   - Deleted items to remove
+4. **Shopify Sync**: Changes are published to Shopify via GraphQL API
+5. **Collection Management**: Products are automatically assigned to appropriate collections
+6. **Channel Publishing**: Products are published to all available sales channels
+7. **Email Notifications**: Alerts are sent for important events and errors
+
+### Scheduling
+
+The application uses Spring's `@Scheduled` annotation with cron expressions:
+
+- **Service**: `TaskDispatcher` class
+- **Method**: `scheduledTaskCheck()` 
+- **Configuration**: Defined in `application.properties`
+  - `cron.schedule`: Cron expression (e.g., `0 * * * * *` for every minute)
+  - `cron.zone`: Timezone (e.g., `America/Los_Angeles`)
+
 ## Deployment
 
-The application is designed to run as a scheduled job that:
+### Running the Application
 
-1. **Reads Feed Data**: Parses XML feed from Keystone
-2. **Compares with Database**: Identifies new, changed, and deleted items
-3. **Synchronizes with Shopify**: Updates products via GraphQL API
-4. **Manages Collections**: Ensures proper collection associations
-5. **Publishes to Channels**: Makes products available on all sales channels
-6. **Sends Notifications**: Email alerts for important events
+**Maven Execution:**
+```bash
+# Run with default profile
+mvn exec:java
+
+# Run with specific profile
+mvn exec:java -Dspring.profiles.active=keystone-prod
+```
+
+**Direct Java Execution:**
+```bash
+# Build the JAR first
+mvn package
+
+# Run the JAR
+java -jar target/BotMain-3.0.jar
+```
+
+**SSH Deployment Scripts:**
+
+The project includes deployment scripts in `bin/ssh/`:
+- `start-keystone.sh` - Start the application
+- `kill-keystone.sh` - Stop the application  
+- `status-keystone.sh` - Check application status
+- `recompile-keystone.sh` - Recompile and restart
+- `deploy-keystone.sh` - Deploy to production
 
 ## Monitoring and Logging
 
@@ -130,7 +184,17 @@ For issues related to:
 ### Performance Features
 
 - **Caching**: Collection mappings are cached to reduce API calls
+- **Feed Caching**: Development mode can reuse downloaded feed files (see [FEED_CACHING_DOCUMENTATION.md](FEED_CACHING_DOCUMENTATION.md))
 - **Rate Limiting**: Built-in delays to respect API limits
 - **Batch Processing**: Efficient pagination for large datasets
-- **Skip Image Download**: Configurable image download skipping for faster development (see [SKIP_IMAGE_DOWNLOAD.md](SKIP_IMAGE_DOWNLOAD.md))
-- **GraphQL Optimization**: Precise field selection reduces data transfer 
+- **Skip Image Download**: Configurable image download skipping for faster development
+- **GraphQL Optimization**: Precise field selection reduces data transfer
+
+## Additional Documentation
+
+- **[FEED_CACHING_DOCUMENTATION.md](FEED_CACHING_DOCUMENTATION.md)** - Feed caching for development/testing
+- **[FORCE_UPDATE_INSTRUCTIONS.md](FORCE_UPDATE_INSTRUCTIONS.md)** - Production force update operations
+- **[GRAPHQL_IMAGE_HANDLING.md](GRAPHQL_IMAGE_HANDLING.md)** - GraphQL migration image handling
+- **[README-InventoryFixTool.md](README-InventoryFixTool.md)** - Inventory correction tools
+- **[RECONCILIATION.md](RECONCILIATION.md)** - Data reconciliation system
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes

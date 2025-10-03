@@ -25,12 +25,12 @@ The reconciliation system has been refactored to provide better control and safe
   - `performReconciliation(boolean force)` - Actual reconciliation work
 
 ### 2. Analysis Test
-- **Location**: `src/test/java/com/gw/service/ReconciliationAnalysisTest.java`
+- **Location**: `src/test/java/com/gw/diagnostics/production/ReconciliationAnalysisTest.java`
 - **Purpose**: Read-only test for analyzing production data
 - **Safety**: Makes NO modifications to any system
 
 ### 3. Reconciliation Test  
-- **Location**: `src/test/java/com/gw/service/ReconciliationTest.java`
+- **Location**: `src/test/java/com/gw/diagnostics/production/ReconciliationTest.java`
 - **Purpose**: Performs actual reconciliation work
 - **Warning**: ⚠️ MODIFIES DATA - Use with caution
 
@@ -122,15 +122,14 @@ mvn test -Pforce-reconciliation-prod
 ### Properties
 
 ```properties
-# Daily reconciliation optimization - only run expensive getAllProducts() once per day
-reconcile.daily.hour=3  # Hour (0-23) when daily reconciliation should run (PST)
-
 # Safety threshold for reconciliation  
 MAX_TO_DELETE_COUNT=350
 
-# Force reconciliation (bypasses safety checks)
+# Force reconciliation (bypasses safety checks) - set via Maven profiles
 reconciliation.force=false
 ```
+
+**Note**: Reconciliation is now run manually via Maven test profiles, not automatically via scheduled jobs. The regular sync continues to run based on the `cron.schedule` configuration.
 
 ### Spring Profiles
 
@@ -208,9 +207,9 @@ The reconciliation logic has been completely extracted from `BaseShopifySyncServ
 ### Scheduling Considerations
 
 - **Analysis**: Can be run anytime safely (read-only)
-- **Reconciliation**: Best run during low-traffic periods
-- **Daily Reconciliation**: Automatically runs at 3 AM PST via cron job
-- **Manual Reconciliation**: Use for immediate fixes or testing
+- **Reconciliation**: Best run during low-traffic periods  
+- **Manual Execution**: All reconciliation operations are now manual via Maven test profiles
+- **Regular Sync**: The normal sync process continues to run based on `cron.schedule` (production: every minute)
 
 ## Troubleshooting
 
@@ -228,10 +227,11 @@ The reconciliation logic has been completely extracted from `BaseShopifySyncServ
 - **Verify**: Are feed sources working correctly?
 - **Consider**: Running reconciliation in smaller batches
 
-### Reconciliation Not Running Daily
-- **Check**: `reconcile.daily.hour` configuration (default: 3)
-- **Verify**: Cron schedule is running (`cron.schedule=0 * * * * *`)
-- **Logs**: Look for "DAILY RECONCILIATION TIME" messages
+### Reconciliation Not Completing
+- **Check**: Run analysis first to understand what discrepancies exist
+- **Verify**: Ensure correct Spring profile is active (keystone-dev or keystone-prod)
+- **Logs**: Review detailed logs for specific error messages
+- **API Rate Limits**: Ensure Shopify API rate limits are not being exceeded
 
 ## Commands Quick Reference
 

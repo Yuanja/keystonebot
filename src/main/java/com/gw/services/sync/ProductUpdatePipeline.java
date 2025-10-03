@@ -86,7 +86,8 @@ public class ProductUpdatePipeline {
             // Step 6: Update metafields and SEO metadata if changed
             updateMetafieldsIfChanged(existingProduct, item);
             
-            // Step 7: Handle images (always recreate)
+            // Step 7: Handle images (download first, then recreate)
+            handleImageProcessing(item);
             updateImages(item);
             
             // Step 8: Update collections
@@ -194,10 +195,25 @@ public class ProductUpdatePipeline {
     }
     
     /**
-     * Step 7: Handle images (always recreate for consistency)
+     * Step 7a: Handle image processing (download images to local disk)
+     */
+    private void handleImageProcessing(FeedItem item) {
+        ImageService.ImageProcessingResult result = imageService.handleImageProcessing(item, item.getWebTagNumber());
+        
+        if (result.isSkipped()) {
+            logger.debug("⏭️ Image processing skipped for SKU: {}", item.getWebTagNumber());
+        } else if (!result.isSuccess()) {
+            logger.warn("⚠️ Image processing failed for SKU: {} - {}", 
+                item.getWebTagNumber(), result.getError() != null ? result.getError().getMessage() : "unknown error");
+            // Continue without failing the whole update - images are not critical
+        }
+    }
+    
+    /**
+     * Step 7b: Update images on Shopify (recreate for consistency)
      */
     private void updateImages(FeedItem item) {
-        logger.debug("🖼️ Step 7: Updating images");
+        logger.debug("🖼️ Step 7b: Updating images on Shopify");
         
         try {
             String[] imageUrls = imageService.getAvailableExternalImagePathByCSS(item);
